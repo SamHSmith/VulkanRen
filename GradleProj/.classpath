@@ -24,7 +24,38 @@
 			<attribute name="gradle_used_by_scope" value="test"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11/"/>
-	<classpathentry kind="con" path="org.eclipse.buildship.core.gradleclasspathcontainer"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11/">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-assimp.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-assimp-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-assimp-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-assimp-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-glfw.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-glfw-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-glfw-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-glfw-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-openal.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-openal-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-openal-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-openal-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-stb.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-stb-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-stb-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-stb-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vma.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vma-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vma-natives-linux.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vma-sources.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vulkan.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vulkan-javadoc.jar"/>
+	<classpathentry kind="lib" path="/home/samhe/Documents/Fabricor/lwjgl-release-3.2.1/lwjgl-vulkan-sources.jar"/>
 	<classpathentry kind="output" path="bin/default"/>
 </classpath>
