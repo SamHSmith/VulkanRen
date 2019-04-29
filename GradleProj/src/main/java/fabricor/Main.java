@@ -5,6 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 import javax.management.RuntimeErrorException;
 
@@ -25,6 +26,9 @@ import org.lwjgl.vulkan.VkInstance;
 import org.lwjgl.vulkan.VkInstanceCreateInfo;
 import org.lwjgl.vulkan.VkLayerProperties;
 import org.lwjgl.vulkan.VkPhysicalDevice;
+import org.lwjgl.vulkan.VkPhysicalDeviceFeatures;
+import org.lwjgl.vulkan.VkPhysicalDeviceProperties;
+import org.lwjgl.vulkan.VkQueueFamilyProperties;
 
 public class Main {
 
@@ -39,57 +43,106 @@ public class Main {
 		}
 	};
 
+	static long window = 0;
+	static long debugCallbackHandle = 0;
+	static VkInstance inst;
+	static VkDevice device;
+
 	public static void main(String[] args) {
 		if (args.length > 0 && args[0].contentEquals("debug"))
 			enableValidationLayers = true;
 
+		CreateGLFWWindow();
+		inst = createVkInstance();
+		if (enableValidationLayers)
+			debugCallbackHandle = SetUpDebugLogs(inst, EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT
+					| EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT | EXTDebugReport.VK_DEBUG_REPORT_DEBUG_BIT_EXT);
+
+		VkPhysicalDevice physicalDevice = PickPhysicalDevice(inst);
+		device=CreateLogicalDevice(physicalDevice);
+
+		while (!GLFW.glfwWindowShouldClose(window)) {
+			GLFW.glfwPollEvents();
+		}
+
+		EXTDebugReport.vkDestroyDebugReportCallbackEXT(inst, debugCallbackHandle, null);
+		VK10.vkDestroyInstance(inst, null);
+		GLFW.glfwDestroyWindow(window);
+		GLFW.glfwTerminate();
+	}
+	private static VkDevice CreateLogicalDevice(VkPhysicalDevice dev) {
+		
+	}
+
+	private static void CreateGLFWWindow() {
 		if (!GLFW.glfwInit()) {
 			throw new RuntimeException("Failed to initialize GLFW");
 		}
 
 		GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
 		GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE);
-		long window = GLFW.glfwCreateWindow(800, 600, "Vulkan Window", 0, 0);
-
-		VkInstance inst = createVkInstance();
-		final long debugCallbackHandle = SetUpDebugLogs(inst,
-				EXTDebugReport.VK_DEBUG_REPORT_ERROR_BIT_EXT |
-				EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT |
-				EXTDebugReport.VK_DEBUG_REPORT_DEBUG_BIT_EXT);
-		VkPhysicalDevice physicalDevice=PickPhysicalDevice(inst);
-		
-		
-
-		while (!GLFW.glfwWindowShouldClose(window)) {
-			GLFW.glfwPollEvents();
-		}
-
-	    EXTDebugReport.vkDestroyDebugReportCallbackEXT(inst, debugCallbackHandle, null);
-		VK10.vkDestroyInstance(inst, null);
-		GLFW.glfwDestroyWindow(window);
-		GLFW.glfwTerminate();
+		window = GLFW.glfwCreateWindow(800, 600, "Vulkan Window", 0, 0);
 	}
-	/*
-	private static VkDevice CreateLogicalDevice() {
-		
-	}
-	*/
-	
+
 	private static VkPhysicalDevice PickPhysicalDevice(VkInstance inst) {
-		int[] deviceCount=new int[1];
-		int err =VK10.vkEnumeratePhysicalDevices(inst, deviceCount, null);
-		if(err !=VK10.VK_SUCCESS|| deviceCount[0]==0) {
+		int[] deviceCount = new int[1];
+		int err = VK10.vkEnumeratePhysicalDevices(inst, deviceCount, null);
+		if (err != VK10.VK_SUCCESS || deviceCount[0] == 0) {
 			throw new RuntimeException("Failed to find GPUs with Vulkan support!");
 		}
 		PointerBuffer pPhysicalDevices = MemoryUtil.memAllocPointer(deviceCount[0]);
 		err = VK10.vkEnumeratePhysicalDevices(inst, deviceCount, pPhysicalDevices);
-		if(err != VK10.VK_SUCCESS)
+		if (err != VK10.VK_SUCCESS)
 			throw new RuntimeException("Failed to get physical devices.");
-		
-		long device=pPhysicalDevices.get(0);
+
+		long device = 0;
+
+		for (int i = 0; i < pPhysicalDevices.capacity(); i++) {
+			if (EvaluateDevice(pPhysicalDevices.get(i))) {
+				device = pPhysicalDevices.get(i);
+				break;
+			}
+		}
+		if (device == 0) {
+			throw new RuntimeException("Could not find suitible physical device for vulkan.");
+		}
+
 		pPhysicalDevices.free();
-		//TODO Pick best device not first.
-		return new VkPhysicalDevice(device,inst);
+		// TODO Pick best device not first.
+		return new VkPhysicalDevice(device, inst);
+	}
+
+	private static boolean EvaluateDevice(long device) {
+		boolean Approved=true;
+		VkPhysicalDevice dev = new VkPhysicalDevice(device, inst);
+		VkPhysicalDeviceProperties prop = VkPhysicalDeviceProperties.calloc();
+		VK10.vkGetPhysicalDeviceProperties(dev, prop);
+		VkPhysicalDeviceFeatures feat= VkPhysicalDeviceFeatures.calloc();
+		VK10.vkGetPhysicalDeviceFeatures(dev, feat);
+		
+		if (prop.apiVersion() < 4198490) {
+			Approved=false;
+		}
+		Approved=FindQueueFamilies(dev).IsComplete();
+		
+		prop.free();
+		feat.free();
+		return Approved;
+	}
+	
+	private static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice dev) {
+		int[] queueFamCount = new int[1];
+		VK10.vkGetPhysicalDeviceQueueFamilyProperties(dev, queueFamCount, null);
+		
+		VkQueueFamilyProperties.Buffer fams=VkQueueFamilyProperties.calloc(queueFamCount[0]);
+		VK10.vkGetPhysicalDeviceQueueFamilyProperties(dev, queueFamCount, fams);
+		QueueFamilyIndices indices=new QueueFamilyIndices();
+		for (int i = 0; i < fams.capacity(); i++) {
+			if((fams.get(i).queueFlags()&VK10.VK_QUEUE_GRAPHICS_BIT )!=0) {
+				indices.indices.add(i);
+			}
+		}
+		return indices;
 	}
 
 	private static long SetUpDebugLogs(VkInstance inst, int flags) {
@@ -97,7 +150,7 @@ public class Main {
 				.sType(EXTDebugReport.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT).pNext(0)
 				.pfnCallback(debugCallback).flags(flags).pUserData(0);
 		LongBuffer pCallback = MemoryUtil.memAllocLong(1);
-		
+
 		int err = EXTDebugReport.vkCreateDebugReportCallbackEXT(inst, dgbCInfo, null, pCallback);
 		long callbackHandle = pCallback.get(0);
 		MemoryUtil.memFree(pCallback);
@@ -194,4 +247,12 @@ public class Main {
 		return vk;
 	}
 
+}
+
+class QueueFamilyIndices{
+	public ArrayList<Integer> indices=new ArrayList<Integer>();
+	
+	public boolean IsComplete() {
+		return !indices.isEmpty();
+	}
 }
