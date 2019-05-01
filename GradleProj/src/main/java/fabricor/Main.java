@@ -6,6 +6,9 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Iterator;
+
+import javax.management.RuntimeErrorException;
 
 import org.checkerframework.checker.units.qual.kg;
 import org.lwjgl.PointerBuffer;
@@ -25,6 +28,7 @@ import org.lwjgl.vulkan.VkDeviceCreateInfo;
 import org.lwjgl.vulkan.VkDeviceQueueCreateInfo;
 import org.lwjgl.vulkan.VkExtensionProperties;
 import org.lwjgl.vulkan.VkExtent2D;
+import org.lwjgl.vulkan.VkImageViewCreateInfo;
 import org.lwjgl.vulkan.VkInstance;
 import org.lwjgl.vulkan.VkInstanceCreateInfo;
 import org.lwjgl.vulkan.VkLayerProperties;
@@ -35,6 +39,7 @@ import org.lwjgl.vulkan.VkQueue;
 import org.lwjgl.vulkan.VkQueueFamilyProperties;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.lwjgl.vulkan.VkSurfaceFormatKHR;
+import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
 
 public class Main {
 
@@ -49,13 +54,17 @@ public class Main {
 			return 0;
 		}
 	};
-	
-	static int Width=1600,Height=900;
-	static int RenderWidth=1600,RenderHeight=900;
+
+	static int Width = 1600, Height = 900;
 
 	static long window = 0;
 	static long debugCallbackHandle = 0;
 	static long windowSurface = 0;
+	static long swapChain = 0;
+	static long[] swapChainImages = new long[0];
+	static long[] swapChainImageViews = new long[0];
+	static VkSurfaceFormatKHR swapChainFormat;
+	static VkExtent2D swapChainExtent;
 	static VkInstance inst;
 	static VkDevice device;
 	static VkQueue graphicsQueue;
@@ -79,13 +88,21 @@ public class Main {
 					| EXTDebugReport.VK_DEBUG_REPORT_WARNING_BIT_EXT | EXTDebugReport.VK_DEBUG_REPORT_DEBUG_BIT_EXT);
 		CreateGLFWWindow();
 
-		VkPhysicalDevice physicalDevice = PickPhysicalDevice(inst);
-		device = CreateLogicalDevice(physicalDevice);
+		VkPhysicalDevice physicalDevice = PickPhysicalDevice(inst, windowSurface);
+
+		device = CreateLogicalDevice(physicalDevice, windowSurface);
+
+		swapChain = CreateSwapChain(physicalDevice, windowSurface);
+
+		createSwapChainImages();
 
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
 		}
 
+		for (int i = 0; i < swapChainImageViews.length; i++) {
+			VK10.vkDestroyImageView(device, swapChainImageViews[i], null);
+		}
 		VK10.vkDestroyDevice(device, null);
 		EXTDebugReport.vkDestroyDebugReportCallbackEXT(inst, debugCallbackHandle, null);
 		VK10.vkDestroyInstance(inst, null);
@@ -94,8 +111,8 @@ public class Main {
 		deviceExtensions.free();
 	}
 
-	private static VkDevice CreateLogicalDevice(VkPhysicalDevice dev) {
-		QueueFamilyIndices ind = FindQueueFamilies(dev);
+	private static VkDevice CreateLogicalDevice(VkPhysicalDevice dev, long surface) {
+		QueueFamilyIndices ind = FindQueueFamilies(dev, surface);
 
 		VkDeviceQueueCreateInfo queueCreate = VkDeviceQueueCreateInfo.calloc();
 		queueCreate.sType(VK10.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO).queueFamilyIndex(ind.graphics.get(0));
@@ -149,7 +166,84 @@ public class Main {
 			throw new RuntimeException("Failed to create window Surface!");
 		}
 		windowSurface = surface[0];
+
+	}
+
+	private static long CreateSwapChain(VkPhysicalDevice dev, long surface) {
+		SwapChainSupportDetails details = SwapChainSupport(dev);
+
+		VkSurfaceCapabilitiesKHR cap = details.capabilities;
+		int presentMode = ChooseSwapPresentMode(details.presentModes);
+		VkSurfaceFormatKHR format = details.formats.get(ChooseSwapSurfaceFormat(details.formats));
+		VkExtent2D extent = ChooseSwapExtent(cap);
+		int swapChainImageCount = cap.minImageCount() + 1;
+		if (cap.maxImageCount() > 0 && swapChainImageCount > cap.maxImageCount())
+			swapChainImageCount = cap.maxImageCount();
+
+		VkSwapchainCreateInfoKHR swapCreate = VkSwapchainCreateInfoKHR.calloc();
+		swapCreate.sType(VkSwapchainCreateInfoKHR.STYPE).surface(surface).minImageCount(swapChainImageCount)
+				.imageFormat(format.format()).imageColorSpace(format.colorSpace()).imageExtent(extent)
+				.imageArrayLayers(1).imageUsage(VK10.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+
+		QueueFamilyIndices indicies = FindQueueFamilies(dev, surface);
+		IntBuffer queueFamInds = MemoryUtil.memCallocInt(2);
+		queueFamInds.put(indicies.graphics.get(0));
+		queueFamInds.put(indicies.present.get(0));
+
+		if (indicies.graphics.get(0) != indicies.present.get(0)) {
+			swapCreate.imageSharingMode(VK10.VK_SHARING_MODE_CONCURRENT).pQueueFamilyIndices(queueFamInds);
+		} else {
+			swapCreate.imageSharingMode(VK10.VK_SHARING_MODE_EXCLUSIVE);
+		}
+
+		swapCreate.preTransform(cap.currentTransform()).compositeAlpha(KHRSurface.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+				.presentMode(presentMode).clipped(true).oldSwapchain(VK10.VK_NULL_HANDLE);
+		long[] pSwapchain = new long[1];
+		KHRSwapchain.vkCreateSwapchainKHR(device, swapCreate, null, pSwapchain);
+
+		details.Free();
+		extent.free();
+		swapCreate.free();
 		
+		Main.swapChainFormat=format;
+		Main.swapChainExtent=extent;
+		
+		return pSwapchain[0];
+	}
+
+	private static void createSwapChainImages() {
+		int[] imgCount = new int[1];
+		KHRSwapchain.vkGetSwapchainImagesKHR(device, swapChain, imgCount, null);
+		swapChainImages = new long[imgCount[0]];
+		KHRSwapchain.vkGetSwapchainImagesKHR(device, swapChain, imgCount, swapChainImages);
+		
+		swapChainImageViews=new long[swapChainImages.length];
+		
+		for (int i = 0; i < swapChainImages.length; i++) {
+			VkImageViewCreateInfo createInfo=VkImageViewCreateInfo.malloc();
+			createInfo.sType(VkImageViewCreateInfo.STYPE)
+			.image(swapChainImages[i])
+			.viewType(VK10.VK_IMAGE_VIEW_TYPE_2D)
+			.components().r(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
+			createInfo.components().g(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
+			createInfo.components().b(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
+			createInfo.components().a(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
+			createInfo.subresourceRange().aspectMask(VK10.VK_IMAGE_ASPECT_COLOR_BIT);
+			createInfo.subresourceRange().baseMipLevel(0);
+			createInfo.subresourceRange().levelCount(1);
+			createInfo.subresourceRange().baseArrayLayer(0);
+			createInfo.subresourceRange().layerCount(0);
+			
+			long[] imgView=new long[1];
+			
+			if(VK10.vkCreateImageView(device, createInfo, null, imgView)!=VK10.VK_SUCCESS) {
+				throw new RuntimeException("Failed to create image views!");
+			}
+			swapChainImageViews[i]=imgView[0];
+			
+			createInfo.free();
+			
+		}
 	}
 
 	private static int ChooseSwapSurfaceFormat(ArrayList<VkSurfaceFormatKHR> formats) {
@@ -165,36 +259,36 @@ public class Main {
 			return 0;
 		}
 	}
-	
+
 	private static int ChooseSwapPresentMode(ArrayList<Integer> modes) {
-		if(modes.contains(KHRSurface.VK_PRESENT_MODE_FIFO_RELAXED_KHR)) {
+		if (modes.contains(KHRSurface.VK_PRESENT_MODE_FIFO_RELAXED_KHR)) {
 			return KHRSurface.VK_PRESENT_MODE_FIFO_RELAXED_KHR;
 		}
 		return KHRSurface.VK_PRESENT_MODE_IMMEDIATE_KHR;
 	}
-	
+
 	private static VkExtent2D ChooseSwapExtent(VkSurfaceCapabilitiesKHR cap) {
-		if(RenderWidth < cap.minImageExtent().width()) {
-			RenderWidth=cap.minImageExtent().width();
+		if (Width < cap.minImageExtent().width()) {
+			Width = cap.minImageExtent().width();
 		}
-		if(RenderWidth > cap.maxImageExtent().width()) {
-			RenderWidth=cap.maxImageExtent().width();
+		if (Width > cap.maxImageExtent().width()) {
+			Width = cap.maxImageExtent().width();
 		}
-		
-		if(RenderHeight < cap.minImageExtent().height()) {
-			RenderHeight=cap.minImageExtent().height();
+
+		if (Height < cap.minImageExtent().height()) {
+			Height = cap.minImageExtent().height();
 		}
-		if(RenderHeight > cap.maxImageExtent().height()) {
-			RenderHeight=cap.maxImageExtent().height();
+		if (Height > cap.maxImageExtent().height()) {
+			Height = cap.maxImageExtent().height();
 		}
-		
-		VkExtent2D extent=VkExtent2D.calloc();
-		extent.width(RenderWidth).height(RenderHeight);
-		
+
+		VkExtent2D extent = VkExtent2D.calloc();
+		extent.width(Width).height(Height);
+
 		return extent;
 	}
 
-	private static VkPhysicalDevice PickPhysicalDevice(VkInstance inst) {
+	private static VkPhysicalDevice PickPhysicalDevice(VkInstance inst, long surface) {
 		int[] deviceCount = new int[1];
 		int err = VK10.vkEnumeratePhysicalDevices(inst, deviceCount, null);
 		if (err != VK10.VK_SUCCESS || deviceCount[0] == 0) {
@@ -208,7 +302,7 @@ public class Main {
 		long device = 0;
 
 		for (int i = 0; i < pPhysicalDevices.capacity(); i++) {
-			if (EvaluateDevice(pPhysicalDevices.get(i))) {
+			if (EvaluateDevice(pPhysicalDevices.get(i), surface)) {
 				device = pPhysicalDevices.get(i);
 				break;
 			}
@@ -222,7 +316,7 @@ public class Main {
 		return new VkPhysicalDevice(device, inst);
 	}
 
-	private static boolean EvaluateDevice(long device) {
+	private static boolean EvaluateDevice(long device, long surface) {
 		boolean Approved = true;
 		VkPhysicalDevice dev = new VkPhysicalDevice(device, inst);
 		VkPhysicalDeviceProperties prop = VkPhysicalDeviceProperties.calloc();
@@ -233,7 +327,7 @@ public class Main {
 		if (prop.apiVersion() < 4198490) {
 			Approved = false;
 		}
-		Approved &= FindQueueFamilies(dev).IsComplete();
+		Approved &= FindQueueFamilies(dev, surface).IsComplete();
 
 		Approved &= checkDeviceExtensionSupport(dev);
 
@@ -273,18 +367,42 @@ public class Main {
 		return true;
 	}
 
-	private static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice dev) {
+	private static QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice dev, long surface) {
 		int[] queueFamCount = new int[1];
 		VK10.vkGetPhysicalDeviceQueueFamilyProperties(dev, queueFamCount, null);
 
 		VkQueueFamilyProperties.Buffer fams = VkQueueFamilyProperties.calloc(queueFamCount[0]);
 		VK10.vkGetPhysicalDeviceQueueFamilyProperties(dev, queueFamCount, fams);
 		QueueFamilyIndices indices = new QueueFamilyIndices();
+
+		IntBuffer supportsPresent = MemoryUtil.memAllocInt(queueFamCount[0]);
+		for (int i = 0; i < queueFamCount[0]; i++) {
+			supportsPresent.position(i);
+			int err = KHRSurface.vkGetPhysicalDeviceSurfaceSupportKHR(dev, i, surface, supportsPresent);
+			if (err != VK10.VK_SUCCESS) {
+				throw new AssertionError("Failed to physical device surface support.");
+			}
+		}
+
 		for (int i = 0; i < fams.capacity(); i++) {
 			if ((fams.get(i).queueFlags() & VK10.VK_QUEUE_GRAPHICS_BIT) != 0) {
 				indices.graphics.add(i);
 			}
+			if (supportsPresent.get(i) == VK10.VK_TRUE) {
+				indices.present.add(i);
+			}
 		}
+		MemoryUtil.memFree(supportsPresent);
+
+		for (Iterator<Integer> iterator = indices.graphics.iterator(); iterator.hasNext();) {
+			int g = (int) iterator.next();
+			if (indices.present.contains(g)) {
+				indices.graphics.add(0, g);
+				indices.present.add(0, g);
+				return indices;
+			}
+		}
+
 		return indices;
 	}
 
@@ -427,9 +545,10 @@ public class Main {
 
 class QueueFamilyIndices {
 	public ArrayList<Integer> graphics = new ArrayList<Integer>();
+	public ArrayList<Integer> present = new ArrayList<Integer>();
 
 	public boolean IsComplete() {
-		return !graphics.isEmpty();
+		return !graphics.isEmpty() && !present.isEmpty();
 	}
 }
 
