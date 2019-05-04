@@ -99,6 +99,8 @@ public class Main {
 
 		createSwapChainImages();
 
+		createGraphicsPipeline();
+
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
 		}
@@ -114,6 +116,10 @@ public class Main {
 		GLFW.glfwDestroyWindow(window);
 		GLFW.glfwTerminate();
 		deviceExtensions.free();
+	}
+
+	private static void createGraphicsPipeline() {
+
 	}
 
 	private static VkDevice CreateLogicalDevice(VkPhysicalDevice dev,
@@ -247,7 +253,7 @@ public class Main {
 		swapChainImageViews = new long[swapChainImages.length];
 
 		for (int i = 0; i < swapChainImages.length; i++) {
-			VkImageViewCreateInfo createInfo = VkImageViewCreateInfo.malloc();
+			VkImageViewCreateInfo createInfo = VkImageViewCreateInfo.create();
 			createInfo.sType(VkImageViewCreateInfo.STYPE)
 					.image(swapChainImages[i])
 					.viewType(VK10.VK_IMAGE_VIEW_TYPE_2D).components()
@@ -262,16 +268,19 @@ public class Main {
 			createInfo.subresourceRange().baseArrayLayer(0);
 			createInfo.subresourceRange().layerCount(0);
 
-			long[] imgView = new long[1];
+			LongBuffer view = MemoryUtil.memCallocLong(1);
 
 			if (VK10.vkCreateImageView(device, createInfo, null,
-					imgView) != VK10.VK_SUCCESS) {
+					view) != VK10.VK_SUCCESS) {
 				throw new RuntimeException("Failed to create image views!");
 			}
-			swapChainImageViews[i] = imgView[0];
+			System.out.println("did it " + i);
 
+			swapChainImageViews[i] = view.get(0);
+
+			MemoryUtil.memFree(view);
 			createInfo.free();
-
+			System.out.println("done " + i);
 		}
 	}
 
