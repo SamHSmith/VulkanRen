@@ -1,5 +1,6 @@
 package fabricor.main;
 
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -34,6 +35,7 @@ import org.lwjgl.vulkan.VkPhysicalDeviceFeatures;
 import org.lwjgl.vulkan.VkPhysicalDeviceProperties;
 import org.lwjgl.vulkan.VkQueue;
 import org.lwjgl.vulkan.VkQueueFamilyProperties;
+import org.lwjgl.vulkan.VkShaderModuleCreateInfo;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.lwjgl.vulkan.VkSurfaceFormatKHR;
 import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
@@ -119,7 +121,55 @@ public class Main {
 	}
 
 	private static void createGraphicsPipeline() {
+		long[] shader = loadShaderFromClasspath("triangle", device);
+		System.out.println(shader[0]);
+	}
 
+	private static long[] loadShaderFromClasspath(String name, VkDevice dev) {
+		String path = "/" + name + "/";
+		URL vert = Main.class.getResource(path + "vert.spv");
+		URL frag = Main.class.getResource(path + "frag.spv");
+
+		byte[] bytevert = vert.getFile().getBytes();
+		byte[] bytefrag = frag.getFile().getBytes();
+
+		ByteBuffer vertbuff = MemoryUtil.memCalloc(bytevert.length);
+		ByteBuffer fragbuff = MemoryUtil.memCalloc(bytefrag.length);
+
+		vertbuff.put(bytevert);
+		vertbuff.flip();
+		fragbuff.put(bytevert);
+		fragbuff.flip();
+
+		long[] modules = new long[2];
+
+		int err;
+		VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo
+				.calloc()
+				.sType(VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+				.pNext(0).pCode(vertbuff).flags(0);
+		LongBuffer pShaderModule = MemoryUtil.memAllocLong(1);
+		err = VK10.vkCreateShaderModule(dev, moduleCreateInfo, null,
+				pShaderModule);
+		modules[0] = pShaderModule.get(0);
+		MemoryUtil.memFree(pShaderModule);
+		if (err != VK10.VK_SUCCESS) {
+			throw new AssertionError("Failed to create shader module: " + err);
+		}
+
+		moduleCreateInfo = VkShaderModuleCreateInfo.calloc()
+				.sType(VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+				.pNext(0).pCode(fragbuff).flags(0);
+		pShaderModule = MemoryUtil.memAllocLong(1);
+		err = VK10.vkCreateShaderModule(dev, moduleCreateInfo, null,
+				pShaderModule);
+		modules[1] = pShaderModule.get(0);
+		MemoryUtil.memFree(pShaderModule);
+		if (err != VK10.VK_SUCCESS) {
+			throw new AssertionError("Failed to create shader module: " + err);
+		}
+
+		return modules;
 	}
 
 	private static VkDevice CreateLogicalDevice(VkPhysicalDevice dev,
