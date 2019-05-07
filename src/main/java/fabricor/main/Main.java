@@ -28,6 +28,7 @@ import org.lwjgl.vulkan.VkDeviceCreateInfo;
 import org.lwjgl.vulkan.VkDeviceQueueCreateInfo;
 import org.lwjgl.vulkan.VkExtensionProperties;
 import org.lwjgl.vulkan.VkExtent2D;
+import org.lwjgl.vulkan.VkFramebufferCreateInfo;
 import org.lwjgl.vulkan.VkGraphicsPipelineCreateInfo;
 import org.lwjgl.vulkan.VkImageViewCreateInfo;
 import org.lwjgl.vulkan.VkInstance;
@@ -81,6 +82,7 @@ public class Main {
 	static long renderPass = 0;
 	static long graphicsPipeline = 0;
 	static long pipelineLayout = 0;
+	static long[] swapChainFrameBuffers = new long[0];
 	static long[] swapChainImages = new long[0];
 	static long[] swapChainImageViews = new long[0];
 	static VkSurfaceFormatKHR swapChainFormat;
@@ -126,8 +128,10 @@ public class Main {
 		System.out.println("Created RenderPass");
 
 		graphicsPipeline = createGraphicsPipeline();
-		
+
 		System.out.println("Created GraphicsPipeline");
+
+		createFrameBuffers();
 
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
@@ -142,7 +146,9 @@ public class Main {
 		VK10.vkDestroyPipelineLayout(device, pipelineLayout, null);
 		VK10.vkDestroyRenderPass(device, renderPass, null);
 		for (int i = 0; i < swapChainImageViews.length; i++) {
+			VK10.vkDestroyFramebuffer(device, swapChainFrameBuffers[i], null);
 			VK10.vkDestroyImageView(device, swapChainImageViews[i], null);
+
 		}
 		KHRSwapchain.vkDestroySwapchainKHR(device, swapChain, null);
 		VK10.vkDestroyDevice(device, null);
@@ -154,9 +160,30 @@ public class Main {
 		GLFW.glfwTerminate();
 	}
 
+	private static void createFrameBuffers() {
+		swapChainFrameBuffers = new long[swapChainImageViews.length];
+		for (int i = 0; i < swapChainFrameBuffers.length; i++) {
+			LongBuffer attach = MemoryUtil.memCallocLong(1);
+			attach.put(swapChainImageViews[i]);
+			attach.flip();
+
+			VkFramebufferCreateInfo framebuffInfo = VkFramebufferCreateInfo.create();
+			framebuffInfo.sType(VkFramebufferCreateInfo.STYPE).renderPass(renderPass).pAttachments(attach)
+					.width(swapChainExtent.width()).height(swapChainExtent.height()).layers(1);
+
+			LongBuffer p = MemoryUtil.memCallocLong(1);
+			if (VK10.vkCreateFramebuffer(device, framebuffInfo, null, p) != VK10.VK_SUCCESS) {
+				throw new RuntimeException("Failed to create framebuffer!");
+			}
+			swapChainFrameBuffers[i] = p.get(0);
+			MemoryUtil.memFree(attach);
+			MemoryUtil.memFree(p);
+		}
+	}
+
 	private static long createRenderPass() {
 		VkAttachmentDescription colorAttachment = VkAttachmentDescription.create();
-		colorAttachment.format(swapChainFormat.format()).samples(1).loadOp(VK10.VK_ATTACHMENT_LOAD_OP_CLEAR)
+		colorAttachment.format(swapChainFormat.format()).samples(VK10.VK_SAMPLE_COUNT_1_BIT).loadOp(VK10.VK_ATTACHMENT_LOAD_OP_CLEAR)
 				.storeOp(VK10.VK_ATTACHMENT_STORE_OP_STORE).stencilLoadOp(VK10.VK_ATTACHMENT_LOAD_OP_DONT_CARE)
 				.stencilStoreOp(VK10.VK_ATTACHMENT_STORE_OP_DONT_CARE).initialLayout(VK10.VK_IMAGE_LAYOUT_UNDEFINED)
 				.finalLayout(KHRSwapchain.VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -449,7 +476,8 @@ public class Main {
 
 		for (int i = 0; i < swapChainImages.length; i++) {
 			VkImageViewCreateInfo createInfo = VkImageViewCreateInfo.create();
-			createInfo.sType(VkImageViewCreateInfo.STYPE).image(swapChainImages[i]).viewType(VK10.VK_IMAGE_VIEW_TYPE_2D)
+			createInfo.sType(VkImageViewCreateInfo.STYPE).image(swapChainImages[i])
+			.viewType(VK10.VK_IMAGE_VIEW_TYPE_2D).format(swapChainFormat.format())
 					.components().r(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
 			createInfo.components().g(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
 			createInfo.components().b(VK10.VK_COMPONENT_SWIZZLE_IDENTITY);
@@ -731,7 +759,6 @@ public class Main {
 		if (enableValidationLayers) {
 			debugExtensionCount = 1;
 		}
-		System.out.println(glfwExtensions);
 		PointerBuffer extensions = MemoryUtil.memCallocPointer(glfwExtensions.capacity() + debugExtensionCount);
 		for (int i = 0; i < glfwExtensions.capacity(); i++) {
 			extensions.put(glfwExtensions.get());
