@@ -1,9 +1,14 @@
 package fabricor.main;
 
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -25,7 +30,6 @@ import org.lwjgl.vulkan.VK11;
 import org.lwjgl.vulkan.VkApplicationInfo;
 import org.lwjgl.vulkan.VkAttachmentDescription;
 import org.lwjgl.vulkan.VkAttachmentReference;
-import org.lwjgl.vulkan.VkBufferCreateInfo;
 import org.lwjgl.vulkan.VkClearValue;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkCommandBufferAllocateInfo;
@@ -78,7 +82,6 @@ import org.lwjgl.vulkan.VkPipelineLayoutCreateInfo;
 import org.lwjgl.vulkan.VkPipelineMultisampleStateCreateInfo;
 import org.lwjgl.vulkan.VkPipelineRasterizationStateCreateInfo;
 import org.lwjgl.vulkan.VkPipelineShaderStageCreateInfo;
-import org.lwjgl.vulkan.VkPipelineVertexInputStateCreateInfo;
 import org.lwjgl.vulkan.VkPipelineViewportStateCreateInfo;
 import org.lwjgl.vulkan.VkPresentInfoKHR;
 import org.lwjgl.vulkan.VkQueue;
@@ -96,10 +99,10 @@ import org.lwjgl.vulkan.VkSubresourceLayout;
 import org.lwjgl.vulkan.VkSurfaceCapabilitiesKHR;
 import org.lwjgl.vulkan.VkSurfaceFormatKHR;
 import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
-import org.lwjgl.vulkan.VkVertexInputAttributeDescription;
-import org.lwjgl.vulkan.VkVertexInputBindingDescription;
 import org.lwjgl.vulkan.VkViewport;
 import org.lwjgl.vulkan.VkWriteDescriptorSet;
+
+import rendering.MasterRenderer;
 
 public class Main {
 
@@ -110,7 +113,7 @@ public class Main {
     private static final boolean USE_STAGING_BUFFER = true;
 
     private static final int DEMO_TEXTURE_COUNT    = 1;
-    private static final int VERTEX_BUFFER_BIND_ID = 0;
+    
 
     private static final ByteBuffer KHR_swapchain    = MemoryUtil.memUTF8(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
     private static final ByteBuffer EXT_debug_report = MemoryUtil.memUTF8(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -297,7 +300,7 @@ private VkQueue  queue;
 private int format;
 private int color_space;
 
-private VkPhysicalDeviceMemoryProperties memory_properties = VkPhysicalDeviceMemoryProperties.malloc();
+private static VkPhysicalDeviceMemoryProperties memory_properties = VkPhysicalDeviceMemoryProperties.malloc();
 
 private long            cmd_pool;
 private VkCommandBuffer draw_cmd;
@@ -313,7 +316,7 @@ private Depth depth = new Depth();
 
 private TextureObject[] textures = new TextureObject[DEMO_TEXTURE_COUNT];
 
-private Vertices vertices = new Vertices();
+private RenderModel vertices = new RenderModel();
 
 private long desc_layout;
 private long pipeline_layout;
@@ -371,7 +374,7 @@ private final VkDebugReportCallbackEXT dbgFunc = VkDebugReportCallbackEXT.create
 
 
 
-private static void check(int errcode) {
+public static void check(int errcode) {
     if (errcode != 0) {
         throw new IllegalStateException(String.format("Vulkan error [0x%X]", errcode));
     }
@@ -629,7 +632,7 @@ private void demo_create_window() {
 private void demo_init_device() {
     try (MemoryStack stack = MemoryStack.stackPush()) {
         VkDeviceQueueCreateInfo.Buffer queue = VkDeviceQueueCreateInfo.mallocStack(1, stack)
-            .sType(VkDeviceQueueCreateInfo.STYPE)
+            .sType(VK10.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO)
             .pNext(0)
             .flags(0)
             .queueFamilyIndex(graphics_queue_node_index)
@@ -813,8 +816,8 @@ private void demo_set_image_layout(long image, final int aspectMask, int old_ima
                 break;
         }
 
-        int src_stages  = VK10.VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        int dest_stages = VK10.VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        int src_stages  = VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        int dest_stages = VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
         VK10.vkCmdPipelineBarrier(setup_cmd, src_stages, dest_stages, 0, null, null, image_memory_barrier);
     }
@@ -965,7 +968,7 @@ private static class Depth {
     long view;
 }
 
-private boolean memory_type_from_properties(int typeBits, int requirements_mask, VkMemoryAllocateInfo mem_alloc) {
+public static boolean memory_type_from_properties(int typeBits, int requirements_mask, VkMemoryAllocateInfo mem_alloc) {
     // Search memtypes to find first index with those properties
     for (int i = 0; i < VK10.VK_MAX_MEMORY_TYPES; i++) {
         if ((typeBits & 1) == 1) {
@@ -1151,7 +1154,7 @@ private void demo_prepare_texture_image(
             VK10.vkUnmapMemory(device, tex_obj.mem);
         }
 
-        tex_obj.imageLayout = VK10.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        tex_obj.imageLayout = VK10.VK_IMAGE_LAYOUT_GENERAL;
         demo_set_image_layout(tex_obj.image, VK10.VK_IMAGE_ASPECT_COLOR_BIT, VK10.VK_IMAGE_LAYOUT_PREINITIALIZED, tex_obj.imageLayout, VK10.VK_ACCESS_HOST_WRITE_BIT);
         /* setting the image layout does not reference the actual memory so no need
          * to add a mem ref */
@@ -1356,80 +1359,9 @@ private void demo_prepare_textures() {
     }
 }
 
-private static class Vertices {
-    long buf;
-    long mem;
-
-    VkPipelineVertexInputStateCreateInfo     vi          = VkPipelineVertexInputStateCreateInfo.calloc();
-    VkVertexInputBindingDescription.Buffer   vi_bindings = VkVertexInputBindingDescription.calloc(1);
-    VkVertexInputAttributeDescription.Buffer vi_attrs    = VkVertexInputAttributeDescription.calloc(2);
-}
 
 private void demo_prepare_vertices() {
-    float[][] vb = {
-        /*      position             texcoord */
-        {-1.0f, -1.0f, 0.25f, 0.0f, 0.0f},
-        {1.0f, -1.0f, 0.25f, 1.0f, 0.0f},
-        {0.0f, 1.0f, 1.0f, 0.5f, 1.0f},
-    };
-
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        VkBufferCreateInfo buf_info = VkBufferCreateInfo.callocStack(stack)
-            .sType(VK10.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO)
-            .size(/*sizeof(vb)*/ vb.length * vb[0].length * 4)
-            .usage(VK10.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
-            .sharingMode(VK10.VK_SHARING_MODE_EXCLUSIVE);
-
-        check(VK10.vkCreateBuffer(device, buf_info, null, lp));
-        vertices.buf = lp.get(0);
-
-        VkMemoryRequirements mem_reqs = VkMemoryRequirements.mallocStack(stack);
-        VK10.vkGetBufferMemoryRequirements(device, vertices.buf, mem_reqs);
-
-        VkMemoryAllocateInfo mem_alloc = VkMemoryAllocateInfo.callocStack(stack)
-            .sType(VK10.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO)
-            .allocationSize(mem_reqs.size());
-        boolean pass = memory_type_from_properties(mem_reqs.memoryTypeBits(), VK10.VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK10.VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, mem_alloc);
-        assert (pass);
-
-        check(VK10.vkAllocateMemory(device, mem_alloc, null, lp));
-        vertices.mem = lp.get(0);
-
-        check(VK10.vkMapMemory(device, vertices.mem, 0, mem_alloc.allocationSize(), 0, pp));
-        FloatBuffer data = pp.getFloatBuffer(0, ((int)mem_alloc.allocationSize()) >> 2);
-        data
-            .put(vb[0])
-            .put(vb[1])
-            .put(vb[2])
-            .flip();
-    }
-
-    VK10.vkUnmapMemory(device, vertices.mem);
-
-    check(VK10.vkBindBufferMemory(device, vertices.buf, vertices.mem, 0));
-
-    vertices.vi
-        .sType(VK10.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO)
-        .pNext(0)
-        .pVertexBindingDescriptions(vertices.vi_bindings)
-        .pVertexAttributeDescriptions(vertices.vi_attrs);
-
-    vertices.vi_bindings.get(0)
-        .binding(VERTEX_BUFFER_BIND_ID)
-        .stride(vb[0].length * 4)
-        .inputRate(VK10.VK_VERTEX_INPUT_RATE_VERTEX);
-
-    vertices.vi_attrs.get(0)
-        .binding(VERTEX_BUFFER_BIND_ID)
-        .location(0)
-        .format(VK10.VK_FORMAT_R32G32B32_SFLOAT)
-        .offset(0);
-
-    vertices.vi_attrs.get(1)
-        .binding(VERTEX_BUFFER_BIND_ID)
-        .location(1)
-        .format(VK10.VK_FORMAT_R32G32_SFLOAT)
-        .offset(4 * 3);
+    vertices.Prepare(device);
 }
 
 private void demo_prepare_descriptor_layout() {
@@ -1508,23 +1440,65 @@ private void demo_prepare_render_pass() {
     }
 }
 
-private long demo_prepare_shader_module(byte[] code) {
-    try (MemoryStack stack = MemoryStack.stackPush()) {
-        ByteBuffer pCode = MemoryUtil.memAlloc(code.length).put(code);
-        pCode.flip();
 
-        VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.mallocStack(stack)
-            .sType(VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
-            .pNext(0)
-            .flags(0)
-            .pCode(pCode);
 
-        check(VK10.vkCreateShaderModule(device, moduleCreateInfo, null, lp));
+private static long[] loadShaderFromClasspath(String name, VkDevice dev) {
+	String path = "/" + name + "/";
+	URL vert = Main.class.getResource(path + "vert.spv");
+	URL frag = Main.class.getResource(path + "frag.spv");
 
-        MemoryUtil.memFree(pCode);
+	byte[] bytevert = new byte[1];
+	byte[] bytefrag = new byte[1];
+	try {
+		bytevert = Files.readAllBytes(Paths.get(vert.toURI()));
+		bytefrag = Files.readAllBytes(Paths.get(frag.toURI()));
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (URISyntaxException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
+	ByteBuffer vertbuff = MemoryUtil.memCalloc(bytevert.length);
+	
+	ByteBuffer fragbuff = MemoryUtil.memCalloc(bytefrag.length);
+	
+	
+	for (int i = 0; i < bytevert.length; i++) {
+		vertbuff.put(bytevert[i]);
+	}
+	vertbuff.flip();
+	
+	for (int i = 0; i < bytefrag.length; i++) {
+		fragbuff.put(bytefrag[i]);
+	}
+	fragbuff.flip();
 
-        return lp.get(0);
-    }
+	long[] modules = new long[2];
+
+	int err;
+	VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.calloc().sType(VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+			.pNext(0).pCode(vertbuff).flags(0);
+	LongBuffer pShaderModule = MemoryUtil.memAllocLong(1);
+	err = VK10.vkCreateShaderModule(dev, moduleCreateInfo, null, pShaderModule);
+	modules[0] = pShaderModule.get(0);
+	MemoryUtil.memFree(pShaderModule);
+	if (err != VK10.VK_SUCCESS) {
+		throw new AssertionError("Failed to create vertex shader module: " + err);
+	}
+
+	moduleCreateInfo = VkShaderModuleCreateInfo.calloc().sType(VK10.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO)
+			.pNext(0).pCode(fragbuff).flags(0);
+	pShaderModule = MemoryUtil.memAllocLong(1);
+	err = VK10.vkCreateShaderModule(dev, moduleCreateInfo, null, pShaderModule);
+	modules[1] = pShaderModule.get(0);
+	MemoryUtil.memFree(pShaderModule);
+	if (err != VK10.VK_SUCCESS) {
+		throw new AssertionError("Failed to create fragment shader module: " + err);
+	}
+
+	return modules;
 }
 
 private void demo_prepare_pipeline() {
@@ -1538,16 +1512,18 @@ private void demo_prepare_pipeline() {
         // Two stages: vs and fs
         ByteBuffer main = stack.UTF8("main");
 
+        long[] shaders=loadShaderFromClasspath("triangle", device);
+        
         VkPipelineShaderStageCreateInfo.Buffer shaderStages = VkPipelineShaderStageCreateInfo.callocStack(2, stack);
         shaderStages.get(0)
             .sType(VK10.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
             .stage(VK10.VK_SHADER_STAGE_VERTEX_BIT)
-            .module(vert_shader_module = demo_prepare_shader_module(vertShaderCode))
+            .module(vert_shader_module = shaders[0])
             .pName(main);
         shaderStages.get(1)
             .sType(VK10.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO)
             .stage(VK10.VK_SHADER_STAGE_FRAGMENT_BIT)
-            .module(frag_shader_module = demo_prepare_shader_module(fragShaderCode))
+            .module(frag_shader_module = shaders[1])
             .pName(main);
 
         VkPipelineDepthStencilStateCreateInfo ds = VkPipelineDepthStencilStateCreateInfo.callocStack(stack)
@@ -1812,8 +1788,8 @@ private void demo_draw_build_cmd() {
 					    .layerCount(1);
 				}
 			});
-
-        VK10.vkCmdPipelineBarrier(draw_cmd, VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK10.VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, null, null, image_memory_barrier);
+        
+        VK10.vkCmdPipelineBarrier(draw_cmd, VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, null, null, image_memory_barrier);
         VK10.vkCmdBeginRenderPass(draw_cmd, rp_begin, VK10.VK_SUBPASS_CONTENTS_INLINE);
 
         VK10.vkCmdBindPipeline(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -1847,11 +1823,8 @@ private void demo_draw_build_cmd() {
 			});
         VK10.vkCmdSetScissor(draw_cmd, 0, scissor);
 
-        lp.put(0, 0);
-        LongBuffer pBuffers = stack.longs(vertices.buf);
-        VK10.vkCmdBindVertexBuffers(draw_cmd, VERTEX_BUFFER_BIND_ID, pBuffers, lp);
-
-        VK10.vkCmdDraw(draw_cmd, 3, 1, 0, 0);
+        MasterRenderer.MasterRender(stack, draw_cmd, vertices);
+        
         VK10.vkCmdEndRenderPass(draw_cmd);
 
         VkImageMemoryBarrier.Buffer prePresentBarrier = VkImageMemoryBarrier.mallocStack(1, stack)
@@ -1875,9 +1848,9 @@ private void demo_draw_build_cmd() {
 					    .layerCount(1);
 				}
 			});
-
+        
         VK10.vkCmdPipelineBarrier(draw_cmd, VK10.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK10.VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, null, null, prePresentBarrier);
-
+        
         check(VK10.vkEndCommandBuffer(draw_cmd));
     }
 }
@@ -1987,8 +1960,10 @@ private void demo_resize() {
     VK10.vkDestroyPipelineLayout(device, pipeline_layout, null);
     VK10.vkDestroyDescriptorSetLayout(device, desc_layout, null);
 
-    VK10.vkDestroyBuffer(device, vertices.buf, null);
-    VK10.vkFreeMemory(device, vertices.mem, null);
+    VK10.vkDestroyBuffer(device, vertices.vertexBuffer, null);
+    VK10.vkFreeMemory(device, vertices.vertexMemory, null);
+    VK10.vkDestroyBuffer(device, vertices.indexBuffer, null);
+    VK10.vkFreeMemory(device, vertices.indexMemory, null);
 
     for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
     	VK10.vkDestroyImageView(device, textures[i].view, null);
@@ -2060,8 +2035,10 @@ private void demo_cleanup() {
     VK10.vkDestroyPipelineLayout(device, pipeline_layout, null);
     VK10.vkDestroyDescriptorSetLayout(device, desc_layout, null);
 
-    VK10.vkDestroyBuffer(device, vertices.buf, null);
-    VK10.vkFreeMemory(device, vertices.mem, null);
+    VK10.vkDestroyBuffer(device, vertices.vertexBuffer, null);
+    VK10.vkFreeMemory(device, vertices.vertexMemory, null);
+    VK10.vkDestroyBuffer(device, vertices.indexBuffer, null);
+    VK10.vkFreeMemory(device, vertices.indexMemory, null);
     vertices.vi.free();
     vertices.vi_bindings.free();
     vertices.vi_attrs.free();
