@@ -103,6 +103,7 @@ import org.lwjgl.vulkan.VkViewport;
 import org.lwjgl.vulkan.VkWriteDescriptorSet;
 
 import rendering.MasterRenderer;
+import rendering.RenderModel;
 
 public class Main {
 
@@ -286,7 +287,6 @@ private VkQueueFamilyProperties.Buffer queue_props;
 private int   width          = 300;
 private int   height         = 300;
 private float depthStencil   = 1.0f;
-private float depthIncrement = -0.01f;
 
 private long window;
 
@@ -316,9 +316,9 @@ private Depth depth = new Depth();
 
 private TextureObject[] textures = new TextureObject[DEMO_TEXTURE_COUNT];
 
-private RenderModel vertices = new RenderModel();
+private RenderModel vertices;
 
-private long desc_layout;
+private long desc_layout,uniform_layout;
 private long pipeline_layout;
 
 private long render_pass;
@@ -1361,7 +1361,7 @@ private void demo_prepare_textures() {
 
 
 private void demo_prepare_vertices() {
-    vertices.Prepare(device);
+    vertices.Prepare();
 }
 
 private void demo_prepare_descriptor_layout() {
@@ -1381,7 +1381,28 @@ private void demo_prepare_descriptor_layout() {
         LongBuffer layouts = stack.mallocLong(1);
         check(VK10.vkCreateDescriptorSetLayout(device, descriptor_layout, null, layouts));
         desc_layout = layouts.get(0);
+        /*
+        descriptor_layout = VkDescriptorSetLayoutCreateInfo.mallocStack(stack)
+                .sType(VK10.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO)
+                .pNext(0)
+                .flags(0)
+                .pBindings(
+                    VkDescriptorSetLayoutBinding.callocStack(1, stack)
+                        .binding(1)
+                        .descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+                        .descriptorCount(1)
+                        .stageFlags(VK10.VK_SHADER_STAGE_VERTEX_BIT)
+                );
+        
+        layouts = stack.mallocLong(1);
+        check(VK10.vkCreateDescriptorSetLayout(device, descriptor_layout, null, layouts));
+        uniform_layout = layouts.get(0);
+        
+        layouts= stack.mallocLong(2);
+        layouts.put(desc_layout);
+        layouts.put(uniform_layout);
 
+*/
         VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = VkPipelineLayoutCreateInfo.callocStack(stack)
             .sType(VK10.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO)
             .pNext(0)
@@ -1547,7 +1568,7 @@ private void demo_prepare_pipeline() {
         pipeline
             .sType(VK10.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO)
             .pStages(shaderStages)
-            .pVertexInputState(vertices.vi)
+            .pVertexInputState(RenderModel.getVi())
             .pInputAssemblyState(
                 VkPipelineInputAssemblyStateCreateInfo.callocStack(stack)
                     .sType(VK10.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO)
@@ -1698,6 +1719,7 @@ private void demo_prepare() {
             .commandBufferCount(1);
 
         check(VK10.vkAllocateCommandBuffers(device, cmd, pp));
+        MasterRenderer.Init(device, stack);
     }
 
     draw_cmd = new VkCommandBuffer(pp.get(0), device);
@@ -1714,6 +1736,8 @@ private void demo_prepare() {
     demo_prepare_descriptor_set();
 
     demo_prepare_framebuffers();
+    
+    
 }
 
 private void demo_draw_build_cmd() {
@@ -1822,8 +1846,8 @@ private void demo_draw_build_cmd() {
 				}
 			});
         VK10.vkCmdSetScissor(draw_cmd, 0, scissor);
-
-        MasterRenderer.MasterRender(stack, draw_cmd, vertices);
+        
+        MasterRenderer.MasterRender(vertices, draw_cmd);
         
         VK10.vkCmdEndRenderPass(draw_cmd);
 
@@ -1995,14 +2019,6 @@ private void demo_run() {
 
         demo_draw();
 
-        if (depthStencil > 0.99f) {
-            depthIncrement = -0.001f;
-        }
-        if (depthStencil < 0.8f) {
-            depthIncrement = 0.001f;
-        }
-
-        depthStencil += depthIncrement;
 
         c++;
         if (System.nanoTime() - t > 1000 * 1000 * 1000) {
@@ -2035,13 +2051,9 @@ private void demo_cleanup() {
     VK10.vkDestroyPipelineLayout(device, pipeline_layout, null);
     VK10.vkDestroyDescriptorSetLayout(device, desc_layout, null);
 
-    VK10.vkDestroyBuffer(device, vertices.vertexBuffer, null);
-    VK10.vkFreeMemory(device, vertices.vertexMemory, null);
-    VK10.vkDestroyBuffer(device, vertices.indexBuffer, null);
-    VK10.vkFreeMemory(device, vertices.indexMemory, null);
-    vertices.vi.free();
-    vertices.vi_bindings.free();
-    vertices.vi_attrs.free();
+    vertices.freeBuffers();
+    RenderModel.free();
+    
 
     for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
     	VK10.vkDestroyImageView(device, textures[i].view, null);
@@ -2094,7 +2106,7 @@ private void run() {
     demo_init();
     demo_create_window();
     demo_init_vk_swapchain();
-
+    vertices=new RenderModel(device);
     demo_prepare();
     demo_run();
 
