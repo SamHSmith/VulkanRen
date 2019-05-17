@@ -39,6 +39,7 @@ import org.lwjgl.vulkan.VkComponentMapping;
 import org.lwjgl.vulkan.VkDebugReportCallbackCreateInfoEXT;
 import org.lwjgl.vulkan.VkDebugReportCallbackEXT;
 import org.lwjgl.vulkan.VkDebugReportCallbackEXTI;
+import org.lwjgl.vulkan.VkDescriptorBufferInfo;
 import org.lwjgl.vulkan.VkDescriptorImageInfo;
 import org.lwjgl.vulkan.VkDescriptorPoolCreateInfo;
 import org.lwjgl.vulkan.VkDescriptorPoolSize;
@@ -104,6 +105,7 @@ import org.lwjgl.vulkan.VkWriteDescriptorSet;
 
 import rendering.MasterRenderer;
 import rendering.RenderModel;
+import rendering.ShaderBuffer;
 
 public class Main {
 
@@ -169,9 +171,8 @@ private Depth depth = new Depth();
 
 private TextureObject[] textures = new TextureObject[DEMO_TEXTURE_COUNT];
 
-private RenderModel vertices;
 
-private long desc_layout,uniform_layout;
+private long desc_layout;
 private long pipeline_layout;
 
 private long render_pass;
@@ -1213,9 +1214,6 @@ private void demo_prepare_textures() {
 }
 
 
-private void demo_prepare_vertices() {
-    vertices.Prepare();
-}
 
 private void demo_prepare_descriptor_layout() {
     try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -1226,9 +1224,9 @@ private void demo_prepare_descriptor_layout() {
             .pBindings(
                 VkDescriptorSetLayoutBinding.callocStack(1, stack)
                     .binding(0)
-                    .descriptorType(VK10.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .descriptorCount(DEMO_TEXTURE_COUNT)
-                    .stageFlags(VK10.VK_SHADER_STAGE_FRAGMENT_BIT)
+                    .descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                    .descriptorCount(1)
+                    .stageFlags(VK10.VK_SHADER_STAGE_VERTEX_BIT)
             );
 
         LongBuffer layouts = stack.mallocLong(1);
@@ -1489,8 +1487,8 @@ private void demo_prepare_descriptor_pool() {
             .maxSets(1)
             .pPoolSizes(
                 VkDescriptorPoolSize.mallocStack(1, stack)
-                    .type(VK10.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                    .descriptorCount(DEMO_TEXTURE_COUNT)
+                    .type(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                    .descriptorCount(1)
             );
 
         check(VK10.vkCreateDescriptorPool(device, descriptor_pool, null, lp));
@@ -1510,19 +1508,19 @@ private void demo_prepare_descriptor_set() {
         check(VK10.vkAllocateDescriptorSets(device, alloc_info, lp));
         desc_set = lp.get(0);
 
-        VkDescriptorImageInfo.Buffer tex_descs = VkDescriptorImageInfo.callocStack(DEMO_TEXTURE_COUNT, stack);
-        for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-            tex_descs.get(i)
-                .sampler(textures[i].sampler)
-                .imageView(textures[i].view)
-                .imageLayout(VK10.VK_IMAGE_LAYOUT_GENERAL);
-        }
+       
+        ShaderBuffer shbuff=MasterRenderer.GetViewBuffer();
+        VkDescriptorBufferInfo buff = VkDescriptorBufferInfo.create();
+        buff.offset(0)
+        .range(shbuff.localStride)
+        .buffer(shbuff.buffer);
 
         VkWriteDescriptorSet.Buffer write = VkWriteDescriptorSet.callocStack(1, stack)
             .sType(VK10.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET)
             .dstSet(desc_set)
-            .descriptorType(VK10.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-            .pImageInfo(tex_descs);
+            .descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+            .pBufferInfo(VkDescriptorBufferInfo.calloc(1).put(0, buff));
+            
 
         VK10.vkUpdateDescriptorSets(device, write, null);
     }
@@ -1579,8 +1577,8 @@ private void demo_prepare() {
 
     demo_prepare_buffers();
     demo_prepare_depth();
-    demo_prepare_textures();
-    demo_prepare_vertices();
+    //demo_prepare_textures();
+
     demo_prepare_descriptor_layout();
     demo_prepare_render_pass();
     demo_prepare_pipeline();
@@ -1700,7 +1698,7 @@ private void demo_draw_build_cmd() {
 			});
         VK10.vkCmdSetScissor(draw_cmd, 0, scissor);
         
-        MasterRenderer.MasterRender(vertices, draw_cmd);
+        MasterRenderer.MasterRender(draw_cmd);
         
         VK10.vkCmdEndRenderPass(draw_cmd);
 
@@ -1837,18 +1835,7 @@ private void demo_resize() {
     VK10.vkDestroyPipelineLayout(device, pipeline_layout, null);
     VK10.vkDestroyDescriptorSetLayout(device, desc_layout, null);
 
-    VK10.vkDestroyBuffer(device, vertices.vertexBuffer, null);
-    VK10.vkFreeMemory(device, vertices.vertexMemory, null);
-    VK10.vkDestroyBuffer(device, vertices.indexBuffer, null);
-    VK10.vkFreeMemory(device, vertices.indexMemory, null);
-
-    for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-    	VK10.vkDestroyImageView(device, textures[i].view, null);
-    	VK10.vkDestroyImage(device, textures[i].image, null);
-    	VK10.vkFreeMemory(device, textures[i].mem, null);
-    	VK10.vkDestroySampler(device, textures[i].sampler, null);
-    }
-
+    
     for (int i = 0; i < swapchainImageCount; i++) {
     	VK10.vkDestroyImageView(device, buffers[i].view, null);
     }
@@ -1904,16 +1891,11 @@ private void demo_cleanup() {
     VK10.vkDestroyPipelineLayout(device, pipeline_layout, null);
     VK10.vkDestroyDescriptorSetLayout(device, desc_layout, null);
 
-    vertices.freeBuffers();
-    RenderModel.free();
     
+    RenderModel.cleanUp();
+    MasterRenderer.cleanUp();
 
-    for (int i = 0; i < DEMO_TEXTURE_COUNT; i++) {
-    	VK10.vkDestroyImageView(device, textures[i].view, null);
-    	VK10.vkDestroyImage(device, textures[i].image, null);
-    	VK10.vkFreeMemory(device, textures[i].mem, null);
-    	VK10.vkDestroySampler(device, textures[i].sampler, null);
-    }
+    
 
     for (int i = 0; i < swapchainImageCount; i++) {
     	VK10.vkDestroyImageView(device, buffers[i].view, null);
@@ -1959,7 +1941,6 @@ private void run() {
     demo_init();
     demo_create_window();
     demo_init_vk_swapchain();
-    vertices=new RenderModel(device);
     demo_prepare();
     demo_run();
 

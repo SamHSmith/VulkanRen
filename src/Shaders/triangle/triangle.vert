@@ -7,7 +7,9 @@ layout(location = 1) in vec2 intexCoord;
 
 layout(location = 2) in mat4 transform;
 
-layout(location = 6) in mat4 viewMatrix;
+layout(binding = 0) uniform UniformBufferObject {
+    mat4 viewMatrix;
+} ubo;
 
 layout(location = 0) out vec2 texCoord;
 
@@ -16,7 +18,7 @@ layout(location = 0) out vec2 texCoord;
 void main() {
 	
 	
-    gl_Position = viewMatrix * transform * vec4(inPos, 1.0);
+    gl_Position = ubo.viewMatrix * transform * vec4(inPos, 1.0);
     texCoord = intexCoord;
 }
 

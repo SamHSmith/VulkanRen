@@ -37,12 +37,16 @@ public class ShaderBuffer {
 		this.device=device;
 		this.localStride=stride;
 	}
-
+	
 	public void prepare(int count) {
+		prepare(count, VK10.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+	}
+
+	public void prepare(int count, int usage) {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			VkBufferCreateInfo buf_info = VkBufferCreateInfo.callocStack(stack)
 					.sType(VK10.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO).size(count*localStride)
-					.usage(VK10.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT).sharingMode(VK10.VK_SHARING_MODE_EXCLUSIVE);
+					.usage(usage).sharingMode(VK10.VK_SHARING_MODE_EXCLUSIVE);
 
 			Main.check(VK10.vkCreateBuffer(device, buf_info, null, lp));
 			buffer = lp.get(0);

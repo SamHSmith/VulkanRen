@@ -27,15 +27,15 @@ public class RenderModel {
 	private final PointerBuffer pp = MemoryUtil.memAllocPointer(1);
 	private int IndexCount = 0;
 	static VkPipelineVertexInputStateCreateInfo vi = VkPipelineVertexInputStateCreateInfo.calloc();
-	static VkVertexInputBindingDescription.Buffer vi_bindings = VkVertexInputBindingDescription.calloc(3);
-	static VkVertexInputAttributeDescription.Buffer vi_attrs = VkVertexInputAttributeDescription.calloc(2+4+4);
+	static VkVertexInputBindingDescription.Buffer vi_bindings = VkVertexInputBindingDescription.calloc(2);
+	static VkVertexInputAttributeDescription.Buffer vi_attrs = VkVertexInputAttributeDescription.calloc(2+4);
 
 	private VkDevice device;
-	public InstanceBuffer inst;
+	public ShaderBuffer inst;
 	
 	public RenderModel(VkDevice device) {
 		this.device=device;
-		inst= new InstanceBuffer(device);
+		inst= new ShaderBuffer(device);
 		inst.prepare(1);
 	}
 	
@@ -45,9 +45,7 @@ public class RenderModel {
 
 		vi_bindings.get(0).binding(0).stride(VertexSize).inputRate(VK10.VK_VERTEX_INPUT_RATE_VERTEX);
 		
-		vi_bindings.get(1).binding(1).stride(InstanceBuffer.BufferStride).inputRate(VK10.VK_VERTEX_INPUT_RATE_INSTANCE);
-		
-		vi_bindings.get(2).binding(2).stride(16).inputRate(VK10.VK_VERTEX_INPUT_RATE_INSTANCE);
+		vi_bindings.get(1).binding(1).stride(ShaderBuffer.BufferStride).inputRate(VK10.VK_VERTEX_INPUT_RATE_INSTANCE);
 
 		vi_attrs.get(0).binding(0).location(0).format(VK10.VK_FORMAT_R32G32B32_SFLOAT).offset(0);
 
@@ -60,18 +58,10 @@ public class RenderModel {
 		vi_attrs.get(4).binding(1).location(4).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(4*4*2);
 		
 		vi_attrs.get(5).binding(1).location(5).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(4*4*3);
-		
-		vi_attrs.get(6).binding(2).location(6).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(0);//matrix
-		
-		vi_attrs.get(7).binding(2).location(7).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(4*4);
-		
-		vi_attrs.get(8).binding(2).location(8).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(4*4*2);
-		
-		vi_attrs.get(9).binding(2).location(9).format(VK10.VK_FORMAT_R32G32B32A32_SFLOAT).offset(4*4*3);
 		return vi;
 	}
 
-	public static void free() {
+	public static void cleanUp() {
 		vi.free();
 		vi_bindings.free();
 		vi_attrs.free();
@@ -79,7 +69,7 @@ public class RenderModel {
 	
 	
 
-	public void Prepare() {
+	public void prepare() {
 
 		float[][] vb = GetVerticies();
 		short[] ind = GetIndicies();
@@ -150,19 +140,21 @@ public class RenderModel {
 
 	}
 	
-	public void freeBuffers() {
-		VK10.vkDestroyBuffer(device, vertexBuffer, null);
-	    VK10.vkFreeMemory(device, vertexMemory, null);
-	    VK10.vkDestroyBuffer(device, indexBuffer, null);
-	    VK10.vkFreeMemory(device, indexMemory, null);
-	}
+	
 
 	private float[][] GetVerticies() {
 		float[][] vb = {
 				/* position texcoord */
-				{ -0.5f, -0.5f, 0.5f, 0.0f, 0.0f }, { 0.5f, -0.5f, 0.5f, 1.0f, 0.0f },
-				{ -0.5f, 0.5f, 0.5f, 0.0f, 1.0f }, { 0.5f, 0.5f, 0.5f, 1.0f, 1.0f }, };
+				{ -0.5f, -0.5f, 0f, 0.0f, 0.0f }, { 0.5f, -0.5f, 0f, 1.0f, 0.0f },
+				{ -0.5f, 0.5f, 0f, 0.0f, 1.0f }, { 0.5f, 0.5f, 0f, 1.0f, 1.0f }, };
 		return vb;
+	}
+	
+	public void free() {
+		VK10.vkDestroyBuffer(device, vertexBuffer, null);
+	    VK10.vkFreeMemory(device, vertexMemory, null);
+	    VK10.vkDestroyBuffer(device, indexBuffer, null);
+	    VK10.vkFreeMemory(device, indexMemory, null);
 	}
 
 	private short[] GetIndicies() {
