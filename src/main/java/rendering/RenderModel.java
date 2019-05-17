@@ -31,12 +31,9 @@ public class RenderModel {
 	static VkVertexInputAttributeDescription.Buffer vi_attrs = VkVertexInputAttributeDescription.calloc(2+4);
 
 	private VkDevice device;
-	public ShaderBuffer inst;
 	
 	public RenderModel(VkDevice device) {
 		this.device=device;
-		inst= new ShaderBuffer(device);
-		inst.prepare(1);
 	}
 	
 	public static VkPipelineVertexInputStateCreateInfo getVi() {

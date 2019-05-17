@@ -111,7 +111,7 @@ public class Main {
 
 	private static String VK_EXT_DEBUG_REPORT_EXTENSION_NAME="VK_EXT_debug_report";
 	private static String VK_KHR_SWAPCHAIN_EXTENSION_NAME="VK_KHR_swapchain";
-	private static final boolean VALIDATE = true;
+	public static boolean VALIDATE = false;
 
     private static final boolean USE_STAGING_BUFFER = true;
 
@@ -139,8 +139,17 @@ private VkPhysicalDeviceFeatures   gpu_features = VkPhysicalDeviceFeatures.mallo
 
 private VkQueueFamilyProperties.Buffer queue_props;
 
-private int   width          = 300;
-private int   height         = 300;
+private static int   width          = 300;
+private static int   height         = 300;
+
+public static int getWidth() {
+	return width;
+}
+
+public static int getHeight() {
+	return height;
+}
+
 private float depthStencil   = 1.0f;
 
 private long window;
@@ -352,7 +361,7 @@ private void demo_init_vk() {
             .ppEnabledExtensionNames(extension_names);
         extension_names.clear();
 
-        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+        VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = null;
         if (VALIDATE) {
             dbgCreateInfo = VkDebugReportCallbackCreateInfoEXT.mallocStack(stack)
                 .sType(EXTDebugReport.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT)
@@ -464,8 +473,8 @@ private void demo_create_window() {
     GLFW.glfwSetFramebufferSizeCallback(window, new GLFWFramebufferSizeCallbackI() {
 		@Override
 		public void invoke(long window, int width, int height) {
-		    Main.this.width = width;
-		    Main.this.height = height;
+		    Main.width = width;
+		    Main.height = height;
 
 		    if (width != 0 && height != 0) {
 		        demo_resize();
@@ -1570,7 +1579,7 @@ private void demo_prepare() {
             .commandBufferCount(1);
 
         check(VK10.vkAllocateCommandBuffers(device, cmd, pp));
-        MasterRenderer.Init(device, stack);
+        
     }
 
     draw_cmd = new VkCommandBuffer(pp.get(0), device);
@@ -1816,7 +1825,7 @@ private void demo_resize() {
     // AND redo the command buffers, etc.
     //
     // First, perform part of the demo_cleanup() function:
-
+	
     for (int i = 0; i < swapchainImageCount; i++) {
     	VK10.vkDestroyFramebuffer(device, framebuffers.get(i), null);
     }
@@ -1941,6 +1950,7 @@ private void run() {
     demo_init();
     demo_create_window();
     demo_init_vk_swapchain();
+    MasterRenderer.Init(device, MemoryStack.stackPush());
     demo_prepare();
     demo_run();
 
@@ -1948,6 +1958,8 @@ private void run() {
 }
 
 public static void main(String[] args) {
+	if(args.length>0 && args[0].equalsIgnoreCase("debug"))
+		Main.VALIDATE=true;
     new Main().run();
 }
 }

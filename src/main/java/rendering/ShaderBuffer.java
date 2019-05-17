@@ -1,5 +1,6 @@
 package rendering;
 
+import java.nio.BufferOverflowException;
 import java.nio.FloatBuffer;
 import java.nio.LongBuffer;
 
@@ -24,6 +25,7 @@ public class ShaderBuffer {
 	private final PointerBuffer pp = MemoryUtil.memAllocPointer(1);
 	public static final int BufferStride = (16 * 4);// +2+2+2+2;//transform matrix plus TODO texture atlas coords
 	public int localStride=0;//exists for viewmatrix
+	private int strideCount=0;
 	public long buffer, memory;
 	private VkDevice device;
 	private long allocationSize;
@@ -38,14 +40,19 @@ public class ShaderBuffer {
 		this.localStride=stride;
 	}
 	
+	public int getStrideCount() {
+		return strideCount;
+	}
+
 	public void prepare(int count) {
 		prepare(count, VK10.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 	}
 
 	public void prepare(int count, int usage) {
+		strideCount=count;
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			VkBufferCreateInfo buf_info = VkBufferCreateInfo.callocStack(stack)
-					.sType(VK10.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO).size(count*localStride)
+					.sType(VK10.VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO).size(strideCount*localStride)
 					.usage(usage).sharingMode(VK10.VK_SHARING_MODE_EXCLUSIVE);
 
 			Main.check(VK10.vkCreateBuffer(device, buf_info, null, lp));
@@ -71,6 +78,9 @@ public class ShaderBuffer {
 	}
 	
 	public void Put(Matrix4f mat, int index) {
+		if(index >= strideCount) {
+			throw new BufferOverflowException();
+		}
 		Main.check(VK10.vkMapMemory(device, memory, index*localStride, localStride, 0, pp));
 		FloatBuffer data = pp.getFloatBuffer(0, localStride/4);
 		data.put(mat.get(BufferUtils.createFloatBuffer(localStride/4)));

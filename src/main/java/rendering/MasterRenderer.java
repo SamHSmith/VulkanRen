@@ -14,6 +14,7 @@ import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkDevice;
 
+import fabricor.main.Main;
 import grids.StaticGridCube;
 
 public class MasterRenderer {
@@ -22,10 +23,11 @@ public class MasterRenderer {
 	private static MemoryStack stack;
 	private static VkDevice device;
 	private static VkCommandBuffer cmdbuff;
-	private static Matrix4f viewMat = new Matrix4f().setPerspectiveLH(70, 1, 0.01f, 100000, true);
+	private static Matrix4f viewMat = new Matrix4f();
 	private static ShaderBuffer viewBuff;
 	private static RenderModel quad;
 	private static ArrayList<IRenderCube> toRenderCubes = new ArrayList<IRenderCube>();
+	private static ShaderBuffer instBuff;
 
 	static StaticGridCube cube;
 
@@ -52,7 +54,7 @@ public class MasterRenderer {
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
-		// viewMat.translate(0, 0, 0.01f);
+		viewMat.identity().setPerspectiveLH(70, (float)Main.getWidth()/(float)Main.getHeight(), 0.01f, 100000, true);
 		viewBuff.Put(viewMat, 0);
 
 		cube.rotation.rotateAxis((float) Math.toRadians(0.8f), new Vector3f(1, 1, 0));
@@ -61,21 +63,23 @@ public class MasterRenderer {
 
 	}
 
-	private static ShaderBuffer instBuff;
+	
 
 	private static void RenderCubes(ArrayList<IRenderCube> cubes) {
 		if (instBuff != null) {
 			instBuff.free();
 		}
-		int i = 0;
 		instBuff = new ShaderBuffer(device);
-		instBuff.prepare(6);
+		instBuff.prepare(cubes.size() * 6);
+		
+		int i = 0;
 		for (Iterator<IRenderCube> iterator = cubes.iterator(); iterator.hasNext();) {
 			IRenderCube rc = (IRenderCube) iterator.next();
 			i = BindCube(rc, i, instBuff);
 		}
 		BindModel(quad, instBuff);
 		VK10.vkCmdDrawIndexed(cmdbuff, quad.getIndexCount(), i, 0, 0, 0);
+
 	}
 
 	private static int BindCube(IRenderCube cube, int index, ShaderBuffer instbuffer) {
@@ -97,11 +101,11 @@ public class MasterRenderer {
 		instbuffer.Put(new Matrix4f(cubeMat).mul(new Matrix4f().translate(new Vector3f(0, 0, 0.5f)))
 				.rotate((float) Math.PI, new Vector3f(1, 0, 0)), index);
 		index++;
-		
+
 		instbuffer.Put(new Matrix4f(cubeMat).mul(new Matrix4f().translate(new Vector3f(0.5f, 0, 0))
 				.rotate((float) Math.toRadians(-90), new Vector3f(0, 1, 0))), index);
 		index++;
-		
+
 		instbuffer.Put(new Matrix4f(cubeMat).mul(new Matrix4f().translate(new Vector3f(-0.5f, 0, 0))
 				.rotate((float) Math.toRadians(90), new Vector3f(0, 1, 0))), index);
 		index++;
@@ -116,12 +120,18 @@ public class MasterRenderer {
 
 		VK10.vkCmdBindVertexBuffers(cmdbuff, 0, pVertBuffers, lp);
 		VK10.vkCmdBindVertexBuffers(cmdbuff, 1, pInstanceBuffers, lp);
+		
 
 		VK10.vkCmdBindIndexBuffer(cmdbuff, m.indexBuffer, 0, VK10.VK_INDEX_TYPE_UINT16);
 	}
 
 	public static void cleanUp() {
-
+		if (instBuff != null) {
+			instBuff.free();
+			instBuff=null;
+		}
+		viewBuff.free();
+		quad.free();
 	}
 
 }
