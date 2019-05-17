@@ -1,4 +1,4 @@
-package rendering;
+package fabricor.rendering;
 
 import java.nio.BufferOverflowException;
 import java.nio.FloatBuffer;
@@ -11,6 +11,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Pointer;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkBufferCreateInfo;
 import org.lwjgl.vulkan.VkDevice;
@@ -22,6 +23,7 @@ import fabricor.main.Main;
 public class ShaderBuffer {
 
 	private static LongBuffer lp = BufferUtils.createLongBuffer(1);
+	private static FloatBuffer mappedMemory = null;
 	private final PointerBuffer pp = MemoryUtil.memAllocPointer(1);
 	public static final int BufferStride = (16 * 4);// +2+2+2+2;//transform matrix plus TODO texture atlas coords
 	public int localStride=0;//exists for viewmatrix
@@ -77,18 +79,31 @@ public class ShaderBuffer {
 		Main.check(VK10.vkBindBufferMemory(device, buffer, memory, 0));
 	}
 	
-	public void Put(Matrix4f mat, int index) {
+	public void mapMemory() {
+		Main.check(VK10.vkMapMemory(device, memory, 0, strideCount*localStride, 0, pp));
+		if(mappedMemory==null) {
+			mappedMemory=BufferUtils.createFloatBuffer(strideCount*localStride/4);
+		}
+		
+		mappedMemory=pp.getFloatBuffer(0, strideCount*localStride/4);
+	}
+	
+	public void unMapMemory() {
+		
+		VK10.vkUnmapMemory(device, memory);
+	}
+	
+	public void putThreadSafe(Matrix4f mat, int index) {
 		if(index >= strideCount) {
 			throw new BufferOverflowException();
 		}
-		Main.check(VK10.vkMapMemory(device, memory, index*localStride, localStride, 0, pp));
-		FloatBuffer data = pp.getFloatBuffer(0, localStride/4);
-		data.put(mat.get(BufferUtils.createFloatBuffer(localStride/4)));
-//		for (int i = 0; i < data.capacity(); i++) {
-//			System.out.println(data.get(i));
-//		}
-		VK10.vkUnmapMemory(device, memory);
-		
+		mappedMemory.put(mat.get(BufferUtils.createFloatBuffer(localStride/4)));
+	}
+	
+	public void put(Matrix4f mat, int index) {
+		mapMemory();
+		putThreadSafe(mat, index);
+		unMapMemory();
 	}
 	
 	public void free() {

@@ -1,4 +1,4 @@
-package rendering;
+package fabricor.rendering;
 
 import java.nio.FloatBuffer;
 import java.nio.LongBuffer;

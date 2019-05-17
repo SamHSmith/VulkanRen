@@ -1,4 +1,4 @@
-package rendering;
+package fabricor.rendering;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;

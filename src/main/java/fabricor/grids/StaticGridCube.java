@@ -1,9 +1,9 @@
-package grids;
+package fabricor.grids;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import rendering.IRenderCube;
+import fabricor.rendering.IRenderCube;
 
 public class StaticGridCube implements IRenderCube {
 
