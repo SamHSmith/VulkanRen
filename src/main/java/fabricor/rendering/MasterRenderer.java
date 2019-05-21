@@ -2,19 +2,26 @@ package fabricor.rendering;
 
 import java.nio.LongBuffer;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector3i;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkCommandBuffer;
 import org.lwjgl.vulkan.VkDevice;
 
-import fabricor.grids.*;
+import fabricor.grids.Grid;
+import fabricor.grids.StaticGridCube;
 import fabricor.main.Main;
 
 public class MasterRenderer {
@@ -27,9 +34,11 @@ public class MasterRenderer {
 	private static Matrix4f cameraMat = new Matrix4f();
 	private static ShaderBuffer viewBuff;
 	private static RenderModel quad;
-	private static ArrayList<IRenderCube> toRenderCubes = new ArrayList<IRenderCube>();
-	private static ShaderBuffer instBuff;
-	private static ArrayList<StaticGridCube> cubes = new ArrayList<StaticGridCube>();
+	private static HashMap<Grid, ShaderBuffer> gridbuffers = new HashMap<Grid, ShaderBuffer>();
+	private static ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+	private static ArrayList<Grid> toRenderGrids = new ArrayList<Grid>();
+
+	private static Grid g;
 
 	public static ShaderBuffer GetViewBuffer() {
 		viewBuff.put(viewMat, 0);
@@ -47,53 +56,132 @@ public class MasterRenderer {
 		viewBuff.prepare(1, VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 		viewBuff.put(viewMat, 0);
 
-		Random r = new Random();
-		for (int i = 0; i < 100000; i++) {
-			StaticGridCube cube = new StaticGridCube();
-			cube.position = new Vector3f((float) r.nextDouble() * 100 - 50, (float) r.nextDouble() * 100 - 50,
-					(float) r.nextDouble() * 100);
-			cube.rotation.rotateAxis((float) r.nextDouble(),
-					new Vector3f((float) r.nextDouble(), (float) r.nextDouble(), (float) r.nextDouble()));
-			cubes.add(cube);
-			toRenderCubes.add((IRenderCube) cube);
-		}
+		cameraMat.rotate((float) Math.PI / 5, new Vector3f(1, 0, 0));
+		cameraMat.rotate((float) -Math.PI / 4, new Vector3f(0, 1, 0));
 
-		instBuff= bindCubes(toRenderCubes);
+		cameraMat.translate(new Vector3f(10, 10, 10));
+
+		g = new Grid(new Vector3i(256, 256, 256));
+		toRenderGrids.add(g);
 	}
 
-	static long renderTime = 0;
+	static int Counter = 101;
+	static Random r = new Random();
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
-		viewMat.identity().setPerspectiveLH(70, (float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000,
-				true);
+		viewMat.identity().setPerspectiveLH((float) Math.toRadians(100),
+				(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
 		viewMat.mul(cameraMat);
 		viewBuff.put(viewMat, 0);
+		
+		
 
-		cameraMat.translate(0, 0, 0.1f);
-
-		for (Iterator<StaticGridCube> iterator = cubes.iterator(); iterator.hasNext();) {
-			StaticGridCube cube = (StaticGridCube) iterator.next();
-			cube.rotation.rotateAxis((float) Math.toRadians(0.8f), new Vector3f(1, 1, 0));
+		if (Counter > 100) {
+			for (int i = 0; i < 1000; i++) {
+				int x = r.nextInt(g.getExtent().x), y = r.nextInt(g.getExtent().y), z = r.nextInt(g.getExtent().z);
+				if (g.isEmpty(x, y, z))
+					g.put(new StaticGridCube(), new Vector3i(x, y, z));
+			}
+			Counter = 0;
+		} else {
+			Counter++;
 		}
-
-		BindModel(quad, instBuff);
-		VK10.vkCmdDrawIndexed(cmdbuff, quad.getIndexCount(), instBuff.getStrideCount(), 0, 0, 0);
+		
+		for (Grid g : toRenderGrids) {
+			RenderGrid(g);
+		}
+		
+		cameraMat.translate(-0.01f, -0.01f, -0.01f);
 	}
 
-	private static ShaderBuffer bindCubes(ArrayList<IRenderCube> cubes) {
-		ShaderBuffer instBuff = new ShaderBuffer(device);
-		instBuff.prepare(cubes.size() * 6);
+	private static void RenderGrid(Grid g) {
+		
+		if (!gridbuffers.containsKey(g))
+			gridbuffers.put(g, null);
 
-		instBuff.mapMemory();
-		int i = 0;
-		for (Iterator<IRenderCube> iterator = cubes.iterator(); iterator.hasNext();) {
-			IRenderCube cube = (IRenderCube) iterator.next();
-			BindCube(cube, i * 6, instBuff);
-			i++;
+		if(g.IsGridEmpty())
+			return;
+		
+		if (g.shouldBind())
+			gridbuffers.put(g, bindCubes(g.getRenderCubes().toArray(new IRenderCube[0]), gridbuffers.get(g)));
+
+		BindModel(quad, gridbuffers.get(g));
+		VK10.vkCmdDrawIndexed(cmdbuff, quad.getIndexCount(), gridbuffers.get(g).getStrideCount(), 0, 0, 0);
+	}
+
+	private static ShaderBuffer bindCubes(final IRenderCube[] cubes, ShaderBuffer instBuff) {
+		if (instBuff == null)
+			instBuff = new ShaderBuffer(device);
+
+		int totalquads = TotalQuads(cubes);
+		if (instBuff.getStrideCount() != totalquads) {
+			instBuff.free();
+			instBuff.prepare(totalquads);
 		}
-		instBuff.unMapMemory();
+
+		final ShaderBuffer buffer = instBuff;
+		
+		final int threadCount=Runtime.getRuntime().availableProcessors();
+
+		final AtomicInteger ai = new AtomicInteger();
+		final AtomicInteger quad = new AtomicInteger();
+		Callable<Integer> c = new Callable<Integer>() {
+			@Override
+			public Integer call() throws Exception {
+
+				int index = ai.getAndIncrement();
+				int cubeCount=Math.floorDiv(cubes.length, threadCount);
+				int i = index * cubeCount;
+				
+				
+				if(index+1>=threadCount)
+					cubeCount+=cubes.length-(threadCount*cubeCount);
+				for (int c = 0; c < cubeCount; c++) {
+					IRenderCube cube = cubes[i];
+					int bufferIndex=quad.getAndAdd(QuadCount(cube));
+					BindCube(cube, bufferIndex, buffer);
+					i++;
+				}
+
+				return i;
+			}
+		};
+
+		ArrayList<Future<Integer>> result = new ArrayList<Future<Integer>>();
+		for (int i = 0; i < threadCount; i++) {
+			result.add(service.submit(c));
+		}
+		try {
+			for (Future<Integer> res : result) {
+				res.get();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
+
+		instBuff.pushMemory();
 		return instBuff;
+	}
+
+	private static int TotalQuads(IRenderCube[] cubes) {
+		int total = 0;
+		for (int i = 0; i < cubes.length; i++) {
+			total+=QuadCount(cubes[i]);
+		}
+		return total;
+	}
+	
+	private static int QuadCount(IRenderCube c) {
+		int count=0;
+		for (int i = 0; i < c.getNonOccludedSides().length; i++) {
+			if(c.getNonOccludedSides()[i]) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private static Matrix4f upFace = new Matrix4f().translate(new Vector3f(0, -0.5f, 0))
@@ -109,28 +197,35 @@ public class MasterRenderer {
 					new Vector3f(0, 1, 0));
 
 	private static void BindCube(IRenderCube cube, int index, ShaderBuffer instbuffer) {
+
 		Matrix4f cubeMat = new Matrix4f();
 		cubeMat.translate(cube.getWorldPosition());
 		cubeMat.rotate(cube.getWorldRotation());
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(upFace), index);
-		index++;
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(frontFace), index);
-		index++;
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(bottomFace), index);
-		index++;
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(backFace), index);
-		index++;
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(rightFace), index);
-		index++;
-
-		instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(leftFace), index);
-		index++;
-
+		int i = 0;
+		if (cube.getNonOccludedSides()[0]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(upFace), index + i);
+			i++;
+		}
+		if (cube.getNonOccludedSides()[1]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(frontFace), index + i);
+			i++;
+		}
+		if (cube.getNonOccludedSides()[2]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(bottomFace), index + i);
+			i++;
+		}
+		if (cube.getNonOccludedSides()[3]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(backFace), index + i);
+			i++;
+		}
+		if (cube.getNonOccludedSides()[4]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(rightFace), index + i);
+			i++;
+		}
+		if (cube.getNonOccludedSides()[5]) {
+			instbuffer.putThreadSafe(new Matrix4f(cubeMat).mul(leftFace), index + i);
+			i++;
+		}
 	}
 
 	private static void BindModel(RenderModel m, ShaderBuffer in) {
@@ -143,18 +238,19 @@ public class MasterRenderer {
 
 		VK10.vkCmdBindIndexBuffer(cmdbuff, m.indexBuffer, 0, VK10.VK_INDEX_TYPE_UINT16);
 	}
-	
+
 	public static void RenderModels(RenderModel m, ShaderBuffer in) {
-		
+
 	}
 
 	public static void cleanUp() {
-		if (instBuff != null) {
-			instBuff.free();
-			instBuff = null;
+		for (ShaderBuffer sb : gridbuffers.values()) {
+			if (sb != null)
+				sb.free();
 		}
 		viewBuff.free();
 		quad.free();
+		service.shutdown();
 	}
 
 }

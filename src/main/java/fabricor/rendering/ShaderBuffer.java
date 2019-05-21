@@ -4,14 +4,11 @@ import java.nio.BufferOverflowException;
 import java.nio.FloatBuffer;
 import java.nio.LongBuffer;
 
-import org.joml.Matrix4d;
 import org.joml.Matrix4f;
-import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
-import org.lwjgl.system.Pointer;
 import org.lwjgl.vulkan.VK10;
 import org.lwjgl.vulkan.VkBufferCreateInfo;
 import org.lwjgl.vulkan.VkDevice;
@@ -23,7 +20,7 @@ import fabricor.main.Main;
 public class ShaderBuffer {
 
 	private static LongBuffer lp = BufferUtils.createLongBuffer(1);
-	private static FloatBuffer mappedMemory = null;
+	
 	private final PointerBuffer pp = MemoryUtil.memAllocPointer(1);
 	public static final int BufferStride = (16 * 4);// +2+2+2+2;//transform matrix plus TODO texture atlas coords
 	public int localStride=0;//exists for viewmatrix
@@ -31,6 +28,7 @@ public class ShaderBuffer {
 	public long buffer, memory;
 	private VkDevice device;
 	private long allocationSize;
+	private float[] editarray = null;
 
 	public ShaderBuffer(VkDevice device) {
 		this.device=device;
@@ -77,19 +75,14 @@ public class ShaderBuffer {
 		}
 		
 		Main.check(VK10.vkBindBufferMemory(device, buffer, memory, 0));
+		editarray=new float[strideCount*localStride/4];
 	}
 	
-	public void mapMemory() {
-		Main.check(VK10.vkMapMemory(device, memory, 0, strideCount*localStride, 0, pp));
-		if(mappedMemory==null) {
-			mappedMemory=BufferUtils.createFloatBuffer(strideCount*localStride/4);
-		}
-		
-		mappedMemory=pp.getFloatBuffer(0, strideCount*localStride/4);
-	}
-	
-	public void unMapMemory() {
-		
+	public void pushMemory() {
+		pp.position(0);
+		Main.check(VK10.vkMapMemory(device, memory, 0, getStrideCount()*localStride, 0, pp));
+		FloatBuffer f=pp.getFloatBuffer(getStrideCount()*localStride/4);
+		f.put(editarray);
 		VK10.vkUnmapMemory(device, memory);
 	}
 	
@@ -97,16 +90,18 @@ public class ShaderBuffer {
 		if(index >= strideCount) {
 			throw new BufferOverflowException();
 		}
-		mappedMemory.put(mat.get(BufferUtils.createFloatBuffer(localStride/4)));
+		mat.get(editarray, index*localStride/4);
 	}
 	
 	public void put(Matrix4f mat, int index) {
-		mapMemory();
+		
 		putThreadSafe(mat, index);
-		unMapMemory();
+		pushMemory();
 	}
 	
 	public void free() {
+		strideCount=0;
+		
 		VK10.vkFreeMemory(device, memory, null);
 		VK10.vkDestroyBuffer(device, buffer, null);
 	}
