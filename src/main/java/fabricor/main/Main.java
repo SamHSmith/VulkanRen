@@ -1,6 +1,7 @@
 package fabricor.main;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -1136,18 +1137,15 @@ public class Main {
 
 	private static long[] loadShaderFromClasspath(String name, VkDevice dev) {
 		String path = "/" + name + "/";
-		URL vert = Main.class.getResource(path + "vert.spv");
-		URL frag = Main.class.getResource(path + "frag.spv");
+		InputStream vert = Main.class.getResourceAsStream(path + "vert.spv");
+		InputStream frag = Main.class.getResourceAsStream(path + "frag.spv");
 
 		byte[] bytevert = new byte[1];
 		byte[] bytefrag = new byte[1];
 		try {
-			bytevert = Files.readAllBytes(Paths.get(vert.toURI()));
-			bytefrag = Files.readAllBytes(Paths.get(frag.toURI()));
+			bytevert = vert.readAllBytes();
+			bytefrag = frag.readAllBytes();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (URISyntaxException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
