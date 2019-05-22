@@ -15,9 +15,11 @@ import java.util.function.Consumer;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWCursorPosCallbackI;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWFramebufferSizeCallbackI;
 import org.lwjgl.glfw.GLFWKeyCallbackI;
+import org.lwjgl.glfw.GLFWMouseButtonCallbackI;
 import org.lwjgl.glfw.GLFWVulkan;
 import org.lwjgl.glfw.GLFWWindowRefreshCallbackI;
 import org.lwjgl.system.MemoryStack;
@@ -103,6 +105,8 @@ import org.lwjgl.vulkan.VkSwapchainCreateInfoKHR;
 import org.lwjgl.vulkan.VkViewport;
 import org.lwjgl.vulkan.VkWriteDescriptorSet;
 
+import fabricor.logic.LogicHandler;
+import fabricor.logic.input.InputManager;
 import fabricor.rendering.MasterRenderer;
 import fabricor.rendering.RenderModel;
 import fabricor.rendering.ShaderBuffer;
@@ -137,8 +141,8 @@ public class Main {
 
 	private VkQueueFamilyProperties.Buffer queue_props;
 
-	private static int width = 300;
-	private static int height = 300;
+	private static int width = 1600;
+	private static int height = 900;
 
 	public static int getWidth() {
 		return width;
@@ -149,7 +153,7 @@ public class Main {
 	}
 
 
-	private long window;
+	private static long window;
 
 	private long surface;
 
@@ -188,6 +192,8 @@ public class Main {
 	private long desc_set;
 
 	private LongBuffer framebuffers;
+	
+	private LogicHandler logic=new LogicHandler();
 
 	private Main() {
 		for (int i = 0; i < textures.length; i++) {
@@ -469,11 +475,30 @@ public class Main {
 		GLFW.glfwSetKeyCallback(window, new GLFWKeyCallbackI() {
 			@Override
 			public void invoke(long window, int key, int scancode, int action, int mods) {
-				if (key == GLFW.GLFW_KEY_ESCAPE && action == GLFW.GLFW_RELEASE) {
-					GLFW.glfwSetWindowShouldClose(window, true);
-				}
+				InputManager.InvokeKey(key, action);
 			}
 		});
+		
+		GLFW.glfwSetCursorPosCallback(window, new GLFWCursorPosCallbackI() {
+			
+			@Override
+			public void invoke(long window, double xpos, double ypos) {
+				InputManager.InvokeMouse(xpos, ypos);
+			}
+		});
+		
+		GLFW.glfwSetMouseButtonCallback(window, new GLFWMouseButtonCallbackI() {
+			
+			@Override
+			public void invoke(long window, int button, int action, int mods) {
+				InputManager.InvokeMouseButton(button, action);
+			}
+		});
+		
+	}
+	
+	public static long getWindow() {
+		return window;
 	}
 
 	private void demo_init_device() {
@@ -1075,7 +1100,7 @@ public class Main {
 			VkDescriptorSetLayoutCreateInfo descriptor_layout = VkDescriptorSetLayoutCreateInfo.mallocStack(stack)
 					.sType(VK10.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO).pNext(0).flags(0)
 					.pBindings(VkDescriptorSetLayoutBinding.callocStack(1, stack).binding(0)
-							.descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER).descriptorCount(1)
+							.descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC).descriptorCount(1)
 							.stageFlags(VK10.VK_SHADER_STAGE_VERTEX_BIT));
 
 			LongBuffer layouts = stack.mallocLong(1);
@@ -1267,7 +1292,7 @@ public class Main {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			VkDescriptorPoolCreateInfo descriptor_pool = VkDescriptorPoolCreateInfo.callocStack(stack)
 					.sType(VK10.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO).pNext(0).maxSets(1)
-					.pPoolSizes(VkDescriptorPoolSize.mallocStack(1, stack).type(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+					.pPoolSizes(VkDescriptorPoolSize.mallocStack(1, stack).type(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
 							.descriptorCount(1));
 
 			check(VK10.vkCreateDescriptorPool(device, descriptor_pool, null, lp));
@@ -1291,7 +1316,7 @@ public class Main {
 
 			VkWriteDescriptorSet.Buffer write = VkWriteDescriptorSet.callocStack(1, stack)
 					.sType(VK10.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET).dstSet(desc_set)
-					.descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+					.descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
 					.pBufferInfo(VkDescriptorBufferInfo.calloc(1).put(0, buff));
 
 			VK10.vkUpdateDescriptorSets(device, write, null);
@@ -1404,7 +1429,7 @@ public class Main {
 			VK10.vkCmdBindPipeline(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
 			lp.put(0, desc_set);
-			VK10.vkCmdBindDescriptorSets(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, lp, null);
+			VK10.vkCmdBindDescriptorSets(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, lp, MemoryStack.stackCallocInt(1).put(0).rewind());
 
 			VkViewport.Buffer viewport = VkViewport.callocStack(1, stack).height(height).width(width).minDepth(0.0f)
 					.maxDepth(1.0f);
@@ -1564,7 +1589,9 @@ public class Main {
 		long t = System.nanoTime();
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
-
+			
+			logic.Update();
+			
 			demo_draw();
 
 			c++;
@@ -1645,6 +1672,7 @@ public class Main {
 		demo_create_window();
 		demo_init_vk_swapchain();
 		MasterRenderer.Init(device, MemoryStack.stackPush());
+		logic.init();
 		demo_prepare();
 		demo_run();
 

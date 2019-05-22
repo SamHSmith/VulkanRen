@@ -31,17 +31,18 @@ public class MasterRenderer {
 	private static VkDevice device;
 	private static VkCommandBuffer cmdbuff;
 	private static Matrix4f viewMat = new Matrix4f();
-	private static Matrix4f cameraMat = new Matrix4f();
 	private static ShaderBuffer viewBuff;
 	private static RenderModel quad;
 	private static HashMap<Grid, ShaderBuffer> gridbuffers = new HashMap<Grid, ShaderBuffer>();
 	private static ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-	private static ArrayList<Grid> toRenderGrids = new ArrayList<Grid>();
+	private static ArrayList<IRenderable> toRenderObjs = new ArrayList<IRenderable>();
+	
+
+	public static ArrayList<Camera> cameras = new ArrayList<Camera>();
 
 	private static Grid g;
 
 	public static ShaderBuffer GetViewBuffer() {
-		viewBuff.put(viewMat, 0);
 		return viewBuff;
 	}
 
@@ -56,13 +57,9 @@ public class MasterRenderer {
 		viewBuff.prepare(1, VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 		viewBuff.put(viewMat, 0);
 
-		cameraMat.rotate((float) Math.PI / 5, new Vector3f(1, 0, 0));
-		cameraMat.rotate((float) -Math.PI / 4, new Vector3f(0, 1, 0));
-
-		cameraMat.translate(new Vector3f(10, 10, 10));
-
-		g = new Grid(new Vector3i(256, 256, 256));
-		toRenderGrids.add(g);
+		g = new Grid(new Vector3i(32, 64, 32));
+		toRenderObjs.add(g);
+		
 	}
 
 	static int Counter = 101;
@@ -70,15 +67,9 @@ public class MasterRenderer {
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
-		viewMat.identity().setPerspectiveLH((float) Math.toRadians(100),
-				(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
-		viewMat.mul(cameraMat);
-		viewBuff.put(viewMat, 0);
-		
-		
 
-		if (Counter > 100) {
-			for (int i = 0; i < 1000; i++) {
+		if (Counter > 10) {
+			for (int i = 0; i < 10; i++) {
 				int x = r.nextInt(g.getExtent().x), y = r.nextInt(g.getExtent().y), z = r.nextInt(g.getExtent().z);
 				if (g.isEmpty(x, y, z))
 					g.put(new StaticGridCube(), new Vector3i(x, y, z));
@@ -87,22 +78,35 @@ public class MasterRenderer {
 		} else {
 			Counter++;
 		}
-		
-		for (Grid g : toRenderGrids) {
+		for (Camera cam : cameras) {
+			System.out.println(cam.rotation);
+			
+			viewMat.identity().setPerspectiveLH((float) Math.toRadians(cam.getFov()),
+					(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
+			viewMat.mul(cam.getTransform());
+			viewBuff.put(viewMat, 0);
+			for (IRenderable obj : toRenderObjs) {
+				RenderObject(obj);
+			}
+			
+		}
+
+	}
+
+	private static void RenderObject(IRenderable obj) {
+		if (obj instanceof Grid) {
 			RenderGrid(g);
 		}
-		
-		cameraMat.translate(-0.01f, -0.01f, -0.01f);
 	}
 
 	private static void RenderGrid(Grid g) {
-		
+
 		if (!gridbuffers.containsKey(g))
 			gridbuffers.put(g, null);
 
-		if(g.IsGridEmpty())
+		if (g.IsGridEmpty())
 			return;
-		
+
 		if (g.shouldBind())
 			gridbuffers.put(g, bindCubes(g.getRenderCubes().toArray(new IRenderCube[0]), gridbuffers.get(g)));
 
@@ -121,8 +125,8 @@ public class MasterRenderer {
 		}
 
 		final ShaderBuffer buffer = instBuff;
-		
-		final int threadCount=Runtime.getRuntime().availableProcessors();
+
+		final int threadCount = Runtime.getRuntime().availableProcessors();
 
 		final AtomicInteger ai = new AtomicInteger();
 		final AtomicInteger quad = new AtomicInteger();
@@ -131,15 +135,14 @@ public class MasterRenderer {
 			public Integer call() throws Exception {
 
 				int index = ai.getAndIncrement();
-				int cubeCount=Math.floorDiv(cubes.length, threadCount);
+				int cubeCount = Math.floorDiv(cubes.length, threadCount);
 				int i = index * cubeCount;
-				
-				
-				if(index+1>=threadCount)
-					cubeCount+=cubes.length-(threadCount*cubeCount);
+
+				if (index + 1 >= threadCount)
+					cubeCount += cubes.length - (threadCount * cubeCount);
 				for (int c = 0; c < cubeCount; c++) {
 					IRenderCube cube = cubes[i];
-					int bufferIndex=quad.getAndAdd(QuadCount(cube));
+					int bufferIndex = quad.getAndAdd(QuadCount(cube));
 					BindCube(cube, bufferIndex, buffer);
 					i++;
 				}
@@ -169,15 +172,15 @@ public class MasterRenderer {
 	private static int TotalQuads(IRenderCube[] cubes) {
 		int total = 0;
 		for (int i = 0; i < cubes.length; i++) {
-			total+=QuadCount(cubes[i]);
+			total += QuadCount(cubes[i]);
 		}
 		return total;
 	}
-	
+
 	private static int QuadCount(IRenderCube c) {
-		int count=0;
+		int count = 0;
 		for (int i = 0; i < c.getNonOccludedSides().length; i++) {
-			if(c.getNonOccludedSides()[i]) {
+			if (c.getNonOccludedSides()[i]) {
 				count++;
 			}
 		}

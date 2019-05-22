@@ -8,9 +8,10 @@ import org.joml.Vector3i;
 import org.joml.Vector4f;
 
 import fabricor.rendering.IRenderCube;
+import fabricor.rendering.IRenderable;
 
 
-public class Grid {
+public class Grid implements IRenderable{
 
 	public Matrix4f transform = new Matrix4f();
 
