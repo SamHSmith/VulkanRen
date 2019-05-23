@@ -126,7 +126,7 @@ public class Main {
 
 // buffers for handle output-params
 	private final IntBuffer ip = MemoryUtil.memAllocInt(1);
-	private final LongBuffer lp = MemoryUtil.memAllocLong(1);
+	private final static LongBuffer lp = MemoryUtil.memAllocLong(1);
 	private final PointerBuffer pp = MemoryUtil.memAllocPointer(1);
 
 	private PointerBuffer extension_names = MemoryUtil.memAllocPointer(64);
@@ -152,14 +152,13 @@ public class Main {
 		return height;
 	}
 
-
 	private static long window;
 
 	private long surface;
 
 	private int graphics_queue_node_index;
 
-	private VkDevice device;
+	private static VkDevice device;
 	private VkQueue queue;
 
 	private int format;
@@ -168,7 +167,7 @@ public class Main {
 	private static VkPhysicalDeviceMemoryProperties memory_properties = VkPhysicalDeviceMemoryProperties.malloc();
 
 	private long cmd_pool;
-	private VkCommandBuffer draw_cmd;
+	private static VkCommandBuffer draw_cmd;
 
 	private long swapchain;
 	private int swapchainImageCount;
@@ -181,19 +180,19 @@ public class Main {
 
 	private TextureObject[] textures = new TextureObject[DEMO_TEXTURE_COUNT];
 
-	private long desc_layout;
-	private long pipeline_layout;
+	private static long desc_layout;
+	private static long pipeline_layout;
 
 	private long render_pass;
 
 	private long pipeline;
 
-	private long desc_pool;
-	private long desc_set;
+	private static long desc_pool;
+	private static long desc_set;
 
 	private LongBuffer framebuffers;
-	
-	private LogicHandler logic=new LogicHandler();
+
+	private LogicHandler logic = new LogicHandler();
 
 	private Main() {
 		for (int i = 0; i < textures.length; i++) {
@@ -478,25 +477,25 @@ public class Main {
 				InputManager.InvokeKey(key, action);
 			}
 		});
-		
+
 		GLFW.glfwSetCursorPosCallback(window, new GLFWCursorPosCallbackI() {
-			
+
 			@Override
 			public void invoke(long window, double xpos, double ypos) {
 				InputManager.InvokeMouse(xpos, ypos);
 			}
 		});
-		
+
 		GLFW.glfwSetMouseButtonCallback(window, new GLFWMouseButtonCallbackI() {
-			
+
 			@Override
 			public void invoke(long window, int button, int action, int mods) {
 				InputManager.InvokeMouseButton(button, action);
 			}
 		});
-		
+
 	}
-	
+
 	public static long getWindow() {
 		return window;
 	}
@@ -1292,8 +1291,8 @@ public class Main {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			VkDescriptorPoolCreateInfo descriptor_pool = VkDescriptorPoolCreateInfo.callocStack(stack)
 					.sType(VK10.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO).pNext(0).maxSets(1)
-					.pPoolSizes(VkDescriptorPoolSize.mallocStack(1, stack).type(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-							.descriptorCount(1));
+					.pPoolSizes(VkDescriptorPoolSize.mallocStack(1, stack)
+							.type(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC).descriptorCount(1));
 
 			check(VK10.vkCreateDescriptorPool(device, descriptor_pool, null, lp));
 			desc_pool = lp.get(0);
@@ -1310,6 +1309,22 @@ public class Main {
 			check(VK10.vkAllocateDescriptorSets(device, alloc_info, lp));
 			desc_set = lp.get(0);
 
+			ShaderBuffer shbuff = MasterRenderer.GetViewBuffer();
+			VkDescriptorBufferInfo buff = VkDescriptorBufferInfo.create();
+			buff.offset(0).range(shbuff.localStride).buffer(shbuff.buffer);
+
+			VkWriteDescriptorSet.Buffer write = VkWriteDescriptorSet.callocStack(1, stack)
+					.sType(VK10.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET).dstSet(desc_set)
+					.descriptorType(VK10.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+					.pBufferInfo(VkDescriptorBufferInfo.calloc(1).put(0, buff));
+
+			VK10.vkUpdateDescriptorSets(device, write, null);
+		}
+	}
+	
+	public static void UpdateDescriptorSet() {
+		try (MemoryStack stack = MemoryStack.stackPush()) {
+			
 			ShaderBuffer shbuff = MasterRenderer.GetViewBuffer();
 			VkDescriptorBufferInfo buff = VkDescriptorBufferInfo.create();
 			buff.offset(0).range(shbuff.localStride).buffer(shbuff.buffer);
@@ -1428,9 +1443,6 @@ public class Main {
 
 			VK10.vkCmdBindPipeline(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-			lp.put(0, desc_set);
-			VK10.vkCmdBindDescriptorSets(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, lp, MemoryStack.stackCallocInt(1).put(0).rewind());
-
 			VkViewport.Buffer viewport = VkViewport.callocStack(1, stack).height(height).width(width).minDepth(0.0f)
 					.maxDepth(1.0f);
 			VK10.vkCmdSetViewport(draw_cmd, 0, viewport);
@@ -1472,6 +1484,12 @@ public class Main {
 
 			check(VK10.vkEndCommandBuffer(draw_cmd));
 		}
+	}
+
+	public static void bindDescriptorSets(int offset) {
+		lp.put(0, desc_set);
+		VK10.vkCmdBindDescriptorSets(draw_cmd, VK10.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, lp,
+				MemoryStack.stackCallocInt(1).put(offset).rewind());
 	}
 
 	private void demo_draw() {
@@ -1589,9 +1607,9 @@ public class Main {
 		long t = System.nanoTime();
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
-			
+
 			logic.Update();
-			
+
 			demo_draw();
 
 			c++;

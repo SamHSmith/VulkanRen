@@ -36,7 +36,6 @@ public class MasterRenderer {
 	private static HashMap<Grid, ShaderBuffer> gridbuffers = new HashMap<Grid, ShaderBuffer>();
 	private static ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 	private static ArrayList<IRenderable> toRenderObjs = new ArrayList<IRenderable>();
-	
 
 	public static ArrayList<Camera> cameras = new ArrayList<Camera>();
 
@@ -59,7 +58,7 @@ public class MasterRenderer {
 
 		g = new Grid(new Vector3i(32, 64, 32));
 		toRenderObjs.add(g);
-		
+
 	}
 
 	static int Counter = 101;
@@ -67,7 +66,32 @@ public class MasterRenderer {
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
+		if(viewBuff.getStrideCount()!=cameras.size()) {
+			viewBuff.free();
+			viewBuff.prepare(cameras.size(), VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+			Main.UpdateDescriptorSet();
+		}
+		int cameraindex=0;
+		for(Camera cam : cameras) {
+			viewMat.identity().setPerspectiveLH((float) Math.toRadians(cameras.get(0).getFov()),
+					(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
+			viewMat.mul(cam.getTransform().invert());
+			viewBuff.put(viewMat, cameraindex);
+			cameraindex++;
+		}
+		cameraindex=0;
+		for (Camera cam : cameras) {
+			System.out.println(cam.rotation);
+			
+			Main.bindDescriptorSets(cameraindex*viewBuff.localStride);
+			cameraindex++;
+			for (IRenderable obj : toRenderObjs) {
+				RenderObject(obj);
+			}
 
+		}
+		
+		
 		if (Counter > 10) {
 			for (int i = 0; i < 10; i++) {
 				int x = r.nextInt(g.getExtent().x), y = r.nextInt(g.getExtent().y), z = r.nextInt(g.getExtent().z);
@@ -78,19 +102,6 @@ public class MasterRenderer {
 		} else {
 			Counter++;
 		}
-		for (Camera cam : cameras) {
-			System.out.println(cam.rotation);
-			
-			viewMat.identity().setPerspectiveLH((float) Math.toRadians(cam.getFov()),
-					(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
-			viewMat.mul(cam.getTransform());
-			viewBuff.put(viewMat, 0);
-			for (IRenderable obj : toRenderObjs) {
-				RenderObject(obj);
-			}
-			
-		}
-
 	}
 
 	private static void RenderObject(IRenderable obj) {

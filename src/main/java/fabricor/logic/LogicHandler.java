@@ -32,15 +32,18 @@ public class LogicHandler {
 		
 		Vector2f mouse=InputManager.getMouseDelta();
 		
-		xrot+=mouse.y;
-		yrot-=mouse.x;
+		xrot-=mouse.y;
+		yrot+=mouse.x;
 		
 		xrot=Mathf.Clamp(xrot, -90, 90);
 		
 		cam.rotation.identity();
-		cam.rotation.rotateAxis((float) Math.toRadians(xrot), new Vector3f(1,0,0));
 		cam.rotation.rotateAxis((float) Math.toRadians(yrot), new Vector3f(0,1,0));
+		cam.rotation.rotateAxis((float) Math.toRadians(xrot), new Vector3f(1,0,0));
 		
+		if(InputManager.getKeyboard(GLFW.GLFW_KEY_W).isPressed()) {
+			cam.position.add(new Vector3f(0,0,1).rotate(cam.rotation));
+		}
 		
 	}
 

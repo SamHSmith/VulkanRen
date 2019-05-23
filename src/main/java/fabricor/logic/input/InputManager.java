@@ -9,7 +9,7 @@ import fabricor.main.Main;
 
 public class InputManager {
 
-	public static float MOUSE_SENSITIVITY=0.5f;
+	public static float MOUSE_SENSITIVITY=0.3f;
 	
 	private static float lastX = 0, lastY = 0;
 	static float deltaY = 0, deltaX = 0;
@@ -65,8 +65,8 @@ public class InputManager {
 			deltaY = 0;
 		}
 		
-		lastdeltaX=(deltaX+ lastdeltaX*2)/3;
-		lastdeltaY=(deltaY+ lastdeltaY*2)/3;
+		lastdeltaX=(deltaX+ lastdeltaX)/2;
+		lastdeltaY=(deltaY+ lastdeltaY)/2;
 		
 		hasUpdatedDelta = false;
 		for (Key k : keyboard.values()) {
