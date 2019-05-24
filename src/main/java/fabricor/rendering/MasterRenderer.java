@@ -35,11 +35,11 @@ public class MasterRenderer {
 	private static RenderModel quad;
 	private static HashMap<Grid, ShaderBuffer> gridbuffers = new HashMap<Grid, ShaderBuffer>();
 	private static ExecutorService service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-	private static ArrayList<IRenderable> toRenderObjs = new ArrayList<IRenderable>();
+	public static ArrayList<IRenderable> toRenderObjs = new ArrayList<IRenderable>();
 
 	public static ArrayList<Camera> cameras = new ArrayList<Camera>();
 
-	private static Grid g;
+	
 
 	public static ShaderBuffer GetViewBuffer() {
 		return viewBuff;
@@ -56,13 +56,9 @@ public class MasterRenderer {
 		viewBuff.prepare(1, VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 		viewBuff.put(viewMat, 0);
 
-		g = new Grid(new Vector3i(32, 64, 32));
-		toRenderObjs.add(g);
+		
 
 	}
-
-	static int Counter = 101;
-	static Random r = new Random();
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
@@ -91,22 +87,11 @@ public class MasterRenderer {
 
 		}
 		
-		
-		if (Counter > 10) {
-			for (int i = 0; i < 10; i++) {
-				int x = r.nextInt(g.getExtent().x), y = r.nextInt(g.getExtent().y), z = r.nextInt(g.getExtent().z);
-				if (g.isEmpty(x, y, z))
-					g.put(new StaticGridCube(), new Vector3i(x, y, z));
-			}
-			Counter = 0;
-		} else {
-			Counter++;
-		}
 	}
 
 	private static void RenderObject(IRenderable obj) {
 		if (obj instanceof Grid) {
-			RenderGrid(g);
+			RenderGrid((Grid) obj);
 		}
 	}
 
