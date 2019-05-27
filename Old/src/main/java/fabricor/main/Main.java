@@ -447,7 +447,9 @@ public class Main {
 	private void demo_create_window() {
 		GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_NO_API);
 
-		window = GLFW.glfwCreateWindow(width, height, "The Vulkan Triangle Demo Program", 0, 0);
+		window = GLFW.glfwCreateWindow(width, height, "Fabricor", 0, 0);
+//		GLFW.glfwSetWindowAttrib(window, GLFW.GLFW_DECORATED, GLFW.GLFW_FALSE);
+
 		if (window == 0) {
 			throw new IllegalStateException("Cannot create a window in which to draw!");
 		}
@@ -1321,10 +1323,10 @@ public class Main {
 			VK10.vkUpdateDescriptorSets(device, write, null);
 		}
 	}
-	
+
 	public static void UpdateDescriptorSet() {
 		try (MemoryStack stack = MemoryStack.stackPush()) {
-			
+
 			ShaderBuffer shbuff = MasterRenderer.GetViewBuffer();
 			VkDescriptorBufferInfo buff = VkDescriptorBufferInfo.create();
 			buff.offset(0).range(shbuff.localStride).buffer(shbuff.buffer);
@@ -1605,6 +1607,7 @@ public class Main {
 	private void demo_run() {
 		int c = 0;
 		long t = System.nanoTime();
+
 		while (!GLFW.glfwWindowShouldClose(window)) {
 			GLFW.glfwPollEvents();
 

@@ -162,6 +162,14 @@
 			<version>${lwjgl.version}</version>
 			<classifier>${lwjgl.natives}</classifier>
 		</dependency>
+		
+<dependency>
+    <groupId>org.ode4j</groupId>
+    <artifactId>core</artifactId>
+    <version>0.4.0</version>
+</dependency>
+
+
   </dependencies>
 
 

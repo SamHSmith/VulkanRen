@@ -9,7 +9,7 @@ public class Camera {
 	public Vector3f position=new Vector3f();
 	public Quaternionf rotation=new Quaternionf();
 	
-	public float fov=80;
+	public float fov=90;
 	
 	public Matrix4f getTransform() {
 		return new Matrix4f().translate(position).rotate(rotation);

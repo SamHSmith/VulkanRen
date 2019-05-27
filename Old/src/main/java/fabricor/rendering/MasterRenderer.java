@@ -39,8 +39,6 @@ public class MasterRenderer {
 
 	public static ArrayList<Camera> cameras = new ArrayList<Camera>();
 
-	
-
 	public static ShaderBuffer GetViewBuffer() {
 		return viewBuff;
 	}
@@ -56,38 +54,39 @@ public class MasterRenderer {
 		viewBuff.prepare(1, VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 		viewBuff.put(viewMat, 0);
 
-		
-
 	}
 
 	public static void MasterRender(VkCommandBuffer cmdbuff) {
 		MasterRenderer.cmdbuff = cmdbuff;
-		if(viewBuff.getStrideCount()!=cameras.size()) {
+		if (viewBuff.getStrideCount() != cameras.size() * toRenderObjs.size()) {
 			viewBuff.free();
-			viewBuff.prepare(cameras.size(), VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+			viewBuff.prepare(cameras.size() * toRenderObjs.size(), VK10.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 			Main.UpdateDescriptorSet();
 		}
-		int cameraindex=0;
-		for(Camera cam : cameras) {
-			viewMat.identity().setPerspectiveLH((float) Math.toRadians(cameras.get(0).getFov()),
-					(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
-			viewMat.mul(cam.getTransform().invert());
-			viewBuff.put(viewMat, cameraindex);
-			cameraindex++;
-		}
-		cameraindex=0;
+		int cameraindex = 0;
 		for (Camera cam : cameras) {
-			System.out.println(cam.rotation);
-			
-			Main.bindDescriptorSets(cameraindex*viewBuff.localStride);
-			cameraindex++;
 			for (IRenderable obj : toRenderObjs) {
+				viewMat.identity().setPerspectiveLH((float) Math.toRadians(cameras.get(0).getFov()),
+						(float) Main.getWidth() / (float) Main.getHeight(), 0.1f, 100000, true);
+				viewMat.mul(cam.getTransform().invert().mul(obj.getTransform()));
+				viewBuff.put(viewMat, cameraindex);
+				cameraindex++;
+			}
+		}
+		cameraindex = 0;
+		for (Camera cam : cameras) {
+			for (IRenderable obj : toRenderObjs) {
+
+				Main.bindDescriptorSets(cameraindex * viewBuff.localStride);
+				cameraindex++;
+
 				RenderObject(obj);
 			}
-
 		}
-		
+
 	}
+
+	
 
 	private static void RenderObject(IRenderable obj) {
 		if (obj instanceof Grid) {

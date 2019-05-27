@@ -9,7 +9,7 @@ import fabricor.main.Main;
 
 public class InputManager {
 
-	public static float MOUSE_SENSITIVITY=0.3f;
+	public static float MOUSE_SENSITIVITY=2f,MOUSE_SENSITIVITY_X=0.2f,MOUSE_SENSITIVITY_Y=0.15f;
 	
 	private static float lastX = 0, lastY = 0;
 	static float deltaY = 0, deltaX = 0;
@@ -27,15 +27,16 @@ public class InputManager {
 	}
 	
 	private static float getDeltaX() {
-		return (lastdeltaX +deltaX)/2;
+		return (deltaX+lastdeltaX)/2;
 	}
 	
 	private static float getDeltaY() {
-		return (lastdeltaY +deltaY)/2;
+		return (deltaY+lastdeltaY)/2;
 	}
 
 	public static Vector2f getMouseDelta() {
-		return new Vector2f(getDeltaX(), getDeltaY()).mul(MOUSE_SENSITIVITY);
+		Vector2f v=new Vector2f(getDeltaX(), getDeltaY()).mul(MOUSE_SENSITIVITY);
+		return v;
 	}
 
 	public static Key getMouse(int button) {
@@ -47,12 +48,16 @@ public class InputManager {
 	}
 
 	public static void InvokeMouse(double x, double y) {
+		x*=MOUSE_SENSITIVITY_X;
+		y*=MOUSE_SENSITIVITY_Y;
+		
 		deltaX = (float) x - lastX;
 		lastX = (float) x;
 
 		deltaY = (float) y - lastY;
 		lastY = (float) y;
 		hasUpdatedDelta = true;
+		
 	}
 
 	public static void InvokeMouseButton(int button, int action) {
@@ -65,8 +70,8 @@ public class InputManager {
 			deltaY = 0;
 		}
 		
-		lastdeltaX=(deltaX+ lastdeltaX)/2;
-		lastdeltaY=(deltaY+ lastdeltaY)/2;
+		lastdeltaX=(deltaX+lastdeltaX)/2;
+		lastdeltaY=(deltaY+lastdeltaY)/2;
 		
 		hasUpdatedDelta = false;
 		for (Key k : keyboard.values()) {

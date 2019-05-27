@@ -3,6 +3,7 @@ package fabricor.grids;
 import java.util.ArrayList;
 
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
 import org.joml.Vector4f;
@@ -13,10 +14,30 @@ import fabricor.rendering.IRenderable;
 
 public class Grid implements IRenderable{
 
-	public Matrix4f transform = new Matrix4f();
+	public Vector3f position=new Vector3f();
+	public Quaternionf rotation=new Quaternionf();
+	public boolean isStatic=false;
+	
+	
+
+	public Vector3f getPosition() {
+		return position;
+	}
+
+	public Quaternionf getRotation() {
+		return rotation;
+	}
+
+	public boolean isStatic() {
+		return isStatic;
+	}
+
+	public boolean isBind() {
+		return bind;
+	}
 
 	public Matrix4f getTransform() {
-		return transform;
+		return new Matrix4f().translate(position).rotate(rotation);
 	}
 
 	private boolean bind = false;
@@ -30,6 +51,18 @@ public class Grid implements IRenderable{
 	private StaticGridCube[][][] cubes;
 	private Vector3i extent;
 
+	public ArrayList<StaticGridCube> getCubes(){
+		ArrayList<StaticGridCube> c=new ArrayList<StaticGridCube>();
+		for (int x = 0; x < cubes.length; x++) {
+			for (int y = 0; y < cubes[x].length; y++) {
+				for (int z = 0; z < cubes[x][y].length; z++) {
+					c.add(cubes[x][y][z]);
+				}
+			}
+		}
+		return c;
+	}
+	
 	public Vector3i getExtent() {
 		return extent;
 	}
@@ -102,12 +135,14 @@ public class Grid implements IRenderable{
 		Vector4f pos=getTransform().transform(new Vector4f(c.position,1));
 		cubes[(int) pos.x][(int) pos.y][(int) pos.z]=c;
 		c.position.set((int)pos.x, (int)pos.x, (int)pos.x);
+		c.internalLocation.set((int)pos.x, (int)pos.y, (int)pos.z);
 		bind=true;
 	}
 	
 	public void put(StaticGridCube c,Vector3i pos) {
 		cubes[pos.x][pos.y][pos.z]=c;
 		c.position.set(pos.x, pos.y,pos.z);
+		c.internalLocation.set((int)pos.x, (int)pos.y, (int)pos.z);
 		bind=true;
 	}
 	

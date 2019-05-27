@@ -8,6 +8,7 @@ import org.lwjgl.glfw.GLFW;
 import fabricor.grids.Grid;
 import fabricor.grids.StaticGridCube;
 import fabricor.logic.input.InputManager;
+import fabricor.logic.physics.PhysicsWorld;
 import fabricor.main.Main;
 import fabricor.rendering.Camera;
 import fabricor.rendering.MasterRenderer;
@@ -15,13 +16,20 @@ import fabricor.util.Mathf;
 
 public class LogicHandler {
 	
+	public PhysicsWorld pworld=new PhysicsWorld(500);
+	
 	Camera cam=new Camera();
 	
 	float xrot=0,yrot=0;
-
-	private Grid g;
 	
+	
+	private long lastUpdate=-1;
 	public void Update() {
+		if(lastUpdate==-1) {
+			lastUpdate=System.nanoTime();
+		}
+		float delta=(float)(System.nanoTime()-lastUpdate)/1000000000;
+		lastUpdate=System.nanoTime();
 		InputManager.UpdateInput();
 		
 		if(InputManager.getKeyboard(GLFW.GLFW_KEY_ESCAPE).isReleased())
@@ -31,8 +39,14 @@ public class LogicHandler {
 			InputManager.ToggleCursor();
 		
 		if(InputManager.getKeyboard(GLFW.GLFW_KEY_F).isPressed()) {
-			cam=new Camera();
-			MasterRenderer.cameras.add(cam);
+			Grid box = new Grid(new Vector3i(1, 1, 1));
+			box.position.y=-10;
+			box.position.x=20f;
+			box.position.z=20f;
+			MasterRenderer.toRenderObjs.add(box);
+			box.put(new StaticGridCube(), new Vector3i(0,0,0));
+			
+			pworld.addGrid(box);
 		}
 		
 		Vector2f mouse=InputManager.getMouseDelta();
@@ -46,26 +60,32 @@ public class LogicHandler {
 		cam.rotation.rotateAxis((float) Math.toRadians(yrot), new Vector3f(0,1,0));
 		cam.rotation.rotateAxis((float) Math.toRadians(xrot), new Vector3f(1,0,0));
 		
-		if(InputManager.getKeyboard(GLFW.GLFW_KEY_W).isPressed()) {
-			cam.position.add(new Vector3f(0,0,1).rotate(cam.rotation));
+		if(InputManager.getKeyboard(GLFW.GLFW_KEY_W).isDown()) {
+			cam.position.add(new Vector3f(0,0,10*delta).rotate(cam.rotation));
 		}
 		
-		
-		
+		pworld.Update(delta);
 	}
 
 	public void init() {
 		InputManager.HideCursor();
 		MasterRenderer.cameras.add(cam);
-		g = new Grid(new Vector3i(32, 64, 32));
-		MasterRenderer.toRenderObjs.add(g);
+		cam.position.z=-10;
 		
-		for (int x = 0; x < 32; x++) {
-			for (int z = 0; z < 32; z++) {
-				for (int y = 10; y < 64; y++) {
-					g.put(new StaticGridCube(), new Vector3i(x,y,z));
+		Grid ground = new Grid(new Vector3i(50, 1, 50));
+		ground.position.y=10;
+		ground.rotation.rotateAxis((float)Math.toRadians(0), new Vector3f(0,0,1));
+		MasterRenderer.toRenderObjs.add(ground);
+		
+		for (int x = 0; x < 50; x++) {
+			for (int z = 0; z < 50; z++) {
+				for (int y = 0; y < 1; y++) {
+					ground.put(new StaticGridCube(), new Vector3i(x,y,z));
 				}
 			}
 		}
+		ground.isStatic=true;
+		pworld.addGrid(ground);
+		
 	}
 }
