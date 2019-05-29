@@ -34,20 +34,39 @@
       <HintPath>packages\OpenTK.3.0.1\lib\net20\OpenTK.dll</HintPath>
     </Reference>
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.4.5.1\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="BepuUtilities">
+      <HintPath>packages\BepuUtilities.2.0.0\lib\netstandard2.0\BepuUtilities.dll</HintPath>
+    </Reference>
+    <Reference Include="BepuPhysics">
+      <HintPath>packages\BepuPhysics.2.0.0\lib\netstandard2.0\BepuPhysics.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Main\FabricorWindow.cs" />
     <Compile Include="Main\Rendering\MasterRenderer.cs" />
-    <Compile Include="Main\Rendering\RawModel.cs" />
     <Compile Include="Main\Rendering\Loader.cs" />
     <Compile Include="Main\Rendering\Shader.cs" />
+    <Compile Include="Main\Rendering\Textures\ModelTexture.cs" />
+    <Compile Include="Main\Rendering\Models\RawModel.cs" />
+    <Compile Include="Main\Rendering\Models\TexturedModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
     <Folder Include="Main\Rendering\" />
     <Folder Include="Main\Rendering\Shaders\" />
+    <Folder Include="Main\Rendering\Textures\" />
+    <Folder Include="Main\Rendering\Models\" />
+    <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
@@ -60,6 +79,7 @@
     <EmbeddedResource Include="Main\Rendering\Shaders\block.frag">
       <LogicalName>block_frag</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Dirt.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

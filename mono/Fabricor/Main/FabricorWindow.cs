@@ -29,6 +29,7 @@ namespace Fabricor.Main
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
+            MasterRenderer.AspectRatio = Width / Height;
             MasterRenderer.MasterRender((float)e.Time);
 
             SwapBuffers();

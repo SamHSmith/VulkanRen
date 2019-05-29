@@ -1,5 +1,5 @@
 ﻿using System;
-namespace Fabricor.Main.Rendering.models
+namespace Fabricor.Main.Rendering.Models
 {
     public class RawModel
     {

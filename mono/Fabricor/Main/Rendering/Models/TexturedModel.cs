@@ -1,7 +1,7 @@
 ﻿using System;
-using Fabricor.Main.Rendering.textures;
+using Fabricor.Main.Rendering.Textures;
 
-namespace Fabricor.Main.Rendering.models
+namespace Fabricor.Main.Rendering.Models
 {
     public class TexturedModel
     {
