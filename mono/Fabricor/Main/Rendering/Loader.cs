@@ -17,21 +17,42 @@ namespace Fabricor.Main.Rendering
         private List<int> textures = new List<int>();
 
 
-        public Shader loadShader(string name,ShaderAttribute[] attributes, ShaderAttribute[] uniforms)
+        public Shader LoadShader(string name,ShaderAttribute[] attributes, ShaderAttribute[] uniforms)
         {
             Shader s = new Shader(name,attributes,uniforms);
             shaders.Add(s);
             return s;
         }
 
-        public RawModel loadToVAO(float[] positions, float[] uvcoords, int[] indices)
+        public RawModel LoadToVAO(float[] positions, float[] uvcoords, int[] indices)
         {
             int vaoID = createVAO();
-            bindIndicesBuffer(indices);
-            storeDataInAttributeList(0,3, positions);
-            storeDataInAttributeList(1, 2, uvcoords);
+            BindIndicesBuffer(indices, BufferUsageHint.StaticDraw);
+            storeDataInAttributeList(0,3, positions,BufferUsageHint.StaticDraw);
+            storeDataInAttributeList(1, 2, uvcoords, BufferUsageHint.StaticDraw);
             unbindVAO();
             return new RawModel(vaoID, indices.Length);
+        }
+
+        public DynamicModel LoadToDynamicVAO(float[] positions, float[] uvcoords, int[] indices)
+        {
+            int vaoID = createVAO();
+            int[] _vbos = new int[3];
+            _vbos[0]=BindIndicesBuffer(indices, BufferUsageHint.DynamicDraw);
+            _vbos[1] = storeDataInAttributeList(0, 3, positions, BufferUsageHint.DynamicDraw);
+            _vbos[2] = storeDataInAttributeList(1, 2, uvcoords, BufferUsageHint.DynamicDraw);
+            unbindVAO();
+            return new DynamicModel(vaoID, indices.Length,_vbos);
+        }
+
+        public void UpdateDynamicVAO(DynamicModel model,int vbo, float[] data, int stride)
+        {
+            updateDataInAttributeList(vbo, stride, data, BufferUsageHint.DynamicDraw,model.vbos[vbo+1]);
+        }
+
+        public void UpdateDynamicVAO(DynamicModel model, int[] indices)
+        {
+            UpdateIndicesBuffer(indices, model.vbos[0], BufferUsageHint.DynamicDraw);
         }
 
         private int createVAO()
@@ -42,14 +63,24 @@ namespace Fabricor.Main.Rendering
             return vaoID;
         }
 
-        private void storeDataInAttributeList(int attribNumber, int stride, float[] data)
+        private int storeDataInAttributeList(int attribNumber, int stride, float[] data,BufferUsageHint usage)
         {
             int vboID = GL.GenBuffer();
             vbos.Add(vboID);
             GL.BindBuffer(BufferTarget.ArrayBuffer, vboID);
-            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(data.Length * sizeof(float)), data, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(data.Length * sizeof(float)), data, usage);
             GL.VertexAttribPointer(attribNumber, stride, VertexAttribPointerType.Float, false, 0, 0);
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            return vboID;
+        }
+
+        private int updateDataInAttributeList(int attribNumber, int stride, float[] data, BufferUsageHint usage, int vboID)
+        {
+            GL.BindBuffer(BufferTarget.ArrayBuffer, vboID);
+            GL.BufferData(BufferTarget.ArrayBuffer, (IntPtr)(data.Length * sizeof(float)), data, usage);
+            GL.VertexAttribPointer(attribNumber, stride, VertexAttribPointerType.Float, false, 0, 0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            return vboID;
         }
 
         private void unbindVAO()
@@ -57,13 +88,19 @@ namespace Fabricor.Main.Rendering
             GL.BindVertexArray(0);
         }
 
-        private void bindIndicesBuffer(int[] indices)
+        private int BindIndicesBuffer(int[] indices,BufferUsageHint usage)
         {
             int vboID = GL.GenBuffer();
             vbos.Add(vboID);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, vboID);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(float), indices, BufferUsageHint.StaticDraw);
-            
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(float), indices, usage);
+            return vboID;
+        }
+
+        private void UpdateIndicesBuffer(int[] indices, int vboID, BufferUsageHint usage)
+        {
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, vboID);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(float), indices, usage);
         }
 
         public int LoadTexture(string filename)

@@ -59,6 +59,7 @@
     <Compile Include="Main\Rendering\Textures\ModelTexture.cs" />
     <Compile Include="Main\Rendering\Models\RawModel.cs" />
     <Compile Include="Main\Rendering\Models\TexturedModel.cs" />
+    <Compile Include="Main\Rendering\Models\DynamicModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

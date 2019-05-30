@@ -22,7 +22,7 @@ namespace Fabricor.Main.Rendering
         {
             loader = new Loader();
 
-            shader = loader.loadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },
+            shader = loader.LoadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },
                 new ShaderAttribute[] { new ShaderAttribute("transform", 0), new ShaderAttribute("persp", 0),
                 new ShaderAttribute("view", 0) });
 
@@ -32,9 +32,9 @@ namespace Fabricor.Main.Rendering
 
             float[] texcoords = { 0, 0, 0, 1, 1, 1, 1, 0 };
 
-            RawModel rawmodel = loader.loadToVAO(vertices, texcoords, indices);
+            DynamicModel rawmodel = loader.LoadToDynamicVAO(vertices, texcoords, indices);
             model = new TexturedModel(rawmodel, new ModelTexture(loader.LoadTexture("Dirt")));
-
+            //loader.UpdateDynamicVAO(rawmodel, indices);
         }
 
         public static void CleanUp()
