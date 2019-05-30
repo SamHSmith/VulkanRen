@@ -32,9 +32,10 @@ namespace Fabricor.Main.Rendering
 
             float[] texcoords = { 0, 0, 0, 1, 1, 1, 1, 0 };
 
-            DynamicModel rawmodel = loader.LoadToDynamicVAO(vertices, texcoords, indices);
+            DynamicModel rawmodel = loader.LoadToDynamicVAO(new float[0], texcoords, new int[0]);
             model = new TexturedModel(rawmodel, new ModelTexture(loader.LoadTexture("Dirt")));
-            //loader.UpdateDynamicVAO(rawmodel, indices);
+            loader.UpdateDynamicVAO(rawmodel, 0, vertices, 3);
+            loader.UpdateDynamicVAO(rawmodel, indices);
         }
 
         public static void CleanUp()

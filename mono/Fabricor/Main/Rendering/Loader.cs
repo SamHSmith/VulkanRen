@@ -52,7 +52,8 @@ namespace Fabricor.Main.Rendering
 
         public void UpdateDynamicVAO(DynamicModel model, int[] indices)
         {
-            UpdateIndicesBuffer(indices, model.vbos[0], BufferUsageHint.DynamicDraw);
+            UpdateIndicesBuffer(indices,model.vbos[0], BufferUsageHint.DynamicDraw);
+            model.vertexCount = indices.Length;
         }
 
         private int createVAO()
@@ -93,7 +94,7 @@ namespace Fabricor.Main.Rendering
             int vboID = GL.GenBuffer();
             vbos.Add(vboID);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, vboID);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(float), indices, usage);
+            GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(int), indices, usage);
             return vboID;
         }
 
