@@ -64,6 +64,13 @@
     <Compile Include="Main\Rendering\Models\DynamicModel.cs" />
     <Compile Include="Main\Rendering\Loading\Loader.cs" />
     <Compile Include="Main\Rendering\Loading\OBJLoader.cs" />
+    <Compile Include="Main\Logic\Grids\Chunk.cs" />
+    <Compile Include="Main\Logic\Grids\BlockLookup.cs" />
+    <Compile Include="Main\Logic\Transform.cs" />
+    <Compile Include="Main\Rendering\RenderObject.cs" />
+    <Compile Include="Main\Logic\LogicMaster.cs" />
+    <Compile Include="Main\Logic\DebugCamera.cs" />
+    <Compile Include="Main\Logic\IUpdatable.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -74,6 +81,8 @@
     <Folder Include="Resources\" />
     <Folder Include="Resources\Models\" />
     <Folder Include="Main\Rendering\Loading\" />
+    <Folder Include="Main\Logic\" />
+    <Folder Include="Main\Logic\Grids\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />

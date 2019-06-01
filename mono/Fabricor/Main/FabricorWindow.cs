@@ -1,4 +1,5 @@
 ﻿using System;
+using Fabricor.Main.Logic;
 using Fabricor.Main.Rendering;
 using OpenTK;
 using OpenTK.Graphics;
@@ -17,20 +18,20 @@ namespace Fabricor.Main
 
         protected override void OnLoad(EventArgs e)
         {
-            MasterRenderer.Init();
+            LogicMaster.Init();
         }
 
         protected override void Dispose(bool manual)
         {
 
             base.Dispose(manual);
-            MasterRenderer.CleanUp();
+            LogicMaster.CleanUp();
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
         {
 
-            MasterRenderer.MasterRender((float)e.Time);
+            LogicMaster.Update((float)e.Time);
 
             SwapBuffers();
         }

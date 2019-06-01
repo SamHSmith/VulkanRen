@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using Fabricor.Main.Logic;
+using Fabricor.Main.Logic.Grids;
 using Fabricor.Main.Rendering.Loading;
 using Fabricor.Main.Rendering.Models;
 using Fabricor.Main.Rendering.Textures;
@@ -13,11 +16,12 @@ namespace Fabricor.Main.Rendering
     {
         public static float AspectRatio = 1;
 
+        public static Transform camera = new Transform();
+        public static List<RenderObject> toRender = new List<RenderObject>();
+        public static Loader GlLoader { get { return loader; } }
         private static Loader loader;
 
         private static Shader shader;
-
-        private static TexturedModel model;
 
         public static void Init()
         {
@@ -29,18 +33,13 @@ namespace Fabricor.Main.Rendering
                 new ShaderAttribute[] { new ShaderAttribute("transform", 0), new ShaderAttribute("persp", 0),
                 new ShaderAttribute("view", 0) });
 
-            float[] vertices = { -0.5f, 0.5f, 0f, -0.5f, -0.5f, 0f, 0.5f, -0.5f, 0f, 0.5f, 0.5f, 0f};
+            Chunk c = new Chunk();
+            c.blocks[0, 0, 0] = 1;
+            c.blocks[1, 0, 0] = 1;
+            c.UpdateModel();
+            TexturedModel model = new TexturedModel(c.model, new ModelTexture(loader.LoadTexture("BlockTest")));
 
-            int[] indices = { 0, 1, 3, 3, 1, 2 };
-
-            float[] texcoords = { 0, 0, 0, 1, 1, 1, 1, 0 };
-
-            DynamicModel rawmodel = loader.LoadToDynamicVAO(new float[0], new float[0], new int[0]);
-            model = new TexturedModel(rawmodel, new ModelTexture(loader.LoadTexture("BlockTest")));
-            Mesh m = OBJLoader.LoadFromOBJ("Block");
-            loader.UpdateDynamicVAO(rawmodel, 0, m.vertices, 3);
-            loader.UpdateDynamicVAO(rawmodel, 1, m.texCoords, 2);
-            loader.UpdateDynamicVAO(rawmodel, m.indices);
+            toRender.Add(new RenderObject(new Transform(), model));
         }
 
         public static void CleanUp()
@@ -57,28 +56,30 @@ namespace Fabricor.Main.Rendering
 
             shader.StartProgram();
 
+            shader.LoadMatrix("view", camera.ToGLMatrix());
+            shader.LoadMatrix("persp", Matrix4.CreatePerspectiveFieldOfView(1.6f, AspectRatio, 0.01f, 1000000));
 
-            renderModel(model);
+            foreach (var o in toRender)
+            {
+                renderModel(o);
+            }
             shader.StopProgram();
 
         }
-        static float distance = 3, rot = 0;
-        private static void renderModel(TexturedModel m)
+        private static void renderModel(RenderObject o)
         {
-            //distance += 0.01f;
-            rot += 0.001f;
+            if (o == null)
+                return;
 
-            GL.BindVertexArray(m.RawModel.vaoID);
+            GL.BindVertexArray(o.Model.RawModel.vaoID);
             GL.EnableVertexAttribArray(0);
             GL.EnableVertexAttribArray(1);
 
-            shader.LoadMatrix("transform", Matrix4.CreateRotationX(rot));
-            shader.LoadMatrix("view", Matrix4.CreateTranslation(new Vector3(0, 0, distance)));
-            shader.LoadMatrix("persp", Matrix4.CreatePerspectiveFieldOfView(1.6f,AspectRatio,0.01f,1000000));
+            shader.LoadMatrix("transform", o.Transform.ToGLMatrix());
 
             GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, m.Texture.textureID);
-            GL.DrawElements(BeginMode.Triangles, m.RawModel.vertexCount, DrawElementsType.UnsignedInt, 0);
+            GL.BindTexture(TextureTarget.Texture2D, o.Model.Texture.textureID);
+            GL.DrawElements(BeginMode.Triangles, o.Model.RawModel.vertexCount, DrawElementsType.UnsignedInt, 0);
             GL.DisableVertexAttribArray(0);
             GL.DisableVertexAttribArray(1);
             GL.BindVertexArray(0);
