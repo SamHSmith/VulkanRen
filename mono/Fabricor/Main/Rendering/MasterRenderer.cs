@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Fabricor.Main.Rendering.Loading;
 using Fabricor.Main.Rendering.Models;
 using Fabricor.Main.Rendering.Textures;
 using OpenTK;
@@ -20,6 +21,8 @@ namespace Fabricor.Main.Rendering
 
         public static void Init()
         {
+            GL.Enable(EnableCap.DepthTest);
+            GL.DepthFunc(DepthFunction.Less);
             loader = new Loader();
 
             shader = loader.LoadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },
@@ -32,10 +35,12 @@ namespace Fabricor.Main.Rendering
 
             float[] texcoords = { 0, 0, 0, 1, 1, 1, 1, 0 };
 
-            DynamicModel rawmodel = loader.LoadToDynamicVAO(new float[0], texcoords, new int[0]);
-            model = new TexturedModel(rawmodel, new ModelTexture(loader.LoadTexture("Dirt")));
-            loader.UpdateDynamicVAO(rawmodel, 0, vertices, 3);
-            loader.UpdateDynamicVAO(rawmodel, indices);
+            DynamicModel rawmodel = loader.LoadToDynamicVAO(new float[0], new float[0], new int[0]);
+            model = new TexturedModel(rawmodel, new ModelTexture(loader.LoadTexture("BlockTest")));
+            Mesh m = OBJLoader.LoadFromOBJ("Block");
+            loader.UpdateDynamicVAO(rawmodel, 0, m.vertices, 3);
+            loader.UpdateDynamicVAO(rawmodel, 1, m.texCoords, 2);
+            loader.UpdateDynamicVAO(rawmodel, m.indices);
         }
 
         public static void CleanUp()
@@ -57,17 +62,17 @@ namespace Fabricor.Main.Rendering
             shader.StopProgram();
 
         }
-        static float distance = 0, rot = 0;
+        static float distance = 3, rot = 0;
         private static void renderModel(TexturedModel m)
         {
-            distance -= 0.01f;
-            rot += 0.05f;
+            //distance += 0.01f;
+            rot += 0.001f;
 
             GL.BindVertexArray(m.RawModel.vaoID);
             GL.EnableVertexAttribArray(0);
             GL.EnableVertexAttribArray(1);
 
-            shader.LoadMatrix("transform", Matrix4.CreateRotationY(rot));
+            shader.LoadMatrix("transform", Matrix4.CreateRotationX(rot));
             shader.LoadMatrix("view", Matrix4.CreateTranslation(new Vector3(0, 0, distance)));
             shader.LoadMatrix("persp", Matrix4.CreatePerspectiveFieldOfView(1.6f,AspectRatio,0.01f,1000000));
 

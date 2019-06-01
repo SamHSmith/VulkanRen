@@ -16,6 +16,9 @@ namespace Fabricor.Main.Rendering
         private List<string> textureNames = new List<string>();
         private List<int> textures = new List<int>();
 
+        public Loader()
+        {
+        }
 
         public Shader LoadShader(string name,ShaderAttribute[] attributes, ShaderAttribute[] uniforms)
         {
@@ -144,7 +147,7 @@ namespace Fabricor.Main.Rendering
         {
             float[] r;
             using (var bmp = (Bitmap)Image.FromStream(System.Reflection.Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream("Fabricor.Resources." + filename + ".png"),true))
+            .GetManifestResourceStream("Fabricor.Resources.Textures." + filename + ".png"),true))
             {
                 width = bmp.Width;
                 height = bmp.Height;
@@ -180,5 +183,7 @@ namespace Fabricor.Main.Rendering
             foreach (int t in textures)
                 GL.DeleteTexture(t);
         }
+
+
     }
 }

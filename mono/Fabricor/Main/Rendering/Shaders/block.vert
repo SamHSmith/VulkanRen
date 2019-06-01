@@ -11,6 +11,6 @@ uniform mat4 transform;
 
 void main(void)
 {
-    gl_Position = persp * view * transform * vec4(pos,  1.0);
+    gl_Position = persp * inverse(view) * transform * vec4(pos,  1.0);
     pass_UV=uvCoords;
 }

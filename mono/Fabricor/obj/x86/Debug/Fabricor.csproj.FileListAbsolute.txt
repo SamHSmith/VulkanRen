@@ -110,3 +110,4 @@
 /home/samhe/git/Fabricor/mono/Fabricor/bin/Debug/System.Runtime.CompilerServices.Unsafe.dll
 /home/samhe/git/Fabricor/mono/Fabricor/bin/Debug/System.Numerics.Vectors.xml
 /home/samhe/git/Fabricor/mono/Fabricor/bin/Debug/System.Runtime.CompilerServices.Unsafe.xml
+/home/samhe/git/Fabricor/mono/Fabricor/bin/Debug/CoreCollada.dll

@@ -48,18 +48,22 @@
     <Reference Include="BepuPhysics">
       <HintPath>packages\BepuPhysics.2.0.0\lib\netstandard2.0\BepuPhysics.dll</HintPath>
     </Reference>
+    <Reference Include="CoreCollada">
+      <HintPath>packages\JavierOltra.CoreCollada.0.0.1\lib\netstandard2.0\CoreCollada.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Main\FabricorWindow.cs" />
     <Compile Include="Main\Rendering\MasterRenderer.cs" />
-    <Compile Include="Main\Rendering\Loader.cs" />
     <Compile Include="Main\Rendering\Shader.cs" />
     <Compile Include="Main\Rendering\Textures\ModelTexture.cs" />
     <Compile Include="Main\Rendering\Models\RawModel.cs" />
     <Compile Include="Main\Rendering\Models\TexturedModel.cs" />
     <Compile Include="Main\Rendering\Models\DynamicModel.cs" />
+    <Compile Include="Main\Rendering\Loading\Loader.cs" />
+    <Compile Include="Main\Rendering\Loading\OBJLoader.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -68,6 +72,8 @@
     <Folder Include="Main\Rendering\Textures\" />
     <Folder Include="Main\Rendering\Models\" />
     <Folder Include="Resources\" />
+    <Folder Include="Resources\Models\" />
+    <Folder Include="Main\Rendering\Loading\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
@@ -80,7 +86,9 @@
     <EmbeddedResource Include="Main\Rendering\Shaders\block.frag">
       <LogicalName>block_frag</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\Dirt.png" />
+    <EmbeddedResource Include="Resources\Textures\BlockTest.png" />
+    <EmbeddedResource Include="Resources\Textures\Dirt.png" />
+    <EmbeddedResource Include="Resources\Models\Block.obj" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
