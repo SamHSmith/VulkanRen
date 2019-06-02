@@ -17,6 +17,7 @@ namespace Fabricor.Main.Rendering
         public static float AspectRatio = 1;
 
         public static Transform camera = new Transform();
+        public static List<Grid> toRenderGrids = new List<Grid>();
         public static List<RenderObject> toRender = new List<RenderObject>();
         public static Loader GlLoader { get { return loader; } }
         private static Loader loader;
@@ -32,14 +33,6 @@ namespace Fabricor.Main.Rendering
             shader = loader.LoadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },
                 new ShaderAttribute[] { new ShaderAttribute("transform", 0), new ShaderAttribute("persp", 0),
                 new ShaderAttribute("view", 0) });
-
-            Chunk c = new Chunk();
-            c.blocks[0, 0, 0] = 1;
-            c.blocks[1, 0, 0] = 1;
-            c.UpdateModel();
-            TexturedModel model = new TexturedModel(c.model, new ModelTexture(loader.LoadTexture("BlockTest")));
-
-            toRender.Add(new RenderObject(new Transform(), model));
         }
 
         public static void CleanUp()
@@ -58,6 +51,14 @@ namespace Fabricor.Main.Rendering
 
             shader.LoadMatrix("view", camera.ToGLMatrix());
             shader.LoadMatrix("persp", Matrix4.CreatePerspectiveFieldOfView(1.6f, AspectRatio, 0.01f, 1000000));
+
+            foreach (var g in toRenderGrids)
+            {
+                foreach (var o in g.GetRenderObjects())
+                {
+                    renderModel(o);
+                }
+            }
 
             foreach (var o in toRender)
             {

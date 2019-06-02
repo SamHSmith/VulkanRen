@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Fabricor.Main.Logic.Grids;
 using Fabricor.Main.Rendering;
 
 namespace Fabricor.Main.Logic
@@ -9,10 +10,22 @@ namespace Fabricor.Main.Logic
         public static List<IUpdatable> updatables = new List<IUpdatable>();
         private static DebugCamera camera= new DebugCamera();
 
+        private static Grid g = new Grid();
+
         public static void Init()
         {
             MasterRenderer.Init();
             updatables.Add(camera);
+            updatables.Add(g);
+            MasterRenderer.toRenderGrids.Add(g);
+
+            for (int x = 0; x < 50; x++)
+            {
+                for (int z = 0; z < 50; z++)
+                {
+                    g.Put(x, 0, z, 1);
+                }
+            }
         }
 
         public static void Update(float delta)

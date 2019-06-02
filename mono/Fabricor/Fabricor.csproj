@@ -71,6 +71,8 @@
     <Compile Include="Main\Logic\LogicMaster.cs" />
     <Compile Include="Main\Logic\DebugCamera.cs" />
     <Compile Include="Main\Logic\IUpdatable.cs" />
+    <Compile Include="Main\Logic\Grids\Grid.cs" />
+    <Compile Include="Main\Settings\Settings.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -83,6 +85,7 @@
     <Folder Include="Main\Rendering\Loading\" />
     <Folder Include="Main\Logic\" />
     <Folder Include="Main\Logic\Grids\" />
+    <Folder Include="Main\Settings\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />

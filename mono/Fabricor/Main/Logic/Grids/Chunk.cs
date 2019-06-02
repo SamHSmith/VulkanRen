@@ -8,17 +8,22 @@ namespace Fabricor.Main.Logic.Grids
 {
     public class Chunk
     {
-        public uint[,,] blocks=new uint[16,16,16];
-        public DynamicModel model { get; private set; }
+        public ushort[,,] blocks=new ushort[16,16,16];
+        public TexturedModel model { get; private set; }
         public int xCoord = 0, yCoord = 0, zCoord = 0;
+        public bool ShouldUpdate = false;
 
-        public Chunk()
+        public Chunk(int xCoord, int yCoord, int zCoord)
         {
-            model = MasterRenderer.GlLoader.LoadToDynamicVAO(new float[0], new float[0], new int[0]);
+            this.xCoord = xCoord;
+            this.yCoord = yCoord;
+            this.zCoord = zCoord;
+            model = new TexturedModel(MasterRenderer.GlLoader.LoadToDynamicVAO(new float[0], new float[0], new int[0]), BlockLookup.AtlasTexture);
         }
 
         public void UpdateModel()
         {
+            ShouldUpdate = false;
             List<float> verts = new List<float>();
             List<float> texCoords = new List<float>();
             List<int> indices = new List<int>();
@@ -56,9 +61,9 @@ namespace Fabricor.Main.Logic.Grids
                 }
             }
 
-            MasterRenderer.GlLoader.UpdateDynamicVAO(model, 0, verts.ToArray(), 3);
-            MasterRenderer.GlLoader.UpdateDynamicVAO(model, 1, texCoords.ToArray(), 2);
-            MasterRenderer.GlLoader.UpdateDynamicVAO(model, indices.ToArray());
+            MasterRenderer.GlLoader.UpdateDynamicVAO((DynamicModel)model.RawModel, 0, verts.ToArray(), 3);
+            MasterRenderer.GlLoader.UpdateDynamicVAO((DynamicModel)model.RawModel, 1, texCoords.ToArray(), 2);
+            MasterRenderer.GlLoader.UpdateDynamicVAO((DynamicModel)model.RawModel, indices.ToArray());
         }
 
         

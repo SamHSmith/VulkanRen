@@ -8,6 +8,25 @@ namespace Fabricor.Main.Logic
         public Vector3 position=new Vector3();
         public Quaternion rotation=Quaternion.Identity;
 
+        public Transform()
+        {
+        }
+
+        public Transform(Vector3 position)
+        {
+            this.position = position;
+        }
+
+        public Transform(Quaternion rotation)
+        {
+            this.rotation = rotation;
+        }
+
+        public Transform(Vector3 position, Quaternion rotation) : this(position)
+        {
+            this.rotation = rotation;
+        }
+
         public Transform LocalToWorldSpace(Transform t)
         {
             Transform f = new Transform();
