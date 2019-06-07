@@ -1,14 +1,16 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Rendering/MasterRenderer.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="26" Column="39" />
-      <File FileName="Main/Rendering/RenderObject.cs" Line="16" Column="10" />
-      <File FileName="Main/Logic/IUpdatable.cs" Line="4" Column="32" />
-      <File FileName="Main/Rendering/MasterRenderer.cs" Line="35" Column="51" />
-      <File FileName="Main/Logic/Grids/Grid.cs" Line="8" Column="18" />
-      <File FileName="Main/Logic/Grids/Chunk.cs" Line="11" Column="44" />
-      <File FileName="Main/Rendering/Models/DynamicModel.cs" Line="4" Column="18" />
-      <File FileName="Main/Settings/Settings.cs" Line="6" Column="60" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="39" Column="14" />
+      <File FileName="Main/Rendering/MasterRenderer.cs" Line="100" Column="30" />
+      <File FileName="Main/Logic/Grids/Grid.cs" Line="83" Column="59" />
+      <File FileName="Main/Logic/Grids/Chunk.cs" Line="36" Column="25" />
+      <File FileName="Main/Logic/Physics/NarrowPhaseCallback.cs" Line="56" Column="10" />
+      <File FileName="Main/Logic/Physics/PoseIntegratorCallbacks.cs" Line="42" Column="61" />
+      <File FileName="Main/Logic/Grids/BlockLookup.cs" Line="17" Column="30" />
+      <File FileName="Main/FabricorWindow.cs" Line="37" Column="1" />
+      <File FileName="Main/Rendering/Shader.cs" Line="81" Column="76" />
+      <File FileName="Program.cs" Line="11" Column="10" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -18,13 +20,14 @@
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
                   <Node name="Grids" expanded="True" />
+                  <Node name="Physics" expanded="True" />
+                  <Node name="LogicMaster.cs" selected="True" />
                 </Node>
                 <Node name="Rendering" expanded="True">
                   <Node name="Loading" expanded="True" />
                   <Node name="Models" expanded="True" />
                   <Node name="Shaders" expanded="True" />
                   <Node name="Textures" expanded="True" />
-                  <Node name="MasterRenderer.cs" selected="True" />
                 </Node>
                 <Node name="Settings" expanded="True" />
               </Node>

@@ -28,6 +28,8 @@ namespace Fabricor.Main.Rendering
         {
             GL.Enable(EnableCap.DepthTest);
             GL.DepthFunc(DepthFunction.Less);
+            GL.Enable(EnableCap.CullFace);
+            GL.CullFace(CullFaceMode.Back);
             loader = new Loader();
 
             shader = loader.LoadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },

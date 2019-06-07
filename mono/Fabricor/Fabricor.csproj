@@ -19,6 +19,8 @@
     <WarningLevel>4</WarningLevel>
     <ExternalConsole>true</ExternalConsole>
     <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <Optimize>true</Optimize>
@@ -27,6 +29,8 @@
     <WarningLevel>4</WarningLevel>
     <ExternalConsole>true</ExternalConsole>
     <PlatformTarget>x86</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -73,6 +77,8 @@
     <Compile Include="Main\Logic\IUpdatable.cs" />
     <Compile Include="Main\Logic\Grids\Grid.cs" />
     <Compile Include="Main\Settings\Settings.cs" />
+    <Compile Include="Main\Logic\Physics\NarrowPhaseCallback.cs" />
+    <Compile Include="Main\Logic\Physics\PoseIntegratorCallbacks.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -86,6 +92,7 @@
     <Folder Include="Main\Logic\" />
     <Folder Include="Main\Logic\Grids\" />
     <Folder Include="Main\Settings\" />
+    <Folder Include="Main\Logic\Physics\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
@@ -101,6 +108,7 @@
     <EmbeddedResource Include="Resources\Textures\BlockTest.png" />
     <EmbeddedResource Include="Resources\Textures\Dirt.png" />
     <EmbeddedResource Include="Resources\Models\Block.obj" />
+    <EmbeddedResource Include="Resources\Textures\Grass.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
