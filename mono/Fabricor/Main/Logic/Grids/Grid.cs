@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuUtilities.Memory;
 using Fabricor.Main.Rendering;
 
@@ -12,41 +13,54 @@ namespace Fabricor.Main.Logic.Grids
     {
         private List<Chunk> chunks = new List<Chunk>();
         public Transform transform = new Transform();
-        private BodyReference body = new BodyReference();
+        private BodyReference body = new BodyReference(0,LogicMaster.Simulation.Bodies);
+        private bool noBody = true;
         private TypedIndex shape;
         private BodyInertia inertia;
+        public bool IsStatic { get; private set; }
 
         public Grid()
         {
             
         }
 
+        public Grid(bool isStatic)
+        {
+            IsStatic = isStatic;
+        }
+
         private void CreateBody()
         {
-            BodyDescription desc = new BodyDescription();
-            BepuUtilities.Quaternion rot = new BepuUtilities.Quaternion(transform.rotation.X, transform.rotation.Y, transform.rotation.Z, transform.rotation.W);
-            desc.Pose = new RigidPose(in transform.position, in rot);
-            desc.LocalInertia = inertia;
-            if (shape.Index!=0)
-                desc.Collidable = new CollidableDescription(shape, 0.02f);
+            noBody = false;
+
+            BodyDescription desc = BodyDescription.CreateDynamic(transform.ToRigidPose(), inertia, new CollidableDescription(shape, 0.0f),
+                new BodyActivityDescription(0.0f));
+
+            if (IsStatic)
+            {
+                desc.LocalInertia.InverseMass = 0;
+                desc.LocalInertia.InverseInertiaTensor = new Symmetric3x3();
+            }
             int handle = LogicMaster.Simulation.Bodies.Add(desc);
-            Console.WriteLine(handle);
             body.Handle = handle;
         }
 
         private void UpdateShape()
         {
-            if(body.Handle!=0)
+            if (body.Handle != 0)
                 LogicMaster.Simulation.Bodies.Remove(body.Handle);
-            if (shape.Index!=0)
+            if (shape.Index != 0)
                 LogicMaster.Simulation.Shapes.Remove(shape);
 
             BufferPool pool = new BufferPool();
-            CompoundBuilder b = new CompoundBuilder(pool,LogicMaster.Simulation.Shapes,chunks.Count);
+            CompoundBuilder b = new CompoundBuilder(pool, LogicMaster.Simulation.Shapes, chunks.Count);
             foreach (var ch in chunks)
             {
                 RigidPose pose = new RigidPose(new Vector3(ch.xCoord * 16, ch.yCoord * 16, ch.zCoord * 16));
-                b.Add(LogicMaster.CubeShapeIndex, in pose, ch.inertia.InverseInertiaTensor,ch.inertia.InverseMass);
+                
+
+                    b.Add(ch.shape, in pose, ch.inertia.InverseInertiaTensor, ch.inertia.InverseMass);
+
             }
 
 
@@ -54,10 +68,14 @@ namespace Fabricor.Main.Logic.Grids
             b.Reset();
 
             inertia = compoundInertia;
+            Console.WriteLine("MASS: " + inertia.InverseMass);
 
-            BigCompound compound = new BigCompound(compoundChildren,LogicMaster.Simulation.Shapes,pool);
+            if (compoundChildren.Length <= 0)
+                return;
 
-            shape=LogicMaster.Simulation.Shapes.Add<BigCompound>(in compound);
+            BigCompound compound = new BigCompound(compoundChildren, LogicMaster.Simulation.Shapes, pool);
+
+            shape = LogicMaster.Simulation.Shapes.Add<BigCompound>(in compound);
             CreateBody();
         }
 
@@ -66,7 +84,7 @@ namespace Fabricor.Main.Logic.Grids
             List<RenderObject> objs = new List<RenderObject>();
             foreach (var c in chunks)
             {
-                RenderObject o = new RenderObject(transform.LocalToWorldSpace(new Transform(new Vector3(c.xCoord*16,c.yCoord*16,c.zCoord*16))),c.model);
+                RenderObject o = new RenderObject(transform.LocalToWorldSpace(new Transform(new Vector3(c.xCoord * 16, c.yCoord * 16, c.zCoord * 16))), c.model);
                 objs.Add(o);
             }
             return objs;
@@ -86,13 +104,15 @@ namespace Fabricor.Main.Logic.Grids
                 if (count >= Settings.Settings.ChunkGeneratePerGridPerFrame)
                     break;
             }
-            if(count>0)
+            if (count > 0)
                 UpdateShape();
 
-            if (count == 0)
+            if (!noBody)
             {
-                //Console.WriteLine(body.Handle);
+                transform.FromRigidPose(body.Pose);
+                
             }
+
         }
 
         public void Put(int x, int y, int z, ushort block)
@@ -102,7 +122,7 @@ namespace Fabricor.Main.Logic.Grids
             int cz = z - (z % 16);
 
             Chunk c = GetChunk(cx / 16, cy / 16, cz / 16);
-            c.blocks[x - cx, y - cy, z - cz]=block;
+            c.blocks[x - cx, y - cy, z - cz] = block;
             c.ShouldUpdate = true;
         }
 
@@ -122,14 +142,14 @@ namespace Fabricor.Main.Logic.Grids
             Chunk c = null;
             foreach (var ch in chunks)
             {
-                if(ch.xCoord==x&& ch.yCoord == y && ch.zCoord == z)
+                if (ch.xCoord == x && ch.yCoord == y && ch.zCoord == z)
                 {
                     c = ch;
                 }
             }
             if (c == null)
             {
-                c = new Chunk(x,y,z);
+                c = new Chunk(x, y, z);
                 chunks.Add(c);
             }
             return c;

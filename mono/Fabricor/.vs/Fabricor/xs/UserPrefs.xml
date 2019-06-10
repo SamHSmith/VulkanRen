@@ -1,16 +1,12 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
   <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="39" Column="14" />
-      <File FileName="Main/Rendering/MasterRenderer.cs" Line="100" Column="30" />
-      <File FileName="Main/Logic/Grids/Grid.cs" Line="83" Column="59" />
-      <File FileName="Main/Logic/Grids/Chunk.cs" Line="36" Column="25" />
-      <File FileName="Main/Logic/Physics/NarrowPhaseCallback.cs" Line="56" Column="10" />
-      <File FileName="Main/Logic/Physics/PoseIntegratorCallbacks.cs" Line="42" Column="61" />
-      <File FileName="Main/Logic/Grids/BlockLookup.cs" Line="17" Column="30" />
-      <File FileName="Main/FabricorWindow.cs" Line="37" Column="1" />
-      <File FileName="Main/Rendering/Shader.cs" Line="81" Column="76" />
-      <File FileName="Program.cs" Line="11" Column="10" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="67" Column="1" />
+      <File FileName="Main/Logic/Transform.cs" Line="34" Column="56" />
+      <File FileName="Main/Logic/Grids/Grid.cs" Line="63" Column="1" />
+      <File FileName="Main/Logic/Grids/Chunk.cs" Line="90" Column="21" />
+      <File FileName="Main/Logic/Physics/PoseIntegratorCallbacks.cs" Line="52" Column="72" />
+      <File FileName="Main/FabricorWindow.cs" Line="21" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">

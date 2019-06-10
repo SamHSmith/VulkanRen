@@ -13,7 +13,7 @@ namespace Fabricor.Main.Logic.Physics
         /// <summary>
         /// Gets how the pose integrator should handle angular velocity integration.
         /// </summary>
-        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving; //Don't care about fidelity in this demo!
+        public AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque;
 
         public PoseIntegratorCallbacks(Vector3 gravity) : this()
         {
@@ -28,6 +28,7 @@ namespace Fabricor.Main.Logic.Physics
         {
             //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
             gravityDt = Gravity * dt;
+
         }
 
         /// <summary>
@@ -42,9 +43,14 @@ namespace Fabricor.Main.Logic.Physics
         public void IntegrateVelocity(int bodyIndex, in RigidPose pose, in BodyInertia localInertia, int workerIndex, ref BodyVelocity velocity)
         {
             //Note that we avoid accelerating kinematics. Kinematics are any body with an inverse mass of zero (so a mass of ~infinity). No force can move them.
+
             if (localInertia.InverseMass > 0)
             {
                 velocity.Linear = velocity.Linear + gravityDt;
+                if (bodyIndex == 1)
+                {
+                    Console.WriteLine(velocity.Linear.Y+" "+gravityDt.X);
+                }
             }
         }
 

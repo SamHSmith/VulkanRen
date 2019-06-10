@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuUtilities.Memory;
 using Fabricor.Main.Rendering;
 using Fabricor.Main.Rendering.Loading;
@@ -88,6 +89,8 @@ namespace Fabricor.Main.Logic.Grids
 
         public void UpdateShape(Simulation s)
         {
+            
+
             if (shape.Index!=0)
                 s.Shapes.Remove(shape);
             shape = LogicMaster.CubeShapeIndex;
@@ -121,9 +124,14 @@ namespace Fabricor.Main.Logic.Grids
 
             inertia = compoundInertia;
 
-            BigCompound compound = new BigCompound(compoundChildren, s.Shapes, pool);
+            if (compoundChildren.Length <= 0)
+                return;
+
+            BigCompound compound = new BigCompound(compoundChildren,s.Shapes,pool);
 
             shape=s.Shapes.Add<BigCompound>(in compound);
         }
+
+
     }
 }
