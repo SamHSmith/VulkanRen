@@ -21,6 +21,15 @@ namespace Fabricor.Main.Logic.Grids
             model = new TexturedModel(MasterRenderer.GlLoader.LoadToDynamicVAO(new float[0], new float[0], new int[0]), BlockLookup.AtlasTexture);
         }
 
+        private int Value(int x, int y, int z)
+        {
+            if (x < 0 || y < 0 || z < 0 || x >= 16 || y >= 16 || z >= 16)
+            {
+                return 0;
+            }
+            return blocks[x, y, z];
+        }
+
         public void UpdateModel()
         {
             ShouldUpdate = false;
@@ -33,10 +42,13 @@ namespace Fabricor.Main.Logic.Grids
                 {
                     for (int z = 0; z < 16; z++)
                     {
-                        if (blocks[x, y, z] <= 0)
-                        {
+                        if (Value(x - 1, y, z) > 0 && Value(x + 1, y, z) > 0 && Value(x, y - 1, z) > 0
+                        && Value(x, y + 1, z) > 0 && Value(x, y, z - 1) > 0 && Value(x, y, z + 1) > 0)
                             continue;
-                        }
+
+                        if (Value(x, y, z) <= 0)
+                            continue;
+
                         int vcount = verts.Count/3;
                         Mesh m = BlockLookup.GetBlockMesh(blocks[x,y,z]);
                         for (int i = 0; i < m.vertices.Length; i++)

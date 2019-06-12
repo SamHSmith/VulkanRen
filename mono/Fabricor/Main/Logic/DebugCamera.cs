@@ -29,7 +29,6 @@ namespace Fabricor.Main.Logic
             if (rotx > 90)
                 rotx = 90;
 
-            Console.WriteLine(rotx);
 
 
             transform.rotation = Quaternion.Multiply(Quaternion.CreateFromAxisAngle(new Vector3(0, 1, 0), (float)Math.PI / 180 * roty),

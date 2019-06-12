@@ -23,7 +23,10 @@ namespace Fabricor.Main.Logic
             {
                 for (int z = 0; z < 50; z++)
                 {
-                    g.Put(x, 0, z, 1);
+                    for (int y = 0; y < 3; y++)
+                    {
+                        g.Put(x, y, z, 1);
+                    }
                 }
             }
         }
