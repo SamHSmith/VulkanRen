@@ -8,7 +8,7 @@ namespace Fabricor.Main.Logic.Grids
     public class Grid : IUpdatable
     {
         private List<Chunk> chunks = new List<Chunk>();
-        public Transform transform = new Transform();
+        public Transform transform = new Transform(new Vector3());
 
         public List<RenderObject> GetRenderObjects()
         {

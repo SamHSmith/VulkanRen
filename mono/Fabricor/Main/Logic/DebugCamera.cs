@@ -6,7 +6,7 @@ namespace Fabricor.Main.Logic
 {
     public class DebugCamera : IUpdatable
     {
-        public Transform transform = new Transform();
+        public Transform transform = new Transform(new Vector3());
 
         private float rotx = 0, roty = 0;
         private int lastx = 0, lasty = 0;

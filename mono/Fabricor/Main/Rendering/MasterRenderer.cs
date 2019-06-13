@@ -16,7 +16,7 @@ namespace Fabricor.Main.Rendering
     {
         public static float AspectRatio = 1;
 
-        public static Transform camera = new Transform();
+        public static Transform camera = new Transform(new System.Numerics.Vector3());
         public static List<Grid> toRenderGrids = new List<Grid>();
         public static List<RenderObject> toRender = new List<RenderObject>();
         public static Loader GlLoader { get { return loader; } }
@@ -58,18 +58,18 @@ namespace Fabricor.Main.Rendering
             {
                 foreach (var o in g.GetRenderObjects())
                 {
-                    renderModel(o);
+                    RenderModel(o);
                 }
             }
 
             foreach (var o in toRender)
             {
-                renderModel(o);
+                RenderModel(o);
             }
             shader.StopProgram();
 
         }
-        private static void renderModel(RenderObject o)
+        private static void RenderModel(RenderObject o)
         {
             if (o == null)
                 return;

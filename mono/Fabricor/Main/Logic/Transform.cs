@@ -3,23 +3,22 @@ using System.Numerics;
 
 namespace Fabricor.Main.Logic
 {
-    public class Transform
+    public struct Transform
     {
-        public Vector3 position=new Vector3();
-        public Quaternion rotation=Quaternion.Identity;
+        public Vector3 position;
+        public Quaternion rotation;
 
-        public Transform()
-        {
-        }
 
         public Transform(Vector3 position)
         {
             this.position = position;
+            this.rotation = Quaternion.Identity;
         }
 
         public Transform(Quaternion rotation)
         {
             this.rotation = rotation;
+            this.position = new Vector3();
         }
 
         public Transform(Vector3 position, Quaternion rotation) : this(position)
@@ -27,9 +26,17 @@ namespace Fabricor.Main.Logic
             this.rotation = rotation;
         }
 
+        public static Transform operator*(Transform a, Transform b)
+        {
+            Transform f = new Transform(new Vector3());
+            f.position = a.position + Vector3.Transform(b.position, a.rotation);
+            f.rotation = Quaternion.Multiply(a.rotation, b.rotation);
+            return f;
+        }
+
         public Transform LocalToWorldSpace(Transform t)
         {
-            Transform f = new Transform();
+            Transform f = new Transform(new Vector3());
             f.position = position + Vector3.Transform(t.position, rotation);
             f.rotation = Quaternion.Multiply(rotation, t.rotation);
             return f;
