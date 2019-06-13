@@ -64,6 +64,11 @@
     <Compile Include="Main\Logic\IUpdatable.cs" />
     <Compile Include="Main\Logic\Grids\Grid.cs" />
     <Compile Include="Main\Settings\Settings.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\IShape.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\AABB.cs" />
+    <Compile Include="Main\Logic\Physics\Exceptions\CollisionDetectionNotImplementedException.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\BoundSphere.cs" />
+    <Compile Include="Main\Toolbox\Maths.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -77,6 +82,10 @@
     <Folder Include="Main\Logic\" />
     <Folder Include="Main\Logic\Grids\" />
     <Folder Include="Main\Settings\" />
+    <Folder Include="Main\Logic\Physics\" />
+    <Folder Include="Main\Logic\Physics\Shapes\" />
+    <Folder Include="Main\Logic\Physics\Exceptions\" />
+    <Folder Include="Main\Toolbox\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
