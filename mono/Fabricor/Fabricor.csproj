@@ -69,6 +69,10 @@
     <Compile Include="Main\Logic\Physics\Exceptions\CollisionDetectionNotImplementedException.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\BoundSphere.cs" />
     <Compile Include="Main\Toolbox\Maths.cs" />
+    <Compile Include="Main\Logic\Physics\Rigidbody.cs" />
+    <Compile Include="Main\Logic\Physics\ContactPoint.cs" />
+    <Compile Include="Main\Logic\Physics\Collidable.cs" />
+    <Compile Include="Main\Logic\Physics\Simulation.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

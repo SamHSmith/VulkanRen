@@ -1,10 +1,13 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
   <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Shapes/AABB.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="38" Column="22" />
-      <File FileName="Main/Logic/Physics/Shapes/IShape.cs" Line="10" Column="37" />
-      <File FileName="Main/Logic/Physics/Shapes/AABB.cs" Line="36" Column="78" />
-      <File FileName="Main/Logic/Physics/Shapes/BoundSphere.cs" Line="20" Column="38" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="31" Column="39" />
+      <File FileName="Main/Logic/Physics/Shapes/BoundSphere.cs" Line="16" Column="10" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="39" Column="54" />
+      <File FileName="Main/Logic/Physics/Collidable.cs" Line="11" Column="26" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="42" Column="14" />
+      <File FileName="Main/Logic/Physics/Shapes/AABB.cs" Line="76" Column="97" />
+      <File FileName="Main/Toolbox/Maths.cs" Line="45" Column="22" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -13,7 +16,6 @@
             <Node name="Fabricor" expanded="True">
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
-                  <Node name="Grids" expanded="True" />
                   <Node name="Physics" expanded="True">
                     <Node name="Exceptions" expanded="True" />
                     <Node name="Shapes" expanded="True">

@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Numerics;
+using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
     public struct BoundSphere : IShape
     {
         public float radius;
+
+        public Collidable Collidable { get; set; }
+
+        public BoundSphere(float radius) : this()
+        {
+            this.radius = radius;
+        }
 
         public bool HasImplementation(IShape s)
         {
@@ -15,25 +23,27 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             return false;
         }
 
-        public bool IsColliding(Transform at, Transform bt, IShape other)
+        public ContactPoint[] IsColliding(Transform at, Transform bt, IShape other)
         {
             if (other is BoundSphere)
-                IsColliding(at, bt, (BoundSphere) other);
+                return IsColliding(at, bt, (BoundSphere) other);
 
-            return false;
+            return new ContactPoint[0];
         }
 
-        public bool IsColliding(Transform at, Transform bt, BoundSphere other)
+        public ContactPoint[] IsColliding(Transform at, Transform bt, BoundSphere other)
         {
-            if ((at.position - bt.position).Length() < this.radius + other.radius)
-                return true;
+            Vector3 dir = (at.position - bt.position);
+            if (dir.Length() < this.radius + other.radius)
+                return new ContactPoint[] { new ContactPoint { position = Maths.Average(at.position, bt.position), normal = dir,
+                    bodyA = this.Collidable, bodyB = other.Collidable } };
 
-            return false;
+            return new ContactPoint[0];
         }
 
         public AABB ToAABB()
         {
-            return new AABB { radii = new Vector3(radius, radius, radius) };
+            return new AABB { radii = new Vector3(radius, radius, radius),Collidable=this.Collidable };
         }
 
         public BoundSphere ToBoundSphere()

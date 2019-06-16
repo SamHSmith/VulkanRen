@@ -34,12 +34,18 @@ namespace Fabricor.Main.Logic
             return f;
         }
 
-        public Transform LocalToWorldSpace(Transform t)
+        public static Transform operator /(Transform b, Transform a)
         {
             Transform f = new Transform(new Vector3());
-            f.position = position + Vector3.Transform(t.position, rotation);
-            f.rotation = Quaternion.Multiply(rotation, t.rotation);
+            f.position = Vector3.Transform(b.position- a.position, a.rotation);
+            f.rotation = Quaternion.Multiply(Quaternion.Inverse(a.rotation), b.rotation);
             return f;
+        }
+
+        public Transform LocalToWorldSpace(Transform t)
+        {
+
+            return this*t;
         }
 
         public OpenTK.Matrix4 ToGLMatrix()

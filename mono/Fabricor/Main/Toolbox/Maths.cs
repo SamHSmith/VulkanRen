@@ -23,5 +23,29 @@ namespace Fabricor.Main.Toolbox
 
             return value;
         }
+
+        public static Vector3 Average(params Vector3[] vec)
+        {
+            if (vec.Length == 0)
+                return new Vector3();
+            Vector3 v = new Vector3();
+            for (int i = 0; i < vec.Length; i++)
+            {
+                v += vec[i];
+            }
+            v /= vec.Length;
+            return v;
+        }
+
+        public static Vector3 SmallestComponent(Vector3 v)
+        {
+            if (v.X < v.Y && v.X < v.Z)
+                return new Vector3(v.X, 0, 0);
+
+            if (v.Y < v.Z)
+                return new Vector3(0, v.Y, 0);
+            else
+                return new Vector3(0, 0, v.Z);
+        }
     }
 }
