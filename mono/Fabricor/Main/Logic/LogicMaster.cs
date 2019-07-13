@@ -25,15 +25,16 @@ namespace Fabricor.Main.Logic
             MasterRenderer.toRenderGrids.Add(g);
             updatables.Add(g1);
             MasterRenderer.toRenderGrids.Add(g1);
-            rb1.transform.position.Y = 4;
-            rb1.transform.position.Z = 0.4f;
-            rb1.linearVelocity.Y = -0.5f;
-            rb1.angularVelocity.X = -1f;
+            rb1.transform.position.Y = 2;
+            rb1.transform.position.Z = 0.5f;
+            rb1.linearVelocity.Y = -0.2f;
+            rb1.angularVelocity.X = -0.2f;
             Simulation.rigidbodies.Add(rb);
             Simulation.rigidbodies.Add(rb1);
-            rb.AddShape(new AABB {radii=new Vector3(0.5f) });
+            rb.AddShape(new AABB { radii = new Vector3(0.5f) });
             rb1.AddShape(new AABB { radii = new Vector3(0.5f) });
 
+            
 
             /*
             for (int x = 0; x < 50; x++)

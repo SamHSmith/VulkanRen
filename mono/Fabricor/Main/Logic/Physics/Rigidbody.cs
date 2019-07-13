@@ -9,6 +9,7 @@ namespace Fabricor.Main.Logic.Physics
         public Vector3 linearVelocity;
         public Vector3 angularVelocity;
         public float mass=1;
+        public Vector3 inverseInertia = Vector3.One;
 
         public Rigidbody()
         {
@@ -19,6 +20,26 @@ namespace Fabricor.Main.Logic.Physics
         {
             //TODO add center of mass
             Console.WriteLine("Force " + force);
+
+
+
+            Vector3 axis = Vector3.Normalize(Vector3.Cross(force,position));
+            Console.WriteLine("Axis " + axis);
+            Console.WriteLine("Force Position" + force+" "+position);
+
+            float invinertia = (Vector3.Abs(axis)*inverseInertia).Length();
+
+            Console.WriteLine("inertia " + invinertia);
+
+            float perpPart = Vector3.Dot(force, Vector3.Abs(Vector3.Normalize(Vector3.Cross(position, axis))));
+
+            float speedChange = invinertia * force.Length()*perpPart;
+
+            angularVelocity += axis * speedChange / position.Length() * 2 * (float)Math.PI;
+
+            Console.WriteLine("perp " + perpPart);
+            Console.WriteLine("spdChange " + speedChange);
+
             linearVelocity += force / GetMass();
         }
 

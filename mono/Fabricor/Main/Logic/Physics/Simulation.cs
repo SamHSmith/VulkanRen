@@ -31,16 +31,18 @@ namespace Fabricor.Main.Logic.Physics
 
             foreach (var c in contacts)
             {
-                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(c.position), c.normal);
-                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(c.position), c.normal);
+                Vector3 normal = c.normal;
+                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(c.position), normal);
+                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(c.position), normal);
+                float relativeVelocity = (a1 - b1);
+                float p = 2* relativeVelocity / (c.bodyA.GetMass() + c.bodyB.GetMass());
 
-                float p = 2*(a1 - b1) / (c.bodyA.GetMass() + c.bodyB.GetMass());
-
-                Console.WriteLine("normal" + c.normal);
+                Console.WriteLine("rel vel" + normal);
+                Console.WriteLine("normal" + normal);
                 Console.WriteLine("P " + p);
 
-                c.bodyA.ApplyForce(c.position, -c.normal *p* c.bodyB.GetMass() * c.bodyA.GetMass());//Second masses get divided away later
-                c.bodyB.ApplyForce(c.position, c.normal *p* c.bodyA.GetMass() * c.bodyB.GetMass());
+                c.bodyA.ApplyForce(c.position, normal * -p* c.bodyB.GetMass() * c.bodyA.GetMass());//Second masses get divided away later
+                c.bodyB.ApplyForce(c.position, normal * p* c.bodyA.GetMass() * c.bodyB.GetMass());
             }
         }
 

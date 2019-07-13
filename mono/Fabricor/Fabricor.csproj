@@ -73,6 +73,7 @@
     <Compile Include="Main\Logic\Physics\ContactPoint.cs" />
     <Compile Include="Main\Logic\Physics\Collidable.cs" />
     <Compile Include="Main\Logic\Physics\Simulation.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\ConvexShape.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

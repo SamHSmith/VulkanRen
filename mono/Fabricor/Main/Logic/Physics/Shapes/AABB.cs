@@ -74,7 +74,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
             if ((relpos - closest).Length() < other.radius)
                 return new ContactPoint[] { new ContactPoint {position=(relpos / 2)+at.position,
-                normal=Vector3.Normalize(closest*Vector3.Normalize(Maths.SmallestComponent(radii-Vector3.Abs(closest)))),
+                normal=Vector3.Normalize(closest),
                     bodyA = this.Collidable, bodyB = other.Collidable } };
 
             return new ContactPoint[0];

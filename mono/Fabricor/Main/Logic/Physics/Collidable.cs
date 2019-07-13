@@ -34,6 +34,7 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract Vector3 GetPointVelocity(Vector3 worldPoint);
 
+
         public void ApplyForce(Vector3 position, Vector3 force)
         {
             ApplyLocalForce((new Transform(position) / this.transform).position, force);
