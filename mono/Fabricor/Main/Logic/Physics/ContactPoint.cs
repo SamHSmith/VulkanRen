@@ -7,6 +7,7 @@ namespace Fabricor.Main.Logic.Physics
     {
         public Vector3 position;
         public Vector3 normal;
+        public float depth;
         public Collidable bodyA;
         public Collidable bodyB;
     }

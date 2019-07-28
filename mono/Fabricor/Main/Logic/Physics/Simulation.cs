@@ -31,16 +31,38 @@ namespace Fabricor.Main.Logic.Physics
 
             foreach (var c in contacts)
             {
-                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(c.position), c.normal);
-                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(c.position), c.normal);
+                Vector3 normal = c.normal;
+                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(c.position), normal);
+                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(c.position), normal);
+                float relativeVelocity = (a1 - b1);
+                //Console.WriteLine("rel vel " + relativeVelocity);
+                //Console.WriteLine("normal " + Vector3.Transform(c.normal,c.bodyA.transform.rotation));
 
-                float p = 2*(a1 - b1) / (c.bodyA.GetMass() + c.bodyB.GetMass());
+                //Console.WriteLine("depth " + c.depth);
 
-                Console.WriteLine("normal" + c.normal);
-                Console.WriteLine("P " + p);
+                c.bodyA.transform.position += c.normal * c.depth/2;
+                c.bodyB.transform.position -= c.normal * c.depth/2;
 
-                c.bodyA.ApplyForce(c.position, -c.normal *p* c.bodyB.GetMass() * c.bodyA.GetMass());//Second masses get divided away later
-                c.bodyB.ApplyForce(c.position, c.normal *p* c.bodyA.GetMass() * c.bodyB.GetMass());
+                if (relativeVelocity > 0)//We dont want to keep objects inside of each other
+                    continue;
+
+                float m1 = c.bodyA.GetMass();
+                float m2 = c.bodyB.GetMass();
+
+                float p = 2* relativeVelocity / (m1+m2);
+
+
+                //Console.WriteLine("P " + p);
+
+                float totalM=((c.bodyA.GetMass()*c.bodyA.GetPointVelocity(c.bodyA.transform.position))+
+                    (c.bodyB.GetMass() * c.bodyB.GetPointVelocity(c.bodyB.transform.position))).Length();
+
+                float linear=c.bodyA.ApplyAcceleration(c.position, normal * -p* m2,1);//Second masses get divided away later
+                c.bodyB.ApplyAcceleration(c.position, normal * p* m1, linear);
+
+
+
+                //Console.WriteLine(totalM);
             }
         }
 
@@ -78,6 +100,7 @@ namespace Fabricor.Main.Logic.Physics
             {
                 for (int k = i+1; k < collidables.Count; k++)
                 {
+
                     if (bounds[i].IsColliding(collidables[i].transform, collidables[k].transform, bounds[k]).Length > 0)
                     {
                         CollidablePair pair = new CollidablePair { a = collidables[i], b = collidables[k] };
