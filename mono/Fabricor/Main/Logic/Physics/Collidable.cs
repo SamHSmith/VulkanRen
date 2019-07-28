@@ -32,14 +32,16 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract float GetMass();
 
+        public abstract float GetPointInertia(Vector3 worldPoint);
+
         public abstract Vector3 GetPointVelocity(Vector3 worldPoint);
 
 
-        public void ApplyForce(Vector3 position, Vector3 force)
+        public float ApplyAcceleration(Vector3 position, Vector3 acceleration, float linearFactor)
         {
-            ApplyLocalForce((new Transform(position) / this.transform).position, force);
+            return ApplyLocalAcceleration((new Transform(position) / this.transform).position, acceleration, linearFactor);
         }
 
-        public abstract void ApplyLocalForce(Vector3 position, Vector3 force);
+        public abstract float ApplyLocalAcceleration(Vector3 position, Vector3 acceleration, float linearFactor);
     }
 }

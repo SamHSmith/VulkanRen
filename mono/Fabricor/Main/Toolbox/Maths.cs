@@ -47,5 +47,28 @@ namespace Fabricor.Main.Toolbox
             else
                 return new Vector3(0, 0, v.Z);
         }
+
+        public static Vector3 SnapVector(Vector3 v)
+        {
+            if (Math.Abs(v.X) > Math.Abs(v.Y) && Math.Abs(v.X) > Math.Abs(v.Z))
+            {
+                v.X = Math.Sign(v.X);
+                v.Y = 0;
+                v.Z = 0;
+                return v;
+            }
+            if(Math.Abs(v.Y)> Math.Abs(v.X)&& Math.Abs(v.Y)> Math.Abs(v.Z))
+            {
+                v.X = 0;
+                v.Y = Math.Sign(v.Y);
+                v.Z = 0;
+                return v;
+            }
+
+            v.X = 0;
+            v.Y = 0;
+            v.Z = Math.Sign(v.Z);
+            return v;
+        }
     }
 }

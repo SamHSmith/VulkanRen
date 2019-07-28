@@ -64,7 +64,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 return new ContactPoint[0];
 
             Vector3 pos = Maths.Clamp(relpos, radii * -1, radii)+at.position;
-            return new ContactPoint[] { new ContactPoint { position= pos,normal=Vector3.Normalize(relpos),bodyA=this.Collidable,bodyB= other.Collidable} };
+            return new ContactPoint[] { new ContactPoint { position= pos,normal=Vector3.Normalize(Maths.SnapVector(relpos)),bodyA=this.Collidable,bodyB= other.Collidable} };
         }
 
         public ContactPoint[] IsColliding(Transform at, Transform bt, BoundSphere other)
