@@ -21,9 +21,9 @@ namespace Fabricor.Main.Logic.Physics
             foreach (var rb in rigidbodies)
             {
                 rb.transform.position += rb.linearVelocity * delta;
-                if(rb.angularVelocity.Length()>0)
+                if (rb.angularVelocity.Length() > 0)
                     rb.transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(rb.angularVelocity),
-                        rb.angularVelocity.Length()*delta)*rb.transform.rotation;
+                        rb.angularVelocity.Length() * delta) * rb.transform.rotation;
             }
         }
         private static void PerformCollisions(List<ContactPoint> contacts)
@@ -32,16 +32,51 @@ namespace Fabricor.Main.Logic.Physics
             foreach (var c in contacts)
             {
                 Vector3 normal = c.normal;
-                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(c.position), normal);
-                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(c.position), normal);
+                int contactCount = c.position.Length;
+                Vector3 position = Vector3.Zero;
+                foreach (var pos in c.position)
+                {
+                    position += pos;
+                }
+                position /= contactCount;
+
+                c.bodyA.transform.position += c.normal * c.depth / 2;
+                c.bodyB.transform.position -= c.normal * c.depth / 2;
+
+                float kinlin = Vector3.Dot(normal, c.bodyA.GetLinearVelocity())+ 
+                Vector3.Dot(-normal, c.bodyB.GetLinearVelocity());//Kinetic linear energi for body a and body b
+                kinlin = kinlin * kinlin;
+                kinlin *= c.bodyA.GetMass()+c.bodyB.GetMass();
+                kinlin /= 2;
+
+
+
+
+                Console.WriteLine(kinlin);
+
+                float totalLinearEnergi = kinlin;
+
+                float speed = totalLinearEnergi / ((c.bodyA.GetMass() + c.bodyB.GetMass())/2);
+                speed = (float)Math.Sqrt(speed);
+                Console.WriteLine(speed);
+
+                float p = 2 * speed / (c.bodyA.GetMass() + c.bodyB.GetMass());
+
+                c.bodyA.ApplyLinearForce(normal * p*c.bodyB.GetMass()*c.bodyA.GetMass());
+                c.bodyB.ApplyLinearForce(normal * -p*c.bodyA.GetMass() * c.bodyB.GetMass());
+
+
+                /*
+                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(position), normal);
+                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(position), normal);
                 float relativeVelocity = (a1 - b1);
                 //Console.WriteLine("rel vel " + relativeVelocity);
                 //Console.WriteLine("normal " + Vector3.Transform(c.normal,c.bodyA.transform.rotation));
 
                 //Console.WriteLine("depth " + c.depth);
 
-                c.bodyA.transform.position += c.normal * c.depth/2;
-                c.bodyB.transform.position -= c.normal * c.depth/2;
+                c.bodyA.transform.position += c.normal * c.depth / 2;
+                c.bodyB.transform.position -= c.normal * c.depth / 2;
 
                 if (relativeVelocity > 0)//We dont want to keep objects inside of each other
                     continue;
@@ -49,20 +84,17 @@ namespace Fabricor.Main.Logic.Physics
                 float m1 = c.bodyA.GetMass();
                 float m2 = c.bodyB.GetMass();
 
-                float p = 2* relativeVelocity / (m1+m2);
+                float p = 2 * relativeVelocity / (m1 + m2);
 
 
                 //Console.WriteLine("P " + p);
 
-                float totalM=((c.bodyA.GetMass()*c.bodyA.GetPointVelocity(c.bodyA.transform.position))+
+                float totalM = ((c.bodyA.GetMass() * c.bodyA.GetPointVelocity(c.bodyA.transform.position)) +
                     (c.bodyB.GetMass() * c.bodyB.GetPointVelocity(c.bodyB.transform.position))).Length();
 
-                float linear=c.bodyA.ApplyAcceleration(c.position, normal * -p* m2,1);//Second masses get divided away later
-                c.bodyB.ApplyAcceleration(c.position, normal * p* m1, linear);
-
-
-
-                //Console.WriteLine(totalM);
+                float linear = c.bodyA.ApplyAcceleration(position, normal * -p * m2, 1);//Second masses get divided away later
+                c.bodyB.ApplyAcceleration(position, normal * p * m1, linear);
+                */
             }
         }
 
@@ -98,7 +130,7 @@ namespace Fabricor.Main.Logic.Physics
 
             for (int i = 0; i < collidables.Count; i++)
             {
-                for (int k = i+1; k < collidables.Count; k++)
+                for (int k = i + 1; k < collidables.Count; k++)
                 {
 
                     if (bounds[i].IsColliding(collidables[i].transform, collidables[k].transform, bounds[k]).Length > 0)

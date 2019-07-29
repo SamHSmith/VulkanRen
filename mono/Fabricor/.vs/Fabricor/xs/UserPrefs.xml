@@ -1,35 +1,10 @@
-<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-<<<<<<< ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
-||||||| /home/sam/Documents/git/Fabricor/mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
-=======
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Shapes/ConvexShape.cs">
->>>>>>> ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_REMOTE_6927.xml
+﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Simulation.cs">
     <Files>
-<<<<<<< ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-      <File FileName="Main/Logic/LogicMaster.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Collidable.cs" Line="1" Column="1" />
-      <File FileName="Main/Toolbox/Maths.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/ContactPoint.cs" Line="1" Column="1" />
-||||||| /home/sam/Documents/git/Fabricor/mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-      <File FileName="Main/Logic/LogicMaster.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Collidable.cs" Line="1" Column="1" />
-      <File FileName="Main/Toolbox/Maths.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/ContactPoint.cs" Line="1" Column="1" />
-=======
-      <File FileName="Main/Logic/LogicMaster.cs" Line="33" Column="40" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="104" Column="120" />
-      <File FileName="Main/Logic/Physics/Collidable.cs" Line="40" Column="22" />
-      <File FileName="Main/Toolbox/Maths.cs" Line="69" Column="20" />
-      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="42" Column="15" />
-      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="135" Column="1" />
-      <File FileName="Main/Logic/Physics/ContactPoint.cs" Line="10" Column="28" />
->>>>>>> ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_REMOTE_6927.xml
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="66" Column="91" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="21" Column="56" />
+      <File FileName="Main/Logic/Physics/Collidable.cs" Line="43" Column="60" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="29" Column="41" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -39,22 +14,9 @@
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
                   <Node name="Physics" expanded="True">
-<<<<<<< ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
                     <Node name="Shapes" expanded="True" />
-||||||| /home/sam/Documents/git/Fabricor/mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-                    <Node name="Shapes" expanded="True" />
-=======
-                    <Node name="Shapes" expanded="True">
-                      <Node name="ConvexShape.cs" selected="True" />
-                    </Node>
->>>>>>> ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_REMOTE_6927.xml
+                    <Node name="Simulation.cs" selected="True" />
                   </Node>
-<<<<<<< ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-                  <Node name="LogicMaster.cs" selected="True" />
-||||||| /home/sam/Documents/git/Fabricor/mono/Fabricor/.vs/Fabricor/xs/UserPrefs_LOCAL_6927.xml
-                  <Node name="LogicMaster.cs" selected="True" />
-=======
->>>>>>> ./mono/Fabricor/.vs/Fabricor/xs/UserPrefs_REMOTE_6927.xml
                 </Node>
                 <Node name="Rendering" expanded="True" />
                 <Node name="Settings" expanded="True" />
@@ -66,6 +28,15 @@
               </Node>
             </Node>
           </Node>
+        </State>
+      </Pad>
+      <Pad Id="MonoDevelop.Debugger.WatchPad">
+        <State>
+          <Value>max</Value>
+          <Value>min</Value>
+          <Value>minother</Value>
+          <Value>maxother</Value>
+          <Value>ainside</Value>
         </State>
       </Pad>
     </Pads>

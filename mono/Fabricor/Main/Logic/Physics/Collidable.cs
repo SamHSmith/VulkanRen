@@ -32,9 +32,15 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract float GetMass();
 
+        public abstract float GetInverseMass();
+
         public abstract float GetPointInertia(Vector3 worldPoint);
 
         public abstract Vector3 GetPointVelocity(Vector3 worldPoint);
+
+        public abstract Vector3 GetLinearVelocity();
+
+        public abstract void ApplyLinearForce(Vector3 force);
 
 
         public float ApplyAcceleration(Vector3 position, Vector3 acceleration, float linearFactor)

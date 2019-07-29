@@ -16,6 +16,11 @@ namespace Fabricor.Main.Logic.Physics
             transform = new Transform(new Vector3());
         }
 
+        public override void ApplyLinearForce(Vector3 force)
+        {
+            linearVelocity += force * GetInverseMass();
+        }
+
         public override float ApplyLocalAcceleration(Vector3 position, Vector3 acceleration,float linearFactor)
         {
             //TODO add center of mass
@@ -51,8 +56,21 @@ namespace Fabricor.Main.Logic.Physics
                 linearFactor = 1-Math.Abs(perpPart);
             }
 
-            linearVelocity += acceleration* linearFactor;
+            linearVelocity += acceleration;
             return linearFactor;
+        }
+
+        public override float GetInverseMass()
+        {
+            if (mass > 0)
+                return 1 / mass;
+            else
+                return 0;
+        }
+
+        public override Vector3 GetLinearVelocity()
+        {
+            return linearVelocity;
         }
 
         public override float GetMass()

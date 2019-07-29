@@ -35,7 +35,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         {
             Vector3 dir = (at.position - bt.position);
             if (dir.Length() < this.radius + other.radius)
-                return new ContactPoint[] { new ContactPoint { position = Maths.Average(at.position, bt.position), normal = dir,
+                return new ContactPoint[] { new ContactPoint { position=new Vector3[]{Maths.Average(at.position, bt.position) }, normal = dir,
                     bodyA = this.Collidable, bodyB = other.Collidable } };
 
             return new ContactPoint[0];

@@ -41,30 +41,22 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         }
 
         public ContactPoint[] IsColliding(Transform at, Transform bt, ConvexShape other)
-        {/*
-            List<ContactPoint> contacts = new List<ContactPoint>();
-            foreach (var point in points)
-            {
-                Vector3 local = Vector3.Transform(at.position + Vector3.Transform(point, at.rotation) - bt.position,
-                    Quaternion.Inverse(bt.rotation));
-                Intersect i = other.IsInside(local);
-                if (i!=null)
-                {
-                    contacts.Add( new ContactPoint {position=Vector3.Transform(i.pos,bt.rotation)+bt.position,
-                         normal= Vector3.Transform(i.normal, bt.rotation),
-                        depth=i.depth,bodyA=this.Collidable,bodyB=other.Collidable});
-                }
+        {
 
+            List<Vector3> otherlocal = new List<Vector3>();
+            foreach (var otherpoint in other.points)
+            {
+                Vector3 local = Vector3.Transform(bt.position + Vector3.Transform(otherpoint, bt.rotation) - at.position,
+                Quaternion.Inverse(at.rotation));
+                otherlocal.Add(local);
             }
-            return contacts.ToArray();
-            */
 
             List<Vector3> axis = new List<Vector3>();
             axis.AddRange(this.planes);
             foreach (var plane in other.planes)
             {
                 Vector3 worldPlane = Vector3.Transform(plane, bt.rotation);
-                Vector3 localPlane= Vector3.Transform(worldPlane, Quaternion.Inverse(at.rotation));
+                Vector3 localPlane = Vector3.Transform(worldPlane, Quaternion.Inverse(at.rotation));
                 axis.Add(localPlane);
             }
 
@@ -92,18 +84,25 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 absAxis.Add(Vector3.Abs(a));//TODO Remove duplicates
             }
             axis = absAxis;
+
+            List<Vector3> meInsideother = new List<Vector3>();
+            meInsideother.AddRange(points);
+            List<Vector3> otherInsideme = new List<Vector3>();
+            otherInsideme.AddRange(otherlocal);
+
             foreach (var a in axis)
             {
                 //Debug only
                 Vector3 worldAxis = Vector3.Transform(a, at.rotation);
 
-                
+
 
                 float minother = float.MaxValue, maxother = float.MinValue;
                 foreach (var otherpoint in other.points)
                 {
                     Vector3 local = Vector3.Transform(bt.position + Vector3.Transform(otherpoint, bt.rotation) - at.position,
                     Quaternion.Inverse(at.rotation));
+
                     float value = Vector3.Dot(a, local);
                     if (value > maxother)
                         maxother = value;
@@ -114,7 +113,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
                 bool ainside = false;
 
-                float max=0, min=0;
+                float max = 0, min = 0;
                 foreach (var mypoint in points)
                 {
 
@@ -133,30 +132,57 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
                 float d = float.MaxValue;
 
-                if (more && min > minother&&min<=maxother)
+                if (more && min > minother && min <= maxother)
                 {
                     ainside = true;
-                    d = min- maxother;
+                    d = min - maxother;
                 }
 
-                if (!more && max < maxother&&max>=minother)
+                if (!more && max < maxother && max >= minother)
                 {
                     ainside = true;
-                    d = max-minother;
+                    d = max - minother;
+                }
+
+                if (max >= maxother && min <= minother)//We encapsulate other
+                {
+                    ainside = true;
+                    if (more)
+                    {
+                        d = min - maxother;
+                    }
+                    else
+                    {
+                        d = max - minother;
+                    }
                 }
 
                 float flipFactor = 1;
-                if (ainside&&d<0)
+                if (ainside && d < 0)
                 {
                     flipFactor = -1;
                 }
 
-                if (d*flipFactor < depth)
+                if (d * flipFactor < depth)
                 {
                     depth = d * flipFactor;
                     normal = -a * flipFactor;
-                    //temp
-                    localPoint = normal * depth;
+                }
+
+                //Contact point generation
+
+                for (int i = 0; i < otherInsideme.Count; i++)
+                {
+                    float op = Vector3.Dot(a, otherInsideme[i]);
+                    if (op > max || op < min)// Is outside me
+                        otherInsideme.RemoveAt(i);
+                }
+
+                for (int i = 0; i < meInsideother.Count; i++)
+                {
+                    float mp = Vector3.Dot(a, meInsideother[i]);
+                    if (mp > maxother || mp < minother)// Is outside other
+                        meInsideother.RemoveAt(i);
                 }
 
                 if (!ainside)
@@ -166,8 +192,30 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
             }
 
-            return new ContactPoint[] { new ContactPoint {position= Vector3.Transform(localPoint, at.rotation) + at.position,
-                    normal=Vector3.Transform(normal, at.rotation),depth=depth,bodyA=this.Collidable,bodyB=other.Collidable } };
+
+            List<Vector3> contactPoints = new List<Vector3>();
+
+            foreach (var contact in otherInsideme)
+            {
+                contactPoints.Add(Vector3.Transform(contact, at.rotation) + at.position);
+            }
+            foreach (var contact in meInsideother)
+            {
+                contactPoints.Add(Vector3.Transform(contact, at.rotation) + at.position);
+
+            }
+
+            ContactPoint cp=(new ContactPoint
+            {
+                position = contactPoints.ToArray(),
+                normal = Vector3.Transform(normal, at.rotation),
+                depth = depth,
+                bodyA = this.Collidable,
+                bodyB = other.Collidable
+            });
+
+
+            return new ContactPoint[] {cp };
         }
         /*
         public Intersect IsInside(Vector3 point)

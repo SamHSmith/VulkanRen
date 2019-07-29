@@ -26,12 +26,12 @@ namespace Fabricor.Main.Logic
             MasterRenderer.toRenderGrids.Add(g);
             updatables.Add(g1);
             MasterRenderer.toRenderGrids.Add(g1);
-            rb1.transform.position.Y = 2;
-            rb1.transform.position.Z = 0.0f;
-            rb1.transform.position.X = 0.1f;
-            rb1.linearVelocity.Y = -0.2f;
-            rb1.angularVelocity.X = 1f;
-            rb1.angularVelocity.Y = 1f;
+            rb1.transform.position.Y = 3;
+            rb1.transform.position.Z = 0f;
+            rb1.transform.position.X = 0f;
+            rb1.linearVelocity.Y = -0f;
+            rb1.angularVelocity.X = 0f;
+            rb1.angularVelocity.Y = 0f;
             Simulation.rigidbodies.Add(rb);
             Simulation.rigidbodies.Add(rb1);
             ConvexShape cube = new ConvexShape(new Vector3[] {
@@ -51,7 +51,7 @@ namespace Fabricor.Main.Logic
                 -Vector3.UnitZ});
             rb.AddShape(cube);
             rb1.AddShape(cube);
-            
+            rb1.mass = 10;
 
             /*
             for (int x = 0; x < 50; x++)
@@ -77,14 +77,21 @@ namespace Fabricor.Main.Logic
                 u.Update(delta);
             }
             if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.Y)) {
-                delta /=11;
+                delta /=5;
             }
 
-                if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.T))
+            if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.U))
+            {
+                delta *= 10;
+            }
+
+            if (true/*OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.T)*/)
             {
                 Simulation.TimeStep(delta);
-                rb.linearVelocity += Vector3.Normalize(rb1.transform.position - rb.transform.position) * delta / 2;
-                rb1.linearVelocity += Vector3.Normalize(rb.transform.position - rb1.transform.position) * delta / 2 ;
+                rb.linearVelocity += Vector3.Normalize(rb1.transform.position - rb.transform.position) * delta / 2 / rb.GetMass();
+                rb1.linearVelocity += Vector3.Normalize(rb.transform.position - rb1.transform.position) * delta / 2 /rb1.GetMass();
+
+                
             }
             g.transform = rb.transform;
             g1.transform = rb1.transform;
