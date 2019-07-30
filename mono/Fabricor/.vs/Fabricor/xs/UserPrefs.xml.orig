@@ -1,0 +1,62 @@
+﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
+<<<<<<< HEAD
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
+    <Files>
+      <File FileName="Main/Logic/LogicMaster.cs" Line="1" Column="1" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="1" Column="1" />
+      <File FileName="Main/Logic/Physics/Collidable.cs" Line="1" Column="1" />
+      <File FileName="Main/Toolbox/Maths.cs" Line="1" Column="1" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="1" Column="1" />
+      <File FileName="Main/Logic/Physics/ContactPoint.cs" Line="1" Column="1" />
+=======
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Shapes/ConvexShape.cs">
+    <Files>
+      <File FileName="Main/Logic/LogicMaster.cs" Line="33" Column="40" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="104" Column="120" />
+      <File FileName="Main/Logic/Physics/Collidable.cs" Line="40" Column="22" />
+      <File FileName="Main/Toolbox/Maths.cs" Line="69" Column="20" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="42" Column="15" />
+      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="135" Column="1" />
+      <File FileName="Main/Logic/Physics/ContactPoint.cs" Line="10" Column="28" />
+>>>>>>> e07596fc40ae6857a7c4cfb789b3ac8bc3587793
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="Fabricor" expanded="True">
+            <Node name="Fabricor" expanded="True">
+              <Node name="Main" expanded="True">
+                <Node name="Logic" expanded="True">
+                  <Node name="Physics" expanded="True">
+<<<<<<< HEAD
+                    <Node name="Shapes" expanded="True" />
+=======
+                    <Node name="Shapes" expanded="True">
+                      <Node name="ConvexShape.cs" selected="True" />
+                    </Node>
+>>>>>>> e07596fc40ae6857a7c4cfb789b3ac8bc3587793
+                  </Node>
+                  <Node name="LogicMaster.cs" selected="True" />
+                </Node>
+                <Node name="Rendering" expanded="True" />
+                <Node name="Settings" expanded="True" />
+                <Node name="Toolbox" expanded="True" />
+              </Node>
+              <Node name="Resources" expanded="True">
+                <Node name="Models" expanded="True" />
+                <Node name="Textures" expanded="True" />
+              </Node>
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>
