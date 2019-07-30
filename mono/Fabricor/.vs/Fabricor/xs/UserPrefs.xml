@@ -1,10 +1,10 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
   <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Simulation.cs">
     <Files>
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="66" Column="91" />
-      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="21" Column="56" />
-      <File FileName="Main/Logic/Physics/Collidable.cs" Line="43" Column="60" />
-      <File FileName="Main/Logic/LogicMaster.cs" Line="29" Column="41" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="60" Column="50" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="25" Column="67" />
+      <File FileName="Main/Logic/Physics/Collidable.cs" Line="49" Column="78" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="34" Column="38" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -28,15 +28,6 @@
               </Node>
             </Node>
           </Node>
-        </State>
-      </Pad>
-      <Pad Id="MonoDevelop.Debugger.WatchPad">
-        <State>
-          <Value>max</Value>
-          <Value>min</Value>
-          <Value>minother</Value>
-          <Value>maxother</Value>
-          <Value>ainside</Value>
         </State>
       </Pad>
     </Pads>

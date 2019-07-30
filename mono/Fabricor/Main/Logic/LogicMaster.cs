@@ -28,10 +28,10 @@ namespace Fabricor.Main.Logic
             MasterRenderer.toRenderGrids.Add(g1);
             rb1.transform.position.Y = 3;
             rb1.transform.position.Z = 0f;
-            rb1.transform.position.X = 0f;
-            rb1.linearVelocity.Y = -0f;
+            rb1.transform.position.X = 0.9f;
+            rb1.linearVelocity.Y = 0f;
             rb1.angularVelocity.X = 0f;
-            rb1.angularVelocity.Y = 0f;
+            rb1.angularVelocity.Z = -1f;
             Simulation.rigidbodies.Add(rb);
             Simulation.rigidbodies.Add(rb1);
             ConvexShape cube = new ConvexShape(new Vector3[] {
@@ -51,7 +51,10 @@ namespace Fabricor.Main.Logic
                 -Vector3.UnitZ});
             rb.AddShape(cube);
             rb1.AddShape(cube);
-            rb1.mass = 10;
+            rb1.inertia = Vector3.One * 0.16667f;
+            rb.inertia = Vector3.One * 0.16667f;
+
+            rb.transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, (float)Math.PI/4*2);
 
             /*
             for (int x = 0; x < 50; x++)
@@ -76,6 +79,7 @@ namespace Fabricor.Main.Logic
             {
                 u.Update(delta);
             }
+            delta = 1f / 75;
             if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.Y)) {
                 delta /=5;
             }
@@ -85,7 +89,7 @@ namespace Fabricor.Main.Logic
                 delta *= 10;
             }
 
-            if (true/*OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.T)*/)
+            if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.T))
             {
                 Simulation.TimeStep(delta);
                 rb.linearVelocity += Vector3.Normalize(rb1.transform.position - rb.transform.position) * delta / 2 / rb.GetMass();

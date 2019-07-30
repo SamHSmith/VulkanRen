@@ -50,17 +50,53 @@ namespace Fabricor.Main.Logic.Physics
                 kinlin /= 2;
 
 
+                float tangentspeed1 = Vector3.Dot(normal, c.bodyA.GetTangentVelocity(position, out var axis1));
+                float tangentspeed2 = Vector3.Dot(-normal, c.bodyB.GetTangentVelocity(position, out var axis2));
+
+                float angvel1 = tangentspeed1 / c.bodyA.GetDistanceToCenterOfMass(position);
+                float angvel2 = tangentspeed2 / c.bodyA.GetDistanceToCenterOfMass(position);
 
 
-                Console.WriteLine(kinlin);
+                float kinang = angvel2 - angvel1;
+                kinang *= kinang;
+                kinang *= Math.Abs(Vector3.Dot(axis1, c.bodyA.GetInertia()))+ Math.Abs(Vector3.Dot(axis2, c.bodyB.GetInertia()));
+                kinang /= 2;
+                if (float.IsNaN(kinang))
+                    kinang = 0;
 
-                float totalLinearEnergi = kinlin;
+                Console.WriteLine("Ang Energy " + kinang);
+                Console.WriteLine("Lin Energy " + kinlin);
+                Console.WriteLine("Normal " + normal);
 
-                float speed = totalLinearEnergi / ((c.bodyA.GetMass() + c.bodyB.GetMass())/2);
+
+
+                float totalEnergy = kinlin+kinang;
+
+                //Angular Code
+                float apart = Math.Abs(c.bodyA.GetWorldPerpFactor(Vector3.Normalize(normal), position)/2);
+                float bpart = Math.Abs(c.bodyB.GetWorldPerpFactor(Vector3.Normalize(normal), position)/2);
+
+                if (float.IsNaN(apart))
+                    apart = 0;
+                if (float.IsNaN(bpart))
+                    bpart = 0;
+
+                c.bodyA.ApplyAngularAcceleration(-normal * totalEnergy * apart, position);
+                c.bodyB.ApplyAngularAcceleration(-normal * totalEnergy * bpart, position);
+
+
+
+                totalEnergy *= 1 - (apart + bpart);
+
+                float speed = totalEnergy / ((c.bodyA.GetMass() + c.bodyB.GetMass())/2);
+
                 speed = (float)Math.Sqrt(speed);
-                Console.WriteLine(speed);
+                if (float.IsNaN(speed))
+                    speed = 0;
 
                 float p = 2 * speed / (c.bodyA.GetMass() + c.bodyB.GetMass());
+
+
 
                 c.bodyA.ApplyLinearForce(normal * p*c.bodyB.GetMass()*c.bodyA.GetMass());
                 c.bodyB.ApplyLinearForce(normal * -p*c.bodyA.GetMass() * c.bodyB.GetMass());

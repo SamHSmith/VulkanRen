@@ -78,12 +78,9 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 localPoint = Vector3.Zero;
             Vector3 normal = Vector3.Zero;
 
-            List<Vector3> absAxis = new List<Vector3>();
-            foreach (var a in axis)
-            {
-                absAxis.Add(Vector3.Abs(a));//TODO Remove duplicates
-            }
-            axis = absAxis;
+
+
+            //axis.Add(Vector3.Transform(Vector3.UnitY, Quaternion.Inverse(at.rotation)));
 
             List<Vector3> meInsideother = new List<Vector3>();
             meInsideother.AddRange(points);
@@ -95,7 +92,10 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 //Debug only
                 Vector3 worldAxis = Vector3.Transform(a, at.rotation);
 
+                if (Vector3.Abs(Maths.SnapVector(worldAxis)) == Vector3.UnitY)
+                {
 
+                }
 
                 float minother = float.MaxValue, maxother = float.MinValue;
                 foreach (var otherpoint in other.points)
@@ -169,6 +169,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                     normal = -a * flipFactor;
                 }
 
+
                 //Contact point generation
 
                 for (int i = 0; i < otherInsideme.Count; i++)
@@ -208,7 +209,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             ContactPoint cp=(new ContactPoint
             {
                 position = contactPoints.ToArray(),
-                normal = Vector3.Transform(normal, at.rotation),
+                normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
                 depth = depth,
                 bodyA = this.Collidable,
                 bodyB = other.Collidable

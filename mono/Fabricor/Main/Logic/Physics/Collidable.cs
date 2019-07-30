@@ -34,14 +34,32 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract float GetInverseMass();
 
+        public abstract Vector3 GetInertia();
+
+        public abstract Vector3 GetInverseInertia();
+
         public abstract float GetPointInertia(Vector3 worldPoint);
 
-        public abstract Vector3 GetPointVelocity(Vector3 worldPoint);
+        public abstract Vector3 GetTangentVelocity(Vector3 worldPoint,out Vector3 axis);
 
         public abstract Vector3 GetLinearVelocity();
 
-        public abstract void ApplyLinearForce(Vector3 force);
+        public abstract Vector3 GetAngularVelocity();
 
+        public abstract float GetDistanceToCenterOfMass(Vector3 worldposition);
+
+        public float GetWorldPerpFactor(Vector3 force, Vector3 worldposition)
+        {
+            Vector3 localpos = Vector3.Transform(worldposition - transform.position,
+                Quaternion.Inverse(transform.rotation));
+            return GetPerpFactor(Vector3.Transform(force, Quaternion.Inverse(transform.rotation)), localpos);
+        }
+
+        public abstract float GetPerpFactor(Vector3 force, Vector3 position);
+
+        public abstract void ApplyAngularAcceleration(Vector3 energy, Vector3 position);
+
+        public abstract void ApplyLinearForce(Vector3 force);
 
         public float ApplyAcceleration(Vector3 position, Vector3 acceleration, float linearFactor)
         {
