@@ -16,13 +16,10 @@ namespace Fabricor.Main.Logic.Physics
             transform = new Transform(new Vector3());
         }
 
-        public override void ApplyAngularAcceleration(Vector3 energy, Vector3 position)
+        public override void ApplyTorque(Vector3 torque)
         {
-            Vector3 axis = Vector3.Normalize(Vector3.Cross(energy, position));
 
-            float torque = GetPerpFactor(energy, position)*position.Length();
-
-            Vector3 angChange = (axis*GetInverseInertia())*torque;
+            Vector3 angChange = torque*GetInverseInertia();
 
             angularVelocity += angChange;
         }
@@ -76,9 +73,9 @@ namespace Fabricor.Main.Logic.Physics
             return angularVelocity;
         }
 
-        public override float GetDistanceToCenterOfMass(Vector3 worldposition)
+        public override Vector3 GetDistanceToCenterOfMass(Vector3 worldposition)
         {
-            return (worldposition - transform.position).Length();
+            return (worldposition - transform.position);
         }
 
         public override Vector3 GetInertia()

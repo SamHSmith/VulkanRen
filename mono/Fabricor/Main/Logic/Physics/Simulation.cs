@@ -31,7 +31,7 @@ namespace Fabricor.Main.Logic.Physics
 
             foreach (var c in contacts)
             {
-                Vector3 normal = c.normal;
+                Vector3 normal = -c.normal;
                 int contactCount = c.position.Length;
                 Vector3 position = Vector3.Zero;
                 foreach (var pos in c.position)
@@ -40,67 +40,35 @@ namespace Fabricor.Main.Logic.Physics
                 }
                 position /= contactCount;
 
-                c.bodyA.transform.position += c.normal * c.depth / 2;
-                c.bodyB.transform.position -= c.normal * c.depth / 2;
+                float p = c.depth / (c.bodyA.GetMass() + c.bodyB.GetMass());
 
-                float kinlin = Vector3.Dot(normal, c.bodyA.GetLinearVelocity())+ 
-                Vector3.Dot(-normal, c.bodyB.GetLinearVelocity());//Kinetic linear energi for body a and body b
-                kinlin = kinlin * kinlin;
-                kinlin *= c.bodyA.GetMass()+c.bodyB.GetMass();
-                kinlin /= 2;
+                //c.bodyA.transform.position += c.normal * p* c.bodyA.GetMass();
+                //c.bodyB.transform.position -= c.normal * p * c.bodyB.GetMass();
 
+                float e = 1f;
 
-                float tangentspeed1 = Vector3.Dot(normal, c.bodyA.GetTangentVelocity(position, out var axis1));
-                float tangentspeed2 = Vector3.Dot(-normal, c.bodyB.GetTangentVelocity(position, out var axis2));
-
-                float angvel1 = tangentspeed1 / c.bodyA.GetDistanceToCenterOfMass(position);
-                float angvel2 = tangentspeed2 / c.bodyA.GetDistanceToCenterOfMass(position);
-
-
-                float kinang = angvel2 - angvel1;
-                kinang *= kinang;
-                kinang *= Math.Abs(Vector3.Dot(axis1, c.bodyA.GetInertia()))+ Math.Abs(Vector3.Dot(axis2, c.bodyB.GetInertia()));
-                kinang /= 2;
-                if (float.IsNaN(kinang))
-                    kinang = 0;
-
-                Console.WriteLine("Ang Energy " + kinang);
-                Console.WriteLine("Lin Energy " + kinlin);
-                Console.WriteLine("Normal " + normal);
+                Vector3 ra = c.bodyA.GetDistanceToCenterOfMass(position);
+                Vector3 rb = c.bodyB.GetDistanceToCenterOfMass(position);
 
 
 
-                float totalEnergy = kinlin+kinang;
+                ra = c.bodyA.GetDistanceToCenterOfMass(position);
 
-                //Angular Code
-                float apart = Math.Abs(c.bodyA.GetWorldPerpFactor(Vector3.Normalize(normal), position)/2);
-                float bpart = Math.Abs(c.bodyB.GetWorldPerpFactor(Vector3.Normalize(normal), position)/2);
+                Vector3 pointvel1 = c.bodyA.GetLinearVelocity() + Vector3.Cross(c.bodyA.GetAngularVelocity(), ra);
+                Vector3 pointvel2 = c.bodyB.GetLinearVelocity() + Vector3.Cross(c.bodyB.GetAngularVelocity(), rb);
 
-                if (float.IsNaN(apart))
-                    apart = 0;
-                if (float.IsNaN(bpart))
-                    bpart = 0;
 
-                c.bodyA.ApplyAngularAcceleration(-normal * totalEnergy * apart, position);
-                c.bodyB.ApplyAngularAcceleration(-normal * totalEnergy * bpart, position);
+                float j = -(1 + e) * Vector3.Dot(normal, pointvel1 - pointvel2);
+                j /= c.bodyA.GetInverseMass() + c.bodyB.GetInverseMass() + (Vector3.Cross(ra, normal) * c.bodyA.GetInverseInertia()).Length() +
+                    (Vector3.Cross(rb, normal) * c.bodyB.GetInverseInertia()).Length();
 
 
 
-                totalEnergy *= 1 - (apart + bpart);
+                c.bodyA.ApplyLinearForce(j * normal);
+                c.bodyB.ApplyLinearForce(-j * normal);
 
-                float speed = totalEnergy / ((c.bodyA.GetMass() + c.bodyB.GetMass())/2);
-
-                speed = (float)Math.Sqrt(speed);
-                if (float.IsNaN(speed))
-                    speed = 0;
-
-                float p = 2 * speed / (c.bodyA.GetMass() + c.bodyB.GetMass());
-
-
-
-                c.bodyA.ApplyLinearForce(normal * p*c.bodyB.GetMass()*c.bodyA.GetMass());
-                c.bodyB.ApplyLinearForce(normal * -p*c.bodyA.GetMass() * c.bodyB.GetMass());
-
+                c.bodyA.ApplyTorque(Vector3.Cross(ra, j * normal));
+                c.bodyB.ApplyTorque(Vector3.Cross(rb, -j * normal));
 
                 /*
                 float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(position), normal);

@@ -46,7 +46,7 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract Vector3 GetAngularVelocity();
 
-        public abstract float GetDistanceToCenterOfMass(Vector3 worldposition);
+        public abstract Vector3 GetDistanceToCenterOfMass(Vector3 worldposition);
 
         public float GetWorldPerpFactor(Vector3 force, Vector3 worldposition)
         {
@@ -57,7 +57,7 @@ namespace Fabricor.Main.Logic.Physics
 
         public abstract float GetPerpFactor(Vector3 force, Vector3 position);
 
-        public abstract void ApplyAngularAcceleration(Vector3 energy, Vector3 position);
+        public abstract void ApplyTorque(Vector3 torque);
 
         public abstract void ApplyLinearForce(Vector3 force);
 

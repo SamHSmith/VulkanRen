@@ -13,6 +13,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public Vector3[] planes;
 
+        public const float margin = 0.02f;
+
         public ConvexShape(Vector3[] points, Vector3[] planes) : this()
         {
             this.points = points;
@@ -205,8 +207,21 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 contactPoints.Add(Vector3.Transform(contact, at.rotation) + at.position);
 
             }
+            for (int i = 0; i < contactPoints.Count; i++)
+            {
+                for (int k = i + 1; k < contactPoints.Count; k++)
+                {
+                    if (Vector3.Abs(contactPoints[i] - contactPoints[k]).Length() < margin)
+                    {
+                        contactPoints.RemoveAt(k);
+                    }
+                }
+            }
 
-            ContactPoint cp=(new ContactPoint
+            if(contactPoints.Count<1)
+                return new ContactPoint[] { };//And so, No intersect
+
+            ContactPoint cp = (new ContactPoint
             {
                 position = contactPoints.ToArray(),
                 normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
@@ -216,7 +231,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             });
 
 
-            return new ContactPoint[] {cp };
+            return new ContactPoint[] { cp };
         }
         /*
         public Intersect IsInside(Vector3 point)

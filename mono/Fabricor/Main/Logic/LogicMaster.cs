@@ -28,10 +28,10 @@ namespace Fabricor.Main.Logic
             MasterRenderer.toRenderGrids.Add(g1);
             rb1.transform.position.Y = 3;
             rb1.transform.position.Z = 0f;
-            rb1.transform.position.X = 0.9f;
+            rb1.transform.position.X = 0.1f;
             rb1.linearVelocity.Y = 0f;
             rb1.angularVelocity.X = 0f;
-            rb1.angularVelocity.Z = -1f;
+            rb1.angularVelocity.Z = -0f;
             Simulation.rigidbodies.Add(rb);
             Simulation.rigidbodies.Add(rb1);
             ConvexShape cube = new ConvexShape(new Vector3[] {
@@ -54,8 +54,10 @@ namespace Fabricor.Main.Logic
             rb1.inertia = Vector3.One * 0.16667f;
             rb.inertia = Vector3.One * 0.16667f;
 
-            rb.transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, (float)Math.PI/4*2);
+            rb1.transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, (float)Math.PI/4*3.001f);
 
+            rb.mass = 0;
+            rb.inertia = Vector3.One * 0;
             /*
             for (int x = 0; x < 50; x++)
             {
@@ -92,9 +94,9 @@ namespace Fabricor.Main.Logic
             if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.T))
             {
                 Simulation.TimeStep(delta);
-                rb.linearVelocity += Vector3.Normalize(rb1.transform.position - rb.transform.position) * delta / 2 / rb.GetMass();
-                rb1.linearVelocity += Vector3.Normalize(rb.transform.position - rb1.transform.position) * delta / 2 /rb1.GetMass();
-
+                //rb.linearVelocity += Vector3.Normalize(rb1.transform.position - rb.transform.position) * delta / 2 / rb.GetMass();
+                //rb1.linearVelocity += Vector3.Normalize(rb.transform.position - rb1.transform.position) * delta / 2 /rb1.GetMass();
+                rb1.linearVelocity -= Vector3.UnitY * delta;
                 
             }
             g.transform = rb.transform;
