@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using BepuPhysics;
 
 namespace Fabricor.Main.Logic
 {
@@ -26,6 +27,7 @@ namespace Fabricor.Main.Logic
             this.rotation = rotation;
         }
 
+<<<<<<< HEAD
         public static Transform operator*(Transform a, Transform b)
         {
             Transform f = new Transform(new Vector3());
@@ -35,6 +37,22 @@ namespace Fabricor.Main.Logic
         }
 
         public static Transform operator /(Transform b, Transform a)
+=======
+        public RigidPose ToRigidPose()
+        {
+            BepuUtilities.Quaternion rot = new BepuUtilities.Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W);
+            RigidPose pose = new RigidPose(in position, in rot);
+            return pose;
+        }
+
+        public void FromRigidPose(RigidPose p)
+        {
+            rotation = new Quaternion(p.Orientation.X, p.Orientation.Y, p.Orientation.Z, p.Orientation.W);
+            position = p.Position;
+        }
+
+        public Transform LocalToWorldSpace(Transform t)
+>>>>>>> c309e982ebb6a38a7f1240baf92ec09938fe4f60
         {
             Transform f = new Transform(new Vector3());
             f.position = Vector3.Transform(b.position- a.position, a.rotation);

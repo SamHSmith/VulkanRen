@@ -11,7 +11,7 @@ namespace Fabricor.Main
     public class FabricorWindow : GameWindow
     {
         public FabricorWindow(int display, int windowmode, int width, int height, string name)
-        : base(width, height, GraphicsMode.Default, name, (GameWindowFlags)windowmode, DisplayDevice.GetDisplay((DisplayIndex)display), 4, 0, GraphicsContextFlags.ForwardCompatible)
+        : base(width, height, GraphicsMode.Default, name, (GameWindowFlags)windowmode, DisplayDevice.GetDisplay((DisplayIndex)display), 4, 5, GraphicsContextFlags.ForwardCompatible)
         {
             
         }

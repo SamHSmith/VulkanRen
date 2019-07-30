@@ -1,4 +1,5 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
+<<<<<<< HEAD
   <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Simulation.cs">
     <Files>
       <File FileName="Main/Logic/Physics/Simulation.cs" Line="48" Column="30" />
@@ -6,6 +7,16 @@
       <File FileName="Main/Logic/Physics/Collidable.cs" Line="39" Column="53" />
       <File FileName="Main/Logic/LogicMaster.cs" Line="57" Column="107" />
       <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="224" Column="1" />
+=======
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
+    <Files>
+      <File FileName="Main/Logic/LogicMaster.cs" Line="67" Column="1" />
+      <File FileName="Main/Logic/Transform.cs" Line="34" Column="56" />
+      <File FileName="Main/Logic/Grids/Grid.cs" Line="63" Column="1" />
+      <File FileName="Main/Logic/Grids/Chunk.cs" Line="90" Column="21" />
+      <File FileName="Main/Logic/Physics/PoseIntegratorCallbacks.cs" Line="52" Column="72" />
+      <File FileName="Main/FabricorWindow.cs" Line="21" Column="1" />
+>>>>>>> c309e982ebb6a38a7f1240baf92ec09938fe4f60
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -14,10 +25,22 @@
             <Node name="Fabricor" expanded="True">
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
+<<<<<<< HEAD
                   <Node name="Physics" expanded="True">
                     <Node name="Shapes" expanded="True" />
                     <Node name="Simulation.cs" selected="True" />
                   </Node>
+=======
+                  <Node name="Grids" expanded="True" />
+                  <Node name="Physics" expanded="True" />
+                  <Node name="LogicMaster.cs" selected="True" />
+                </Node>
+                <Node name="Rendering" expanded="True">
+                  <Node name="Loading" expanded="True" />
+                  <Node name="Models" expanded="True" />
+                  <Node name="Shaders" expanded="True" />
+                  <Node name="Textures" expanded="True" />
+>>>>>>> c309e982ebb6a38a7f1240baf92ec09938fe4f60
                 </Node>
                 <Node name="Rendering" expanded="True" />
                 <Node name="Settings" expanded="True" />

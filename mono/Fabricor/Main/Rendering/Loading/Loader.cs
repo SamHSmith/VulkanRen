@@ -117,10 +117,12 @@ namespace Fabricor.Main.Rendering
             int width, height;
             var data = LoadTextureFromFile(filename, out width, out height);
             int texture;
+            int _minMipmapLevel = 0;
+            int _maxMipmapLevel = 8;
             GL.CreateTextures(TextureTarget.Texture2D, 1, out texture);
             GL.TextureStorage2D(
                 texture,
-                1,                           // levels of mipmapping
+                _maxMipmapLevel,                           // levels of mipmapping
                 SizedInternalFormat.Rgba32f, // format of texture
                 width,
                 height);
@@ -135,6 +137,19 @@ namespace Fabricor.Main.Rendering
                 PixelFormat.Rgba,
                 PixelType.Float,
                 data);
+
+            GL.GenerateTextureMipmap(texture);
+
+            GL.TextureParameterI(texture, TextureParameterName.TextureBaseLevel, ref _minMipmapLevel);
+            GL.TextureParameterI(texture, TextureParameterName.TextureMaxLevel, ref _maxMipmapLevel);
+            var textureMinFilter = (int)TextureMinFilter.LinearMipmapLinear;
+            GL.TextureParameterI(texture, TextureParameterName.TextureMinFilter, ref textureMinFilter);
+            var textureMagFilter = (int)TextureMinFilter.Linear;
+            GL.TextureParameterI(texture, TextureParameterName.TextureMagFilter, ref textureMagFilter);
+
+            var lod = 1;
+            GL.TextureParameterI(texture, TextureParameterName.TextureLodBias, ref lod);
+
 
             textureNames.Add(filename);
             textures.Add(texture);

@@ -79,7 +79,6 @@ namespace Fabricor.Main.Rendering
             foreach (ShaderAttribute a in uniformAttribs)
             {
                 a.attribute = GL.GetUniformLocation(shaderProgram, a.Name);
-                Console.Write(a.attribute);
             }
         }
 
