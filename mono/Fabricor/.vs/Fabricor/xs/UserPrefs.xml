@@ -1,7 +1,7 @@
-﻿<Properties>
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Grids/Chunk.cs">
+﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
     <Files>
-      <File FileName="Main/Logic/Grids/Chunk.cs" Line="156" Column="6" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="1" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -10,8 +10,9 @@
             <Node name="Fabricor" expanded="True">
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
-                  <Node name="Grids" expanded="True">
-                    <Node name="Chunk.cs" selected="True" />
+                  <Node name="Grids" expanded="True" />
+                  <Node name="Physics" expanded="True">
+                    <Node name="PoseIntegratorCallbacks.cs" selected="True" />
                   </Node>
                 </Node>
               </Node>
@@ -22,6 +23,7 @@
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />

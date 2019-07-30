@@ -78,8 +78,6 @@
     <Compile Include="Main\Logic\Physics\Collidable.cs" />
     <Compile Include="Main\Logic\Physics\Simulation.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\ConvexShape.cs" />
-    <Compile Include="Main\Logic\Physics\NarrowPhaseCallback.cs" />
-    <Compile Include="Main\Logic\Physics\PoseIntegratorCallbacks.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
