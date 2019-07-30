@@ -68,7 +68,6 @@
     <Compile Include="Main\Logic\IUpdatable.cs" />
     <Compile Include="Main\Logic\Grids\Grid.cs" />
     <Compile Include="Main\Settings\Settings.cs" />
-<<<<<<< HEAD
     <Compile Include="Main\Logic\Physics\Shapes\IShape.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\AABB.cs" />
     <Compile Include="Main\Logic\Physics\Exceptions\CollisionDetectionNotImplementedException.cs" />
@@ -79,10 +78,8 @@
     <Compile Include="Main\Logic\Physics\Collidable.cs" />
     <Compile Include="Main\Logic\Physics\Simulation.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\ConvexShape.cs" />
-=======
     <Compile Include="Main\Logic\Physics\NarrowPhaseCallback.cs" />
     <Compile Include="Main\Logic\Physics\PoseIntegratorCallbacks.cs" />
->>>>>>> c309e982ebb6a38a7f1240baf92ec09938fe4f60
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -97,12 +94,9 @@
     <Folder Include="Main\Logic\Grids\" />
     <Folder Include="Main\Settings\" />
     <Folder Include="Main\Logic\Physics\" />
-<<<<<<< HEAD
     <Folder Include="Main\Logic\Physics\Shapes\" />
     <Folder Include="Main\Logic\Physics\Exceptions\" />
     <Folder Include="Main\Toolbox\" />
-=======
->>>>>>> c309e982ebb6a38a7f1240baf92ec09938fe4f60
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
