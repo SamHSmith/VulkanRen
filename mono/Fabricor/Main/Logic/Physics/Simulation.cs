@@ -42,8 +42,8 @@ namespace Fabricor.Main.Logic.Physics
 
                 float p = c.depth / (c.bodyA.GetMass() + c.bodyB.GetMass());
 
-                //c.bodyA.transform.position += c.normal * p* c.bodyA.GetMass();
-                //c.bodyB.transform.position -= c.normal * p * c.bodyB.GetMass();
+                c.bodyA.transform.position += c.normal * p* c.bodyA.GetMass();
+                c.bodyB.transform.position -= c.normal * p * c.bodyB.GetMass();
 
                 float e = 1f;
 

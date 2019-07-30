@@ -58,3 +58,5 @@ Ankh.NoLoad
 .vscode/
 *.exp
 .vs/
+
+*/Fabricor/obj/*
