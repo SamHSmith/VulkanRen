@@ -2,34 +2,37 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Fabricor.Main.Logic.Physics.Shapes;
+using Fabricor.Main.Logic.Physics.State;
 
 namespace Fabricor.Main.Logic.Physics
 {
     public static class Simulation
     {
-        public static List<Rigidbody> rigidbodies = new List<Rigidbody>();
-        //public static List<Collidable> statics = new List<Collidable>();TODO Add Static class
+        private static PhysicsState state = new PhysicsState(1000);
+        private static List<RigidbodyHandle> handles = new List<RigidbodyHandle>();
+
+
+        internal static Span<RigidbodyState> GetRBState(RigidbodyHandle handle)
+        {
+            return state.GetRef(handle.handle);
+        }
 
         public static void TimeStep(float delta)
-        {
-
-
-
+        { 
             Move(delta);
 
             PerformCollisions(NarrowPhase(BroadPhase()));
-
-
         }
 
         private static void Move(float delta)
         {
-            foreach (var rb in rigidbodies)
+            Span<RigidbodyState> span = state.State;
+            for(int i=0;i<span.Length;i++)
             {
-                rb.transform.position += rb.linearVelocity * delta;
-                if (rb.angularVelocity.Length() > 0)
-                    rb.transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(rb.angularVelocity),
-                        rb.angularVelocity.Length() * delta) * rb.transform.rotation;
+                span[i].transform.position += span[i].linearVelocity * delta;
+                if (span[i].angularVelocity.Length() > 0)
+                    span[i].transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(span[i].angularVelocity),
+                        span[i].angularVelocity.Length() * delta) * span[i].transform.rotation;
             }
         }
         private static void PerformCollisions(List<ContactPoint> contacts)
@@ -87,7 +90,7 @@ namespace Fabricor.Main.Logic.Physics
                 {
                     foreach (var b in p.b.shapes)
                     {
-                        contacts.AddRange(a.IsColliding(p.a.transform, p.b.transform, b));
+                        contacts.AddRange(a.IsColliding(p.a.state[0].transform, p.b.state[0].transform, b));
                     }
                 }
             }
@@ -96,28 +99,25 @@ namespace Fabricor.Main.Logic.Physics
 
         private static List<CollidablePair> BroadPhase()
         {
-            List<Collidable> collidables = new List<Collidable>();
-            collidables.AddRange(rigidbodies);
-            //Statics here
+            List<RigidbodyHandle> rbs = handles;
 
             List<IShape> bounds = new List<IShape>();
-            foreach (var c in collidables)
+            foreach (var c in rbs)
             {
                 bounds.Add(c.GetBound());
             }
 
             List<CollidablePair> pairs = new List<CollidablePair>();
             int checks = 0;
-            for (int i = 0; i < collidables.Count; i++)
+            for (int i = 0; i < rbs.Count; i++)
             {
-                for (int k = i + 1; k < collidables.Count; k++)
+                for (int k = i + 1; k < rbs.Count; k++)
                 {
                     checks++;
-                    if (bounds[i].IsColliding(collidables[i].transform, collidables[k].transform, bounds[k]).Length > 0)
+                    if (bounds[i].IsColliding(rbs[i].state[0].transform, rbs[k].state[0].transform, bounds[k]).Length > 0)
                     {
-                        CollidablePair pair = new CollidablePair { a = collidables[i], b = collidables[k] };
-                        if (!(pair.a is Rigidbody || pair.b is Rigidbody))
-                            continue;
+                        CollidablePair pair = new CollidablePair { a = rbs[i], b = rbs[k] };
+
                         pairs.Add(pair);
                     }
                 }
@@ -129,6 +129,6 @@ namespace Fabricor.Main.Logic.Physics
 
     struct CollidablePair
     {
-        public Collidable a, b;
+        public RigidbodyHandle a, b;
     }
 }

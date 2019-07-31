@@ -8,9 +8,9 @@ namespace Fabricor.Main.Logic.Physics.Shapes
     {
         public Vector3 radii;
         public Vector3 offset;
-        public Collidable Collidable { get; set; }
+        public RigidbodyHandle Rigidbody { get; set; }
 
-        public AABB(Transform at,BoundSphere a,Transform bt, BoundSphere b,Collidable collidable)
+        public AABB(Transform at,BoundSphere a,Transform bt, BoundSphere b,RigidbodyHandle collidable)
         {
             Vector3 dir = (bt.position - at.position)/2;
             Vector3 center = at.position + dir;
@@ -22,7 +22,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             rad += new Vector3(b.radius);
             radii = rad;
             offset = dir;
-            this.Collidable = collidable;
+            this.Rigidbody = collidable;
         }
 
 
@@ -64,7 +64,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 return new ContactPoint[0];
 
             Vector3 pos = Maths.Clamp(relpos, radii * -1, radii)+at.position;
-            return new ContactPoint[] { new ContactPoint { position = new Vector3[] { pos },normal=Vector3.Normalize(Maths.SnapVector(relpos)),bodyA=this.Collidable,bodyB= other.Collidable} };
+            return new ContactPoint[] { new ContactPoint { position = new Vector3[] { pos },normal=Vector3.Normalize(Maths.SnapVector(relpos)),bodyA=this.Rigidbody,bodyB= other.Rigidbody} };
         }
 
         public ContactPoint[] IsColliding(Transform at, Transform bt, BoundSphere other)
@@ -75,7 +75,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             if ((relpos - closest).Length() < other.radius)
                 return new ContactPoint[] { new ContactPoint {position=new Vector3[]{(relpos / 2)+at.position },
                 normal=Vector3.Normalize(closest),
-                    bodyA = this.Collidable, bodyB = other.Collidable } };
+                    bodyA = this.Rigidbody, bodyB = other.Rigidbody } };
 
             return new ContactPoint[0];
         }
@@ -87,7 +87,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public BoundSphere ToBoundSphere()
         {
-            return new BoundSphere { radius = (radii + Vector3.Abs(offset)).Length(),Collidable=this.Collidable };
+            return new BoundSphere { radius = (radii + Vector3.Abs(offset)).Length(),Rigidbody=this.Rigidbody };
         }
     }
 }

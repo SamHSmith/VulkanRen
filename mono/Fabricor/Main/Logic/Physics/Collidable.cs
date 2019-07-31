@@ -13,7 +13,7 @@ namespace Fabricor.Main.Logic.Physics
 
         public void AddShape(IShape s)
         {
-            s.Collidable = this;
+            s.Rigidbody = this;
             shapes.Add(s);
         }
 
@@ -28,7 +28,7 @@ namespace Fabricor.Main.Logic.Physics
                     r = b.radius;
                 }
             }
-            return new BoundSphere { radius = r, Collidable = this };
+            return new BoundSphere { radius = r, Rigidbody = this };
         }
 
         public abstract float GetMass();

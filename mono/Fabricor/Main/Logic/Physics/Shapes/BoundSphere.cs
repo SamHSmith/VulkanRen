@@ -8,7 +8,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
     {
         public float radius;
 
-        public Collidable Collidable { get; set; }
+        public RigidbodyHandle Rigidbody { get; set; }
 
         public BoundSphere(float radius) : this()
         {
@@ -36,14 +36,14 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 dir = (at.position - bt.position);
             if (dir.Length() < this.radius + other.radius)
                 return new ContactPoint[] { new ContactPoint { position=new Vector3[]{Maths.Average(at.position, bt.position) }, normal = dir,
-                    bodyA = this.Collidable, bodyB = other.Collidable } };
+                    bodyA = this.Rigidbody, bodyB = other.Rigidbody } };
 
             return new ContactPoint[0];
         }
 
         public AABB ToAABB()
         {
-            return new AABB { radii = new Vector3(radius, radius, radius),Collidable=this.Collidable };
+            return new AABB { radii = new Vector3(radius, radius, radius),Rigidbody=this.Rigidbody };
         }
 
         public BoundSphere ToBoundSphere()

@@ -7,7 +7,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 {
     public struct ConvexShape : IShape
     {
-        public Collidable Collidable { get; set; }
+        public RigidbodyHandle Rigidbody { get; set; }
 
         public Vector3[] points;
 
@@ -239,8 +239,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 position = contactPoints.ToArray(),
                 normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
                 depth = depth,
-                bodyA = this.Collidable,
-                bodyB = other.Collidable
+                bodyA = this.Rigidbody,
+                bodyB = other.Rigidbody
             });
             cps[0] = cp;//Normal contact
 
@@ -309,7 +309,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 max = new Vector3(maxx, maxy, maxz);
             Vector3 offset = (min + max) / 2;
             Vector3 radii = (max - min) / 2;
-            return new AABB { radii = radii, Collidable = this.Collidable };
+            return new AABB { radii = radii, Rigidbody = this.Rigidbody };
         }
 
 
@@ -321,7 +321,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 if (p.Length() > radius)
                     radius = p.Length();
             }
-            return new BoundSphere { radius = radius, Collidable = this.Collidable };
+            return new BoundSphere { radius = radius, Rigidbody = this.Rigidbody };
         }
     }
 

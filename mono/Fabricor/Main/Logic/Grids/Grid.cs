@@ -10,7 +10,7 @@ namespace Fabricor.Main.Logic.Grids
     {
         private List<Chunk> chunks = new List<Chunk>();
         public Transform transform = new Transform(new Vector3());
-        public Rigidbody rb;
+        public RigidbodyHandle rb;
 
         public List<RenderObject> GetRenderObjects()
         {

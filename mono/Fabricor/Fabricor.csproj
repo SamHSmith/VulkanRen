@@ -79,14 +79,13 @@
     <Compile Include="Main\Logic\Physics\Exceptions\CollisionDetectionNotImplementedException.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\BoundSphere.cs" />
     <Compile Include="Main\Toolbox\Maths.cs" />
-    <Compile Include="Main\Logic\Physics\Rigidbody.cs" />
     <Compile Include="Main\Logic\Physics\ContactPoint.cs" />
-    <Compile Include="Main\Logic\Physics\Collidable.cs" />
     <Compile Include="Main\Logic\Physics\Simulation.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\ConvexShape.cs" />
     <Compile Include="Main\Logic\Physics\State\PhysicsState.cs" />
     <Compile Include="Main\Logic\Physics\State\RigidbodyState.cs" />
     <Compile Include="Main\Logic\Physics\State\NativeMemory.cs" />
+    <Compile Include="Main\Logic\Physics\RigidbodyHandle.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

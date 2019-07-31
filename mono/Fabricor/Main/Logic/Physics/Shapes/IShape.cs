@@ -11,6 +11,6 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         AABB ToAABB();
         BoundSphere ToBoundSphere();
 
-        Collidable Collidable { get; set; }
+        RigidbodyHandle Rigidbody { get; set; }
     }
 }
