@@ -1,11 +1,14 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Rigidbody.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/State/RigidbodyState.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="48" Column="140" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="48" Column="37" />
       <File FileName="Main/Logic/Physics/Simulation.cs" Line="63" Column="1" />
-      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="9" Column="24" />
+      <File FileName="Main/Logic/Physics/Rigidbody.cs" Line="48" Column="10" />
       <File FileName="Main/Logic/Physics/Collidable.cs" Line="10" Column="24" />
       <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="227" Column="73" />
+      <File FileName="Main/Logic/Physics/State/PhysicsState.cs" Line="10" Column="75" />
+      <File FileName="Main/Logic/Physics/State/RigidbodyState.cs" Line="13" Column="32" />
+      <File FileName="Main/Logic/Physics/State/NativeMemory.cs" Line="47" Column="6" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -14,14 +17,15 @@
             <Node name="Fabricor" expanded="True">
               <Node name="Main" expanded="True">
                 <Node name="Logic" expanded="True">
-                  <Node name="Grids" expanded="True" />
                   <Node name="Physics" expanded="True">
-                    <Node name="Shapes" expanded="True" />
-                    <Node name="Rigidbody.cs" selected="True" />
+                    <Node name="State" expanded="True">
+                      <Node name="RigidbodyState.cs" selected="True" />
+                    </Node>
                   </Node>
                 </Node>
               </Node>
             </Node>
+            <Node name="FabricorBenchmarking" expanded="True" />
           </Node>
         </State>
       </Pad>
@@ -29,7 +33,7 @@
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
   <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore />
   </MonoDevelop.Ide.DebuggingService.Breakpoints>

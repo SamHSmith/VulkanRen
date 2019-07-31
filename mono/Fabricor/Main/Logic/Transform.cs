@@ -42,6 +42,16 @@ namespace Fabricor.Main.Logic
             return f;
         }
 
+        public Vector3 TransformVector(Vector3 v)
+        {
+            return position + Vector3.Transform(v, rotation);
+        }
+
+        public Vector3 InverseTransformVector(Vector3 v)
+        {
+            return Vector3.Transform(v- position, Quaternion.Inverse(rotation));
+        }
+
         public Transform LocalToWorldSpace(Transform t)
         {
 

@@ -20,7 +20,7 @@
     <ExternalConsole>true</ExternalConsole>
     <PlatformTarget>x86</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <Optimize>true</Optimize>
@@ -30,7 +30,7 @@
     <ExternalConsole>true</ExternalConsole>
     <PlatformTarget>x86</PlatformTarget>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -44,7 +44,13 @@
     <Reference Include="mscorlib" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.4.5.1\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>packages\System.Memory.4.5.3\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -78,6 +84,9 @@
     <Compile Include="Main\Logic\Physics\Collidable.cs" />
     <Compile Include="Main\Logic\Physics\Simulation.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\ConvexShape.cs" />
+    <Compile Include="Main\Logic\Physics\State\PhysicsState.cs" />
+    <Compile Include="Main\Logic\Physics\State\RigidbodyState.cs" />
+    <Compile Include="Main\Logic\Physics\State\NativeMemory.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
@@ -95,6 +104,7 @@
     <Folder Include="Main\Logic\Physics\Shapes\" />
     <Folder Include="Main\Logic\Physics\Exceptions\" />
     <Folder Include="Main\Toolbox\" />
+    <Folder Include="Main\Logic\Physics\State\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OpenTK.dll.config" />
