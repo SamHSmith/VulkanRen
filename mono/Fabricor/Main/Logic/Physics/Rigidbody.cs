@@ -6,6 +6,22 @@ namespace Fabricor.Main.Logic.Physics
     public class Rigidbody : Collidable
     {
 
+        public override float Energy {
+            get
+            {
+                float lin = this.linearVelocity.Length();
+                lin *= lin;
+                lin *= this.GetMass();
+                lin /= 2;
+
+                Vector3 ang = this.GetAngularVelocity();
+                ang *= ang;
+                ang *= this.GetInertia();
+                ang /= 2;
+                return lin + ang.Length();
+            }
+        }
+
         public Vector3 linearVelocity;
         public Vector3 angularVelocity;
         public float mass = 1;
@@ -15,6 +31,8 @@ namespace Fabricor.Main.Logic.Physics
         {
             transform = new Transform(new Vector3());
         }
+
+        
 
         public override void ApplyTorque(Vector3 torque)
         {

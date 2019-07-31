@@ -7,6 +7,7 @@ namespace Fabricor.Main.Logic.Physics
 {
     public abstract class Collidable
     {
+        public abstract float Energy { get; }
         public List<IShape> shapes = new List<IShape>();
         public Transform transform;
 

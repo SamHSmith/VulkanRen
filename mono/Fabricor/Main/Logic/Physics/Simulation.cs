@@ -12,8 +12,14 @@ namespace Fabricor.Main.Logic.Physics
 
         public static void TimeStep(float delta)
         {
+
+
+
             Move(delta);
+
             PerformCollisions(NarrowPhase(BroadPhase()));
+
+
         }
 
         private static void Move(float delta)
@@ -28,7 +34,7 @@ namespace Fabricor.Main.Logic.Physics
         }
         private static void PerformCollisions(List<ContactPoint> contacts)
         {
-
+            
             foreach (var c in contacts)
             {
                 Vector3 normal = -c.normal;
@@ -42,7 +48,7 @@ namespace Fabricor.Main.Logic.Physics
 
                 float p = c.depth / (c.bodyA.GetMass() + c.bodyB.GetMass());
 
-                c.bodyA.transform.position += c.normal * p* c.bodyA.GetMass();
+                c.bodyA.transform.position += c.normal * p * c.bodyA.GetMass();
                 c.bodyB.transform.position -= c.normal * p * c.bodyB.GetMass();
 
                 float e = 1f;
@@ -51,16 +57,14 @@ namespace Fabricor.Main.Logic.Physics
                 Vector3 rb = c.bodyB.GetDistanceToCenterOfMass(position);
 
 
-
-                ra = c.bodyA.GetDistanceToCenterOfMass(position);
-
                 Vector3 pointvel1 = c.bodyA.GetLinearVelocity() + Vector3.Cross(c.bodyA.GetAngularVelocity(), ra);
                 Vector3 pointvel2 = c.bodyB.GetLinearVelocity() + Vector3.Cross(c.bodyB.GetAngularVelocity(), rb);
 
 
-                float j = -(1 + e) * Vector3.Dot(normal, pointvel1 - pointvel2);
-                j /= c.bodyA.GetInverseMass() + c.bodyB.GetInverseMass() + (Vector3.Cross(ra, normal) * c.bodyA.GetInverseInertia()).Length() +
-                    (Vector3.Cross(rb, normal) * c.bodyB.GetInverseInertia()).Length();
+                float j = -(1 + e) * Vector3.Dot(normal, pointvel1-pointvel2);
+                j /= c.bodyA.GetInverseMass() + c.bodyB.GetInverseMass() + 
+                    (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * c.bodyA.GetInverseInertia()).Length() +
+                    (Vector3.Cross(rb, normal)* Vector3.Cross(rb, normal) * c.bodyB.GetInverseInertia()).Length();
 
 
 
@@ -70,35 +74,7 @@ namespace Fabricor.Main.Logic.Physics
                 c.bodyA.ApplyTorque(Vector3.Cross(ra, j * normal));
                 c.bodyB.ApplyTorque(Vector3.Cross(rb, -j * normal));
 
-                /*
-                float a1 = Vector3.Dot(c.bodyA.GetPointVelocity(position), normal);
-                float b1 = Vector3.Dot(c.bodyB.GetPointVelocity(position), normal);
-                float relativeVelocity = (a1 - b1);
-                //Console.WriteLine("rel vel " + relativeVelocity);
-                //Console.WriteLine("normal " + Vector3.Transform(c.normal,c.bodyA.transform.rotation));
 
-                //Console.WriteLine("depth " + c.depth);
-
-                c.bodyA.transform.position += c.normal * c.depth / 2;
-                c.bodyB.transform.position -= c.normal * c.depth / 2;
-
-                if (relativeVelocity > 0)//We dont want to keep objects inside of each other
-                    continue;
-
-                float m1 = c.bodyA.GetMass();
-                float m2 = c.bodyB.GetMass();
-
-                float p = 2 * relativeVelocity / (m1 + m2);
-
-
-                //Console.WriteLine("P " + p);
-
-                float totalM = ((c.bodyA.GetMass() * c.bodyA.GetPointVelocity(c.bodyA.transform.position)) +
-                    (c.bodyB.GetMass() * c.bodyB.GetPointVelocity(c.bodyB.transform.position))).Length();
-
-                float linear = c.bodyA.ApplyAcceleration(position, normal * -p * m2, 1);//Second masses get divided away later
-                c.bodyB.ApplyAcceleration(position, normal * p * m1, linear);
-                */
             }
         }
 
@@ -131,12 +107,12 @@ namespace Fabricor.Main.Logic.Physics
             }
 
             List<CollidablePair> pairs = new List<CollidablePair>();
-
+            int checks = 0;
             for (int i = 0; i < collidables.Count; i++)
             {
                 for (int k = i + 1; k < collidables.Count; k++)
                 {
-
+                    checks++;
                     if (bounds[i].IsColliding(collidables[i].transform, collidables[k].transform, bounds[k]).Length > 0)
                     {
                         CollidablePair pair = new CollidablePair { a = collidables[i], b = collidables[k] };
@@ -146,6 +122,7 @@ namespace Fabricor.Main.Logic.Physics
                     }
                 }
             }
+            Console.WriteLine(checks);
             return pairs;
         }
     }

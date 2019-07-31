@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Fabricor.Main.Logic.Physics;
 using Fabricor.Main.Rendering;
 
 namespace Fabricor.Main.Logic.Grids
@@ -9,6 +10,7 @@ namespace Fabricor.Main.Logic.Grids
     {
         private List<Chunk> chunks = new List<Chunk>();
         public Transform transform = new Transform(new Vector3());
+        public Rigidbody rb;
 
         public List<RenderObject> GetRenderObjects()
         {

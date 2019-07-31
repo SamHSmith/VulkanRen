@@ -15,10 +15,13 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public const float margin = 0.02f;
 
+        public float frictionFactor;
+
         public ConvexShape(Vector3[] points, Vector3[] planes) : this()
         {
             this.points = points;
             this.planes = planes;
+            frictionFactor = 0.5f;
         }
 
         public bool HasImplementation(IShape s)
@@ -221,6 +224,16 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             if(contactPoints.Count<1)
                 return new ContactPoint[] { };//And so, No intersect
 
+            float friction = this.frictionFactor * other.frictionFactor;
+            bool nofriction = Math.Abs(friction) < float.Epsilon;
+
+            ContactPoint[] cps;
+
+            if (nofriction)
+                cps = new ContactPoint[1];
+            else
+                cps = new ContactPoint[3];
+
             ContactPoint cp = (new ContactPoint
             {
                 position = contactPoints.ToArray(),
@@ -229,9 +242,20 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 bodyA = this.Collidable,
                 bodyB = other.Collidable
             });
+            cps[0] = cp;//Normal contact
 
+            if (!nofriction)
+            {
+                Vector3 frictionVecA = Vector3.Normalize(Vector3.Cross(cp.normal, cp.normal+Vector3.UnitX));
+                Vector3 frictionVecB = Vector3.Normalize(Vector3.Cross(cp.normal, frictionVecA));
+                cp.normal = frictionVecA*friction;
+                cp.depth = 0;
+                cps[1] = cp;
+                cp.normal = frictionVecB * friction;
+                cps[2] = cp;
+            }
 
-            return new ContactPoint[] { cp };
+            return cps;
         }
         /*
         public Intersect IsInside(Vector3 point)
