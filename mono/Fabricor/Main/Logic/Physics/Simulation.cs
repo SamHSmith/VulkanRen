@@ -17,6 +17,34 @@ namespace Fabricor.Main.Logic.Physics
             return state.GetRef(handle.handle);
         }
 
+        public static RigidbodyHandle GetNewRigidbody()
+        {
+            Span<RigidbodyState> span = GetFullState();
+            for (int i = 0; i < span.Length; i++)
+            {
+
+                if (!span[i].IsAssigned)
+                {
+                    span[i] = new RigidbodyState();
+                    span[i].IsAssigned = true;
+                    span[i].transform = new Transform(Vector3.Zero);
+                    span[i].mass = 1;
+                    span[i].inertia = Vector3.One;
+                    RigidbodyHandle handle = new RigidbodyHandle((uint)i);
+                    handles.Add(handle);
+                    return handle;
+                }
+
+            }
+
+            throw new NotImplementedException("Expanding physics state size not implemented");
+        }
+
+        public static Span<RigidbodyState> GetFullState()
+        {
+            return state.State;
+        }
+
         public static void TimeStep(float delta)
         { 
             Move(delta);
@@ -49,33 +77,47 @@ namespace Fabricor.Main.Logic.Physics
                 }
                 position /= contactCount;
 
-                float p = c.depth / (c.bodyA.GetMass() + c.bodyB.GetMass());
+                if (float.IsNaN(normal.Length()))
+                {
+                    continue;
+                }
 
-                c.bodyA.transform.position += c.normal * p * c.bodyA.GetMass();
-                c.bodyB.transform.position -= c.normal * p * c.bodyB.GetMass();
+                Span<RigidbodyState> spana = c.bodyA.state;
+                Span<RigidbodyState> spanb = c.bodyB.state;
 
-                float e = 1f;
+                float p = c.depth / (spana[0].GetMass() + spanb[0].GetMass());
 
-                Vector3 ra = c.bodyA.GetDistanceToCenterOfMass(position);
-                Vector3 rb = c.bodyB.GetDistanceToCenterOfMass(position);
+                spana[0].transform.position += c.normal * p * spana[0].GetMass();
+                spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
+
+                float e = 0.2f;
+
+                Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
+                Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
 
 
-                Vector3 pointvel1 = c.bodyA.GetLinearVelocity() + Vector3.Cross(c.bodyA.GetAngularVelocity(), ra);
-                Vector3 pointvel2 = c.bodyB.GetLinearVelocity() + Vector3.Cross(c.bodyB.GetAngularVelocity(), rb);
+                Vector3 pointvel1 = spana[0].GetLinearVelocity() + Vector3.Cross(spana[0].GetAngularVelocity(), ra);
+                Vector3 pointvel2 = spanb[0].GetLinearVelocity() + Vector3.Cross(spanb[0].GetAngularVelocity(), rb);
 
 
                 float j = -(1 + e) * Vector3.Dot(normal, pointvel1-pointvel2);
-                j /= c.bodyA.GetInverseMass() + c.bodyB.GetInverseMass() + 
-                    (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * c.bodyA.GetInverseInertia()).Length() +
-                    (Vector3.Cross(rb, normal)* Vector3.Cross(rb, normal) * c.bodyB.GetInverseInertia()).Length();
+                j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() + 
+                    (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
+                    (Vector3.Cross(rb, normal)* Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
+                /*
+                if (float.IsNaN(j))
+                {
+                TODO remove
+                    PerformCollisions(new List<ContactPoint>(new ContactPoint[] {c }));
+                }*/
 
 
 
-                c.bodyA.ApplyLinearForce(j * normal);
-                c.bodyB.ApplyLinearForce(-j * normal);
+                spana[0].ApplyLinearForce(j * normal);
+                spanb[0].ApplyLinearForce(-j * normal);
 
-                c.bodyA.ApplyTorque(Vector3.Cross(ra, j * normal));
-                c.bodyB.ApplyTorque(Vector3.Cross(rb, -j * normal));
+                spana[0].ApplyTorque(Vector3.Cross(ra, j * normal));
+                spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
 
             }
@@ -124,6 +166,11 @@ namespace Fabricor.Main.Logic.Physics
             }
             Console.WriteLine(checks);
             return pairs;
+        }
+
+        public static void CleanUp()
+        {
+            state.CleanUp();
         }
     }
 

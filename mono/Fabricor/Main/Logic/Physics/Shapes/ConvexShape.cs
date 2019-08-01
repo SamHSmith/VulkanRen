@@ -199,6 +199,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             }
 
 
+
             List<Vector3> contactPoints = new List<Vector3>();
 
             foreach (var contact in otherInsideme)

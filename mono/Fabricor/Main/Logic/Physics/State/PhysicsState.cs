@@ -20,9 +20,11 @@ namespace Fabricor.Main.Logic.Physics.State
 
         public PhysicsState(int InitialCapacity)
         {
-
             state = new NativeMemory<RigidbodyState>(InitialCapacity);
+        }
 
+        public void CleanUp()
+        {
             state.Free();
         }
     }

@@ -12,6 +12,11 @@ namespace Fabricor.Main.Logic.Physics
         public Span<RigidbodyState> state { get { return Simulation.GetRBState(this); } }
         public List<IShape> shapes = new List<IShape>();
 
+        public RigidbodyHandle(uint handle)
+        {
+            this.handle = handle;
+        }
+
         public BoundSphere GetBound()
         {
             float r = 0;
@@ -24,6 +29,12 @@ namespace Fabricor.Main.Logic.Physics
                 }
             }
             return new BoundSphere { radius = r, Rigidbody = this };
+        }
+
+        public void AddShape(IShape s)
+        {
+            s.Rigidbody = this;
+            shapes.Add(s);
         }
     }
 }

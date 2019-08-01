@@ -15,6 +15,14 @@ namespace Fabricor.Main.Logic.Physics.State
             byteCount = Marshal.SizeOf(default(T)) * length;
             ptr = Marshal.AllocHGlobal(byteCount);
 
+
+            T* myptr = (T*)this.ptr;
+
+            for (int i = 0; i < length; i++)
+            {
+                *myptr = new T();
+                myptr++;
+            }
         }
 
         public unsafe Span<T> GetSpan()

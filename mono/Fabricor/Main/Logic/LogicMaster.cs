@@ -5,6 +5,7 @@ using System.Numerics;
 using Fabricor.Main.Logic.Grids;
 using Fabricor.Main.Logic.Physics;
 using Fabricor.Main.Logic.Physics.Shapes;
+using Fabricor.Main.Logic.Physics.State;
 using Fabricor.Main.Rendering;
 using Plane = Fabricor.Main.Logic.Physics.Shapes.Plane;
 
@@ -20,6 +21,7 @@ namespace Fabricor.Main.Logic
 
         public static void Init()
         {
+            Console.WriteLine("INIT");
             MasterRenderer.Init();
             updatables.Add(camera);
 
@@ -44,14 +46,14 @@ namespace Fabricor.Main.Logic
             {
                 Grid g = new Grid();
                 g.Put(0, 0, 0, 1);
-                g.rb = new Rigidbody();
+                g.rb = Simulation.GetNewRigidbody();
+                Console.WriteLine(i+" "+g.rb.handle);
                 g.rb.AddShape(cube);
-                g.rb.transform.position = new Vector3((float)r.NextDouble() * 100, (float)r.NextDouble() * 100, (float)r.NextDouble() * 100);
-                g.rb.linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
-                g.transform = g.rb.transform;
+                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 100, (float)r.NextDouble() * 100, (float)r.NextDouble() * 100);
+                g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
+                g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
                 MasterRenderer.toRenderGrids.Add(g);
-                Simulation.rigidbodies.Add(g.rb);
                 gs.Add(g);
             }
 
@@ -81,21 +83,13 @@ namespace Fabricor.Main.Logic
 
                 foreach (var g in gs)
                 {
-                    g.rb.linearVelocity += -Vector3.Normalize(g.rb.transform.position)*4 * delta;
+                    g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*4 * delta;
 
-                    g.transform = g.rb.transform;
+                    g.transform = g.rb.state[0].transform;
                 }
             }
 
-            if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.P))
-            {
-                float energy = 0;
-                foreach (var rb in Simulation.rigidbodies)
-                {
-                    energy += rb.Energy;
-                }
-                Console.WriteLine("ENERGY: "+energy);
-            }
+
 
 
 
@@ -106,6 +100,7 @@ namespace Fabricor.Main.Logic
         public static void CleanUp()
         {
             MasterRenderer.CleanUp();
+            Simulation.CleanUp();
         }
 
     }
