@@ -80,6 +80,16 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             return new ContactPoint[0];
         }
 
+        public Vector3 WorldMin(Vector3 world)
+        {
+            return world + offset - radii;
+        }
+
+        public Vector3 WorldMax(Vector3 world)
+        {
+            return world + offset + radii;
+        }
+
         public AABB ToAABB()
         {
             return this;

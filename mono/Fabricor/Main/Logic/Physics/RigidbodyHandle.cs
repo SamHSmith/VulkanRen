@@ -10,6 +10,7 @@ namespace Fabricor.Main.Logic.Physics
         internal uint handle;
         //private Simulation s; TODO Make Simulation a instance type
         public Span<RigidbodyState> state { get { return Simulation.GetRBState(this); } }
+        public Span<RigidbodyState> interpolatedState { get { return Simulation.GetRBInterpolatedState(this); } }
         public List<IShape> shapes = new List<IShape>();
 
         public RigidbodyHandle(uint handle)

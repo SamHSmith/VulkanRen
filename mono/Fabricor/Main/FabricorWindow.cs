@@ -25,6 +25,11 @@ namespace Fabricor.Main
         {
 
             base.Dispose(manual);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            base.OnClosed(e);
             LogicMaster.CleanUp();
         }
 

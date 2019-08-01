@@ -1,25 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using Fabricor.Main.Logic.Physics.Shapes;
 using Fabricor.Main.Logic.Physics.State;
+using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics
 {
     public static class Simulation
     {
-        private static PhysicsState state = new PhysicsState(1000);
+        private static PhysicsState editState = new PhysicsState(10000);
+        private static PhysicsState oldState = new PhysicsState(10000);
+        private static PhysicsState interpolatedState = new PhysicsState(10000);
+        private static PhysicsState newState = new PhysicsState(10000);
         private static List<RigidbodyHandle> handles = new List<RigidbodyHandle>();
 
 
         internal static Span<RigidbodyState> GetRBState(RigidbodyHandle handle)
         {
-            return state.GetRef(handle.handle);
+            return editState.GetRef(handle.handle);
+        }
+
+        internal static Span<RigidbodyState> GetRBInterpolatedState(RigidbodyHandle handle)
+        {
+            return interpolatedState.GetRef(handle.handle);
         }
 
         public static RigidbodyHandle GetNewRigidbody()
         {
-            Span<RigidbodyState> span = GetFullState();
+            Span<RigidbodyState> span = editState.Span;
             for (int i = 0; i < span.Length; i++)
             {
 
@@ -40,21 +50,100 @@ namespace Fabricor.Main.Logic.Physics
             throw new NotImplementedException("Expanding physics state size not implemented");
         }
 
-        public static Span<RigidbodyState> GetFullState()
+        public unsafe static void UpdateInterpolation(float t,float fixeddelta)
         {
-            return state.State;
+            oldState.state.CopyTo(interpolatedState.state);
+
+            RigidbodyState* iptr = (RigidbodyState*)interpolatedState.state.ptr;
+            RigidbodyState* nptr = (RigidbodyState*)newState.state.ptr;
+
+            for (int i = 0; i < interpolatedState.state.length; i++)
+            {
+                if ((*nptr).IsAssigned)
+                {
+                    (*iptr).transform.position = Hermite((*iptr).transform.position, (*iptr).linearVelocity* fixeddelta,
+                        (*nptr).transform.position, (*nptr).linearVelocity* fixeddelta, t);
+                    (*iptr).transform.rotation = Quaternion.Lerp((*iptr).transform.rotation, (*nptr).transform.rotation, t);
+                }
+                iptr++;
+                nptr++;
+            }
         }
 
+        public static Vector3 Hermite(
+            Vector3 value1,
+            Vector3 tangent1,
+            Vector3 value2,
+            Vector3 tangent2,
+            float amount
+        )
+        {
+            Vector3 result = new Vector3();
+            Hermite(ref value1, ref tangent1, ref value2, ref tangent2, amount, out result);
+            return result;
+        }
+
+        public static void Hermite(
+            ref Vector3 value1,
+            ref Vector3 tangent1,
+            ref Vector3 value2,
+            ref Vector3 tangent2,
+            float amount,
+            out Vector3 result
+        )
+        {
+            result.X = MathHelper.Hermite(value1.X, tangent1.X, value2.X, tangent2.X, amount);
+            result.Y = MathHelper.Hermite(value1.Y, tangent1.Y, value2.Y, tangent2.Y, amount);
+            result.Z = MathHelper.Hermite(value1.Z, tangent1.Z, value2.Z, tangent2.Z, amount);
+        }
+
+        static int frame = 0;
         public static void TimeStep(float delta)
-        { 
+        {
+            Stopwatch frametime = new Stopwatch();
+            frametime.Start();
+
+
+
             Move(delta);
 
-            PerformCollisions(NarrowPhase(BroadPhase()));
+            Stopwatch s = new Stopwatch();
+
+            s.Start();
+            List<CollidablePair> broad = BroadPhase();
+            s.Stop();
+            long broadTime = s.ElapsedMilliseconds;
+            s.Reset();
+
+            s.Start();
+            List<ContactPoint> narrow = NarrowPhase(broad);
+            s.Stop();
+            long narrowTime = s.ElapsedMilliseconds;
+            s.Reset();
+
+            s.Start();
+            PerformCollisions(narrow);
+            s.Stop();
+            frametime.Stop();
+
+            Console.WriteLine("Physics Frame " + frame + ", Broadtime: "+broadTime+", Narrowtime: "+narrowTime+", Performtime: "+s.ElapsedMilliseconds);
+            Console.WriteLine("Frametime: " + frametime.ElapsedMilliseconds);
+            frame++;
+        }
+
+        public static void SwapBuffers()
+        {
+            //Swap buffers
+            newState.state.CopyTo(oldState.state);//Move back buffer
+            PhysicsState oldComplete = newState;
+            newState = editState;
+            editState = oldComplete;
+            newState.state.CopyTo(editState.state);
         }
 
         private static void Move(float delta)
         {
-            Span<RigidbodyState> span = state.State;
+            Span<RigidbodyState> span = editState.Span;
             for(int i=0;i<span.Length;i++)
             {
                 span[i].transform.position += span[i].linearVelocity * delta;
@@ -90,7 +179,7 @@ namespace Fabricor.Main.Logic.Physics
                 spana[0].transform.position += c.normal * p * spana[0].GetMass();
                 spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
 
-                float e = 0.2f;
+                float e = 1f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -104,12 +193,7 @@ namespace Fabricor.Main.Logic.Physics
                 j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() + 
                     (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
                     (Vector3.Cross(rb, normal)* Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
-                /*
-                if (float.IsNaN(j))
-                {
-                TODO remove
-                    PerformCollisions(new List<ContactPoint>(new ContactPoint[] {c }));
-                }*/
+
 
 
 
@@ -141,21 +225,33 @@ namespace Fabricor.Main.Logic.Physics
 
         private static List<CollidablePair> BroadPhase()
         {
-            List<RigidbodyHandle> rbs = handles;
 
-            List<IShape> bounds = new List<IShape>();
-            foreach (var c in rbs)
+            List<AABBMarker> markers = new List<AABBMarker>(handles.Count*2);
+            for (int i = 0; i < handles.Count; i++)
             {
-                bounds.Add(c.GetBound());
+                AABB b=handles[i].GetBound().ToAABB();
+                markers.Add(new MinAABB {rb=handles[i],position= b.WorldMin(handles[i].state[0].transform.position) });
+                markers.Add(new MaxAABB { rb = handles[i], position = b.WorldMax(handles[i].state[0].transform.position) });
             }
-
             List<CollidablePair> pairs = new List<CollidablePair>();
-            int checks = 0;
+
+            markers.Sort((x, y) => x.position.X.CompareTo(y.position.X));
+            Prune(ref markers);
+
+            markers.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
+            Prune(ref markers);
+
+            markers.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
+            Prune(ref markers);
+
+            //Find collisions
+
+            /*
+
             for (int i = 0; i < rbs.Count; i++)
             {
                 for (int k = i + 1; k < rbs.Count; k++)
                 {
-                    checks++;
                     if (bounds[i].IsColliding(rbs[i].state[0].transform, rbs[k].state[0].transform, bounds[k]).Length > 0)
                     {
                         CollidablePair pair = new CollidablePair { a = rbs[i], b = rbs[k] };
@@ -164,18 +260,59 @@ namespace Fabricor.Main.Logic.Physics
                     }
                 }
             }
-            Console.WriteLine(checks);
+            */
             return pairs;
+        }
+
+        private static void Prune(ref List<AABBMarker> markers)
+        {
+            int last = 0;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                if (markers[i] is MinAABB)
+                {
+                    last = i;
+                }
+                else
+                {
+                    if(markers[last]is MinAABB)
+                    if (markers[i].rb == ((MinAABB)markers[last]).rb)
+                    {
+                        markers.RemoveAt(i);
+                        markers.RemoveAt(last);
+                    }
+                }
+            }
         }
 
         public static void CleanUp()
         {
-            state.CleanUp();
+            editState.CleanUp();
+            newState.CleanUp();
+            oldState.CleanUp();
         }
     }
 
     struct CollidablePair
     {
         public RigidbodyHandle a, b;
+    }
+
+    interface AABBMarker
+    {
+        RigidbodyHandle rb { get; set; }
+        Vector3 position { get; set; }
+}
+
+    struct MinAABB : AABBMarker
+    {
+        public RigidbodyHandle rb { get; set; }
+        public Vector3 position { get; set; }
+    }
+
+    struct MaxAABB : AABBMarker
+    {
+        public RigidbodyHandle rb { get; set; }
+        public Vector3 position { get; set; }
     }
 }

@@ -5,9 +5,9 @@ namespace Fabricor.Main.Logic.Physics.State
 {
     public class PhysicsState
     {
-        private NativeMemory<RigidbodyState> state;
+        internal NativeMemory<RigidbodyState> state;
 
-        public Span<RigidbodyState> State { get { return state.GetSpan(); } }
+        public Span<RigidbodyState> Span { get { return state.GetSpan(); } }
 
         public unsafe Span<RigidbodyState> GetRef(uint index)
         {
