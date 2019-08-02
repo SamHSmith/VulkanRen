@@ -144,7 +144,7 @@ namespace Fabricor.Main.Logic.Physics
             s.Reset();
 
             s.Start();
-            PerformCollisions(narrow);
+            PerformCollisions(narrow,delta);
             s.Stop();
             frametime.Stop();
 
@@ -174,7 +174,7 @@ namespace Fabricor.Main.Logic.Physics
                         span[i].angularVelocity.Length() * delta) * span[i].transform.rotation;
             }
         }
-        private static void PerformCollisions(List<ContactPoint> contacts)
+        private static void PerformCollisions(List<ContactPoint> contacts,float delta)
         {
 
             foreach (var c in contacts)
@@ -196,9 +196,12 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = c.bodyA.state;
                 Span<RigidbodyState> spanb = c.bodyB.state;
 
+                float p = c.depth / (spana[0].GetMass() + spanb[0].GetMass());
 
+                spana[0].transform.position += c.normal * p * spana[0].GetMass();
+                spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
 
-                float e = 0.5f;
+                float e = 1f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -222,12 +225,6 @@ namespace Fabricor.Main.Logic.Physics
                 spana[0].ApplyTorque(Vector3.Cross(ra, j * normal));
                 spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
-
-                float p = (c.depth * 3);
-                p *= p;
-
-                spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
-                spanb[0].ApplyLinearForce(normal * p * spanb[0].GetMass());
 
             }
         }
@@ -257,24 +254,130 @@ namespace Fabricor.Main.Logic.Physics
                 aABBs.Add(b);
             }
 
-            List<CollidablePair> pairsfinal = new List<CollidablePair>();
-            List<CollidablePair> pairs = SweepAndPrune(aABBs);
+            return SweepAndSplit(aABBs);
+        }
 
-            for (int i = 0; i < pairs.Count; i++)
+        public static List<CollidablePair> SweepAndSplit(List<AABB> aABBs)
+        {
+            List<AABBMarker> markersx = new List<AABBMarker>(aABBs.Count * 2);
+            for (int i = 0; i < aABBs.Count; i++)
             {
-                RigidbodyHandle a = (RigidbodyHandle)pairs[i].a;
-                RigidbodyHandle b = (RigidbodyHandle)pairs[i].b;
+                AABB b = aABBs[i];
+                markersx.Add(new MinAABB { a = aABBs[i], position = b.WorldMin(handles[i].state[0].transform.position) });
+                markersx.Add(new MaxAABB { a = aABBs[i], position = b.WorldMax(handles[i].state[0].transform.position) });
+            }
+            List<List<AABBMarker>> start = new List<List<AABBMarker>>();
+            start.Add(markersx);
 
-                if (!a.state[0].IsAssigned || !b.state[0].IsAssigned)//TODO add static flags
-                    continue;
+            List<List<AABBMarker>> final = Split(Split(Split(start, Vector3.UnitX), Vector3.UnitY), Vector3.UnitZ);
 
-                if ((a.state[0].transform.position - b.state[0].transform.position).Length() < a.shape.ToBoundSphere().radius + b.shape.ToBoundSphere().radius)
+            List<CollidablePair> pairs = new List<CollidablePair>();
+
+            int splitChunks = 0;
+            foreach (var markers in final)
+            {
+                splitChunks++;
+
+                markers.Sort((x, y) => x.position.X.CompareTo(y.position.X));
+                Prune(markersx, out var markersy);
+
+                markersy.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
+                Prune(markersy, out var markersz);
+
+                markersz.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
+                Prune(markersz, out var markersfinal);
+
+                AABB last = null;
+                List<AABB> open = new List<AABB>();
+                for (int j = 0; j < markersfinal.Count; j++)
                 {
-                    pairsfinal.Add(new CollidablePair { a = a, b = b });
+                    if (markersfinal[j] is MinAABB)
+                    {
+                        last = ((MinAABB)markersfinal[j]).a;
+                        open.Add(last);
+                    }
+                    else
+                    {
+                        if (markersfinal[j].a == last)
+                        {
+                            open.Remove(last);
+                        }
+                        foreach (var aa in open)
+                        {
+                            if (aa.root != markersfinal[j].a.root)
+                            {
+                                RigidbodyHandle a = (RigidbodyHandle)aa.root;
+                                RigidbodyHandle b = (RigidbodyHandle)markersfinal[j].a.root;
+
+                                if ((a.state[0].transform.position - b.state[0].transform.position).Length() < a.shape.ToBoundSphere().radius + b.shape.ToBoundSphere().radius)
+                                {
+                                    pairs.Add(new CollidablePair { a = a, b = b });
+                                }
+                            }
+
+                        }
+                        if (open.Contains(markersfinal[j].a))
+                        {
+                            open.Remove(markersfinal[j].a);
+                        }
+
+                    }
                 }
             }
 
-            return pairsfinal;
+            Console.WriteLine("SplitChunks: " + splitChunks);
+            return pairs;
+        }
+
+        private static List<List<AABBMarker>> Split(List<List<AABBMarker>> markers, Vector3 Axis)
+        {
+            if (Axis.X > 0)
+            {
+                foreach (var marker in markers)
+                {
+                    marker.Sort((x, y) => x.position.X.CompareTo(y.position.X));
+                }
+            }
+            else if (Axis.Y > 0)
+            {
+                foreach (var marker in markers)
+                {
+                    marker.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
+                }
+            }
+            else
+            {
+                foreach (var marker in markers)
+                {
+                    marker.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
+                }
+            }
+            List<List<AABBMarker>> final = new List<List<AABBMarker>>();
+            foreach (var marker in markers)
+            {
+
+                List<AABBMarker> tracked = new List<AABBMarker>();
+                List<AABB> open = new List<AABB>();
+                for (int i = 0; i < marker.Count; i++)
+                {
+                    tracked.Add(marker[i]);
+                    if (marker[i] is MinAABB)
+                    {
+                        open.Add(marker[i].a);
+                    }
+                    else
+                    {
+                        open.Remove(marker[i].a);
+                    }
+
+                    if (open.Count < 1)
+                    {
+                        final.Add(tracked);
+                        tracked = new List<AABBMarker>();
+                    }
+                }
+            }
+            return final;
         }
 
         public static List<CollidablePair> SweepAndPrune(List<AABB> aABBs)
