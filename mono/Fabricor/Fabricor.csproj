@@ -87,6 +87,7 @@
     <Compile Include="Main\Logic\Physics\State\NativeMemory.cs" />
     <Compile Include="Main\Logic\Physics\RigidbodyHandle.cs" />
     <Compile Include="Main\Toolbox\MathHelper.cs" />
+    <Compile Include="Main\Logic\Physics\IShapeRoot.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

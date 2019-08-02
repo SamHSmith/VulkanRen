@@ -10,10 +10,10 @@ namespace Fabricor.Main.Logic.Physics
 {
     public static class Simulation
     {
-        private static PhysicsState editState = new PhysicsState(10000);
-        private static PhysicsState oldState = new PhysicsState(10000);
-        private static PhysicsState interpolatedState = new PhysicsState(10000);
-        private static PhysicsState newState = new PhysicsState(10000);
+        private static PhysicsState editState = new PhysicsState(1000);
+        private static PhysicsState oldState = new PhysicsState(1000);
+        private static PhysicsState interpolatedState = new PhysicsState(1000);
+        private static PhysicsState newState = new PhysicsState(1000);
         private static List<RigidbodyHandle> handles = new List<RigidbodyHandle>();
 
 
@@ -50,7 +50,7 @@ namespace Fabricor.Main.Logic.Physics
             throw new NotImplementedException("Expanding physics state size not implemented");
         }
 
-        public unsafe static void UpdateInterpolation(float t,float fixeddelta)
+        public unsafe static void UpdateInterpolation(float t, float fixeddelta)
         {
             oldState.state.CopyTo(interpolatedState.state);
 
@@ -61,8 +61,8 @@ namespace Fabricor.Main.Logic.Physics
             {
                 if ((*nptr).IsAssigned)
                 {
-                    (*iptr).transform.position = Hermite((*iptr).transform.position, (*iptr).linearVelocity* fixeddelta,
-                        (*nptr).transform.position, (*nptr).linearVelocity* fixeddelta, t);
+                    (*iptr).transform.position = Hermite((*iptr).transform.position, (*iptr).linearVelocity * fixeddelta,
+                        (*nptr).transform.position, (*nptr).linearVelocity * fixeddelta, t);
                     (*iptr).transform.rotation = Quaternion.Lerp((*iptr).transform.rotation, (*nptr).transform.rotation, t);
                 }
                 iptr++;
@@ -126,7 +126,7 @@ namespace Fabricor.Main.Logic.Physics
             s.Stop();
             frametime.Stop();
 
-            Console.WriteLine("Physics Frame " + frame + ", Broadtime: "+broadTime+", Narrowtime: "+narrowTime+", Performtime: "+s.ElapsedMilliseconds);
+            Console.WriteLine("Physics Frame " + frame + ", Broadtime: " + broadTime + ", Narrowtime: " + narrowTime + ", Performtime: " + s.ElapsedMilliseconds);
             Console.WriteLine("Frametime: " + frametime.ElapsedMilliseconds);
             frame++;
         }
@@ -144,7 +144,7 @@ namespace Fabricor.Main.Logic.Physics
         private static void Move(float delta)
         {
             Span<RigidbodyState> span = editState.Span;
-            for(int i=0;i<span.Length;i++)
+            for (int i = 0; i < span.Length; i++)
             {
                 span[i].transform.position += span[i].linearVelocity * delta;
                 if (span[i].angularVelocity.Length() > 0)
@@ -154,7 +154,7 @@ namespace Fabricor.Main.Logic.Physics
         }
         private static void PerformCollisions(List<ContactPoint> contacts)
         {
-            
+
             foreach (var c in contacts)
             {
                 Vector3 normal = -c.normal;
@@ -189,10 +189,10 @@ namespace Fabricor.Main.Logic.Physics
                 Vector3 pointvel2 = spanb[0].GetLinearVelocity() + Vector3.Cross(spanb[0].GetAngularVelocity(), rb);
 
 
-                float j = -(1 + e) * Vector3.Dot(normal, pointvel1-pointvel2);
-                j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() + 
+                float j = -(1 + e) * Vector3.Dot(normal, pointvel1 - pointvel2);
+                j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() +
                     (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
-                    (Vector3.Cross(rb, normal)* Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
+                    (Vector3.Cross(rb, normal) * Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
 
 
 
@@ -212,13 +212,11 @@ namespace Fabricor.Main.Logic.Physics
             List<ContactPoint> contacts = new List<ContactPoint>();
             foreach (var p in pairs)
             {
-                foreach (var a in p.a.shapes)
-                {
-                    foreach (var b in p.b.shapes)
-                    {
-                        contacts.AddRange(a.IsColliding(p.a.state[0].transform, p.b.state[0].transform, b));
-                    }
-                }
+                RigidbodyHandle a = (RigidbodyHandle)p.a;
+                RigidbodyHandle b = (RigidbodyHandle)p.b;
+
+                contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
+
             }
             return contacts;
         }
@@ -226,45 +224,84 @@ namespace Fabricor.Main.Logic.Physics
         private static List<CollidablePair> BroadPhase()
         {
 
-            List<AABBMarker> markers = new List<AABBMarker>(handles.Count*2);
+            List<AABB> aABBs = new List<AABB>();
             for (int i = 0; i < handles.Count; i++)
             {
-                AABB b=handles[i].GetBound().ToAABB();
-                markers.Add(new MinAABB {rb=handles[i],position= b.WorldMin(handles[i].state[0].transform.position) });
-                markers.Add(new MaxAABB { rb = handles[i], position = b.WorldMax(handles[i].state[0].transform.position) });
+                AABB b = handles[i].GetBound().ToAABB();
+                aABBs.Add(b);
             }
+
+            List<CollidablePair> pairsfinal = new List<CollidablePair>();
+            List<CollidablePair> pairs = SweepAndPrune(aABBs);
+
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                RigidbodyHandle a = (RigidbodyHandle)pairs[i].a;
+                RigidbodyHandle b = (RigidbodyHandle)pairs[i].b;
+
+                if (!a.state[0].IsAssigned || !b.state[0].IsAssigned)//TODO add static flags
+                    continue;
+
+                if((a.state[0].transform.position-b.state[0].transform.position).Length()<a.shape.ToBoundSphere().radius+b.shape.ToBoundSphere().radius)
+                {
+                    pairsfinal.Add(new CollidablePair {a=a,b=b });
+                }
+            }
+
+            return pairsfinal;
+        }
+
+        public static List<CollidablePair> SweepAndPrune(List<AABB> aABBs)
+        {
+            List<AABBMarker> markersx = new List<AABBMarker>(aABBs.Count * 2);
+            for (int i = 0; i < aABBs.Count; i++)
+            {
+                AABB b = aABBs[i];
+                markersx.Add(new MinAABB { a = aABBs[i], position = b.WorldMin(handles[i].state[0].transform.position) });
+                markersx.Add(new MaxAABB { a = aABBs[i], position = b.WorldMax(handles[i].state[0].transform.position) });
+            }
+
+
+            markersx.Sort((x, y) => x.position.X.CompareTo(y.position.X));
+            Prune(markersx,out var markersy);
+
+            markersy.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
+            Prune(markersy, out var markersz);
+
+            markersz.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
+            Prune(markersz, out var markersfinal);
+
             List<CollidablePair> pairs = new List<CollidablePair>();
 
-            markers.Sort((x, y) => x.position.X.CompareTo(y.position.X));
-            Prune(ref markers);
-
-            markers.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
-            Prune(ref markers);
-
-            markers.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
-            Prune(ref markers);
-
-            //Find collisions
-
-            /*
-
-            for (int i = 0; i < rbs.Count; i++)
+            AABB last=null;
+            List<AABB> open = new List<AABB>();
+            for (int i = 0; i < markersfinal.Count; i++)
             {
-                for (int k = i + 1; k < rbs.Count; k++)
+                if(markersfinal[i] is MinAABB)
                 {
-                    if (bounds[i].IsColliding(rbs[i].state[0].transform, rbs[k].state[0].transform, bounds[k]).Length > 0)
+                    last = ((MinAABB)markersfinal[i]).a;
+                    open.Add(last);
+                }
+                else
+                {
+                    if (markersfinal[i].a == last)
                     {
-                        CollidablePair pair = new CollidablePair { a = rbs[i], b = rbs[k] };
-
-                        pairs.Add(pair);
+                        open.Remove(last);
+                    }
+                    foreach (var aa in open)
+                    {
+                        pairs.Add(new CollidablePair {a=aa.root,b= markersfinal[i].a.root });
+                    }
+                    if (open.Contains(markersfinal[i].a))
+                    {
+                        open.Remove(markersfinal[i].a);
                     }
                 }
             }
-            */
             return pairs;
         }
 
-        private static void Prune(ref List<AABBMarker> markers)
+        private static void Prune(List<AABBMarker> markers, out List<AABBMarker> newmarkers)
         {
             int last = 0;
             for (int i = 0; i < markers.Count; i++)
@@ -275,14 +312,15 @@ namespace Fabricor.Main.Logic.Physics
                 }
                 else
                 {
-                    if(markers[last]is MinAABB)
-                    if (markers[i].rb == ((MinAABB)markers[last]).rb)
-                    {
-                        markers.RemoveAt(i);
-                        markers.RemoveAt(last);
-                    }
+                    if (markers[last] is MinAABB)
+                        if (markers[i].a == ((MinAABB)markers[last]).a)
+                        {
+                            markers.RemoveAt(i);
+                            markers.RemoveAt(last);
+                        }
                 }
             }
+            newmarkers = new List<AABBMarker>(markers);
         }
 
         public static void CleanUp()
@@ -293,26 +331,26 @@ namespace Fabricor.Main.Logic.Physics
         }
     }
 
-    struct CollidablePair
+    public struct CollidablePair
     {
-        public RigidbodyHandle a, b;
+        public IShapeRoot a, b;
     }
 
     interface AABBMarker
     {
-        RigidbodyHandle rb { get; set; }
+        AABB a { get; set; }
         Vector3 position { get; set; }
-}
+    }
 
     struct MinAABB : AABBMarker
     {
-        public RigidbodyHandle rb { get; set; }
+        public AABB a { get; set; }
         public Vector3 position { get; set; }
     }
 
     struct MaxAABB : AABBMarker
     {
-        public RigidbodyHandle rb { get; set; }
+        public AABB a { get; set; }
         public Vector3 position { get; set; }
     }
 }

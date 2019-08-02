@@ -4,15 +4,20 @@ using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
-    public struct BoundSphere : IShape
+    public class BoundSphere : IShape
     {
         public float radius;
 
-        public RigidbodyHandle Rigidbody { get; set; }
+        public IShapeRoot root { get; set; }
 
-        public BoundSphere(float radius) : this()
+        public BoundSphere(float radius)
         {
             this.radius = radius;
+        }
+
+        public BoundSphere(float radius, IShapeRoot root) : this(radius)
+        {
+            this.root = root;
         }
 
         public bool HasImplementation(IShape s)
@@ -36,14 +41,14 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 dir = (at.position - bt.position);
             if (dir.Length() < this.radius + other.radius)
                 return new ContactPoint[] { new ContactPoint { position=new Vector3[]{Maths.Average(at.position, bt.position) }, normal = dir,
-                    bodyA = this.Rigidbody, bodyB = other.Rigidbody } };
+                    bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
 
             return new ContactPoint[0];
         }
 
         public AABB ToAABB()
         {
-            return new AABB { radii = new Vector3(radius, radius, radius),Rigidbody=this.Rigidbody };
+            return new AABB(Vector3.One * radius,root);
         }
 
         public BoundSphere ToBoundSphere()

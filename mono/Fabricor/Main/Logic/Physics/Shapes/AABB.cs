@@ -4,13 +4,13 @@ using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
-    public struct AABB : IShape
+    public class AABB : IShape
     {
         public Vector3 radii;
         public Vector3 offset;
-        public RigidbodyHandle Rigidbody { get; set; }
+        public IShapeRoot root { get; set; }
 
-        public AABB(Transform at,BoundSphere a,Transform bt, BoundSphere b,RigidbodyHandle collidable)
+        public AABB(Transform at,BoundSphere a,Transform bt, BoundSphere b)
         {
             Vector3 dir = (bt.position - at.position)/2;
             Vector3 center = at.position + dir;
@@ -22,10 +22,22 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             rad += new Vector3(b.radius);
             radii = rad;
             offset = dir;
-            this.Rigidbody = collidable;
         }
 
+        public AABB(Vector3 radii)
+        {
+            this.radii = radii;
+        }
 
+        public AABB(Vector3 radii, IShapeRoot root) : this(radii)
+        {
+            this.root = root;
+        }
+
+        public AABB(Vector3 radii, Vector3 offset) : this(radii)
+        {
+            this.offset = offset;
+        }
 
         public bool HasImplementation(IShape s)
         {
@@ -64,7 +76,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 return new ContactPoint[0];
 
             Vector3 pos = Maths.Clamp(relpos, radii * -1, radii)+at.position;
-            return new ContactPoint[] { new ContactPoint { position = new Vector3[] { pos },normal=Vector3.Normalize(Maths.SnapVector(relpos)),bodyA=this.Rigidbody,bodyB= other.Rigidbody} };
+            return new ContactPoint[] { new ContactPoint { position = new Vector3[] { pos },normal=Vector3.Normalize(Maths.SnapVector(relpos)), bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
         }
 
         public ContactPoint[] IsColliding(Transform at, Transform bt, BoundSphere other)
@@ -75,7 +87,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             if ((relpos - closest).Length() < other.radius)
                 return new ContactPoint[] { new ContactPoint {position=new Vector3[]{(relpos / 2)+at.position },
                 normal=Vector3.Normalize(closest),
-                    bodyA = this.Rigidbody, bodyB = other.Rigidbody } };
+                    bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
 
             return new ContactPoint[0];
         }
@@ -97,7 +109,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public BoundSphere ToBoundSphere()
         {
-            return new BoundSphere { radius = (radii + Vector3.Abs(offset)).Length(),Rigidbody=this.Rigidbody };
+            return new BoundSphere((radii + Vector3.Abs(offset)).Length(),root);
         }
     }
 }

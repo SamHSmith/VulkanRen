@@ -11,6 +11,6 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         AABB ToAABB();
         BoundSphere ToBoundSphere();
 
-        RigidbodyHandle Rigidbody { get; set; }
+        IShapeRoot root { get; set; }
     }
 }

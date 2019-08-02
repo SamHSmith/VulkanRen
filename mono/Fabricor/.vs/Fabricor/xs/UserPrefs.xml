@@ -1,13 +1,11 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Simulation.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/State/PhysicsState.cs">
     <Files>
-      <File FileName="Main/Logic/Physics/State/RigidbodyState.cs" Line="13" Column="32" />
-      <File FileName="Main/Logic/LogicMaster.cs" Line="24" Column="49" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="247" Column="30" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="59" Column="24" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="230" Column="40" />
       <File FileName="Main/Logic/Physics/State/PhysicsState.cs" Line="8" Column="17" />
-      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="201" Column="1" />
-      <File FileName="Main/Logic/Physics/RigidbodyHandle.cs" Line="13" Column="114" />
-      <File FileName="Main/Logic/Physics/Shapes/AABB.cs" Line="90" Column="43" />
+      <File FileName="Main/Logic/Physics/RigidbodyHandle.cs" Line="23" Column="31" />
+      <File FileName="Main/Logic/Physics/Shapes/AABB.cs" Line="112" Column="80" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -19,8 +17,9 @@
                   <Node name="Grids" expanded="True" />
                   <Node name="Physics" expanded="True">
                     <Node name="Shapes" expanded="True" />
-                    <Node name="State" expanded="True" />
-                    <Node name="Simulation.cs" selected="True" />
+                    <Node name="State" expanded="True">
+                      <Node name="PhysicsState.cs" selected="True" />
+                    </Node>
                   </Node>
                 </Node>
                 <Node name="Toolbox" expanded="True" />
@@ -34,9 +33,11 @@
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
   <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="/home/sam/Documents/git/Fabricor/mono/Fabricor/Main/Logic/Physics/Simulation.cs" relfile="Main/Logic/Physics/Simulation.cs" line="294" column="85" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MultiItemStartupConfigurations />
 </Properties>

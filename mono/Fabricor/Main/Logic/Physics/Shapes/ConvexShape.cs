@@ -5,9 +5,9 @@ using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
-    public struct ConvexShape : IShape
+    public class ConvexShape : IShape
     {
-        public RigidbodyHandle Rigidbody { get; set; }
+        public IShapeRoot root { get; set; }
 
         public Vector3[] points;
 
@@ -17,7 +17,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public float frictionFactor;
 
-        public ConvexShape(Vector3[] points, Vector3[] planes) : this()
+        public ConvexShape(Vector3[] points, Vector3[] planes)
         {
             this.points = points;
             this.planes = planes;
@@ -240,8 +240,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 position = contactPoints.ToArray(),
                 normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
                 depth = depth,
-                bodyA = this.Rigidbody,
-                bodyB = other.Rigidbody
+                bodyA = (RigidbodyHandle)this.root,
+                bodyB = (RigidbodyHandle)other.root
             });
             cps[0] = cp;//Normal contact
 
@@ -310,7 +310,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 max = new Vector3(maxx, maxy, maxz);
             Vector3 offset = (min + max) / 2;
             Vector3 radii = (max - min) / 2;
-            return new AABB { radii = radii, Rigidbody = this.Rigidbody };
+            return new AABB(radii, root);
         }
 
 
@@ -322,7 +322,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 if (p.Length() > radius)
                     radius = p.Length();
             }
-            return new BoundSphere { radius = radius, Rigidbody = this.Rigidbody };
+            return new BoundSphere(radius,root);
         }
     }
 
