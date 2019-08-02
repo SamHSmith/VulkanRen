@@ -198,8 +198,8 @@ namespace Fabricor.Main.Logic.Physics
 
                 float p = c.depth / (spana[0].GetMass() + spanb[0].GetMass());
 
-                spana[0].transform.position += c.normal * p * spana[0].GetMass();
-                spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
+                //spana[0].transform.position += c.normal * p * spana[0].GetMass();
+                //spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
 
                 float e = 1f;
 
