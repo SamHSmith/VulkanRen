@@ -196,8 +196,6 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = c.bodyA.state;
                 Span<RigidbodyState> spanb = c.bodyB.state;
 
-
-
                 float e = 0.5f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
@@ -274,21 +272,35 @@ namespace Fabricor.Main.Logic.Physics
 
             List<List<AABBMarker>> final = Split(Split(Split(start, Vector3.UnitX), Vector3.UnitY), Vector3.UnitZ);
 
+
+
             List<CollidablePair> pairs = new List<CollidablePair>();
 
-            int splitChunks = 0;
-            foreach (var markers in final)
+
+            int splitChunks = 0,proccesChunks=0;
+            for (int m = 0; m < final.Count; m++)
             {
                 splitChunks++;
 
-                markers.Sort((x, y) => x.position.X.CompareTo(y.position.X));
-                Prune(markersx, out var markersy);
+                if (final[m].Count <= 2) //Two markers per box
+                {
+                    continue;//there is only one box in this segment
+                }
+                proccesChunks++;
+
+                Console.WriteLine(final[m].Count);
+
+                final[m].Sort((x, y) => x.position.X.CompareTo(y.position.X));
+                Prune(final[m], out var markersy);
 
                 markersy.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
                 Prune(markersy, out var markersz);
 
                 markersz.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
                 Prune(markersz, out var markersfinal);
+
+
+                Console.WriteLine(markersfinal.Count);
 
                 AABB last = null;
                 List<AABB> open = new List<AABB>();
@@ -326,9 +338,11 @@ namespace Fabricor.Main.Logic.Physics
 
                     }
                 }
+
             }
 
             Console.WriteLine("SplitChunks: " + splitChunks);
+            Console.WriteLine("ProccesChunks: " + proccesChunks);
             return pairs;
         }
 

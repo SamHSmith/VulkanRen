@@ -36,8 +36,8 @@ namespace Fabricor.Main.Logic
 
 
 
-            Random r = new Random();
-            for (int i = 0; i < 100; i++)
+            Random r = new Random(42);
+            for (int i = 0; i < 5000; i++)
             {
                 ConvexShape cube = new ConvexShape(new Vector3[] {
                 new Vector3(-0.5f,0.5f,0.5f),
@@ -59,7 +59,7 @@ namespace Fabricor.Main.Logic
                 g.Put(0, 0, 0, 1);
                 g.rb = Simulation.GetNewRigidbody();
                 g.rb.AddShape(cube);
-                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 20, (float)r.NextDouble() * 20, (float)r.NextDouble() * 20);
+                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 1000, (float)r.NextDouble() * 100, (float)r.NextDouble() * 100);
                 g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
@@ -83,7 +83,7 @@ namespace Fabricor.Main.Logic
 
                 foreach (var g in gs)
                 {
-                    g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position) * fixedDelta;
+                    g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*10 * fixedDelta;
                 }
 
                 Simulation.TimeStep(fixedDelta);
@@ -116,6 +116,9 @@ namespace Fabricor.Main.Logic
             if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.E))
             {
                 Time = 0.1f;
+            }else if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.R))
+            {
+                Time = 0.01f;
             }
             else
             {
