@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 using Fabricor.Main.Logic.Physics.Shapes;
 using Fabricor.Main.Logic.Physics.State;
 using Fabricor.Main.Toolbox;
@@ -15,6 +17,7 @@ namespace Fabricor.Main.Logic.Physics
         private static PhysicsState interpolatedState = new PhysicsState(1000);
         private static PhysicsState newState = new PhysicsState(1000);
         private static List<RigidbodyHandle> handles = new List<RigidbodyHandle>();
+
 
 
         internal static Span<RigidbodyState> GetRBState(RigidbodyHandle handle)
@@ -47,7 +50,11 @@ namespace Fabricor.Main.Logic.Physics
 
             }
 
-            throw new NotImplementedException("Expanding physics state size not implemented");
+            editState.Grow();
+            oldState.Grow();
+            interpolatedState.Grow();
+            newState.Grow();
+            return GetNewRigidbody();
         }
 
         public unsafe static void UpdateInterpolation(float t, float fixeddelta)
@@ -103,20 +110,35 @@ namespace Fabricor.Main.Logic.Physics
             Stopwatch frametime = new Stopwatch();
             frametime.Start();
 
-
-
             Move(delta);
 
             Stopwatch s = new Stopwatch();
 
             s.Start();
-            List<CollidablePair> broad = BroadPhase();
+            CollidablePair[] broad = BroadPhase().ToArray();
             s.Stop();
             long broadTime = s.ElapsedMilliseconds;
             s.Reset();
 
             s.Start();
-            List<ContactPoint> narrow = NarrowPhase(broad);
+            int part = broad.Length / 2;
+            Memory<CollidablePair> spanorig = broad.AsMemory();
+
+            Console.WriteLine("Narrow Checks: " + spanorig.Length);
+
+            Memory<CollidablePair> span1 = spanorig.Slice(0, part);
+            Memory<CollidablePair> span2 = spanorig.Slice(part, part);
+            Memory<CollidablePair> span3 = spanorig.Slice(part * 2);
+
+            Task<List<ContactPoint>> task1 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span1)));
+            Task<List<ContactPoint>> task2 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span2)));
+            Task<List<ContactPoint>> task3 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span3)));
+
+            List<ContactPoint> narrow = new List<ContactPoint>();
+            narrow.AddRange(task1.Result);
+            narrow.AddRange(task2.Result);
+            narrow.AddRange(task3.Result);
+
             s.Stop();
             long narrowTime = s.ElapsedMilliseconds;
             s.Reset();
@@ -174,12 +196,9 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = c.bodyA.state;
                 Span<RigidbodyState> spanb = c.bodyB.state;
 
-                float p = c.depth / (spana[0].GetMass() + spanb[0].GetMass());
 
-                spana[0].transform.position += c.normal * p * spana[0].GetMass();
-                spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
 
-                float e = 1f;
+                float e = 0.5f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -204,16 +223,23 @@ namespace Fabricor.Main.Logic.Physics
                 spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
 
+                float p = (c.depth * 3);
+                p *= p;
+
+                spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
+                spanb[0].ApplyLinearForce(normal * p * spanb[0].GetMass());
+
             }
         }
 
-        private static List<ContactPoint> NarrowPhase(List<CollidablePair> pairs)
+        private static List<ContactPoint> NarrowPhase(Memory<CollidablePair> pairs)
         {
             List<ContactPoint> contacts = new List<ContactPoint>();
-            foreach (var p in pairs)
+            Span<CollidablePair> pa = pairs.Span;
+            for (int i = 0; i < pa.Length; i++)
             {
-                RigidbodyHandle a = (RigidbodyHandle)p.a;
-                RigidbodyHandle b = (RigidbodyHandle)p.b;
+                RigidbodyHandle a = (RigidbodyHandle)pa[i].a;
+                RigidbodyHandle b = (RigidbodyHandle)pa[i].b;
 
                 contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
 
@@ -242,9 +268,9 @@ namespace Fabricor.Main.Logic.Physics
                 if (!a.state[0].IsAssigned || !b.state[0].IsAssigned)//TODO add static flags
                     continue;
 
-                if((a.state[0].transform.position-b.state[0].transform.position).Length()<a.shape.ToBoundSphere().radius+b.shape.ToBoundSphere().radius)
+                if ((a.state[0].transform.position - b.state[0].transform.position).Length() < a.shape.ToBoundSphere().radius + b.shape.ToBoundSphere().radius)
                 {
-                    pairsfinal.Add(new CollidablePair {a=a,b=b });
+                    pairsfinal.Add(new CollidablePair { a = a, b = b });
                 }
             }
 
@@ -263,7 +289,7 @@ namespace Fabricor.Main.Logic.Physics
 
 
             markersx.Sort((x, y) => x.position.X.CompareTo(y.position.X));
-            Prune(markersx,out var markersy);
+            Prune(markersx, out var markersy);
 
             markersy.Sort((x, y) => x.position.Y.CompareTo(y.position.Y));
             Prune(markersy, out var markersz);
@@ -273,11 +299,11 @@ namespace Fabricor.Main.Logic.Physics
 
             List<CollidablePair> pairs = new List<CollidablePair>();
 
-            AABB last=null;
+            AABB last = null;
             List<AABB> open = new List<AABB>();
             for (int i = 0; i < markersfinal.Count; i++)
             {
-                if(markersfinal[i] is MinAABB)
+                if (markersfinal[i] is MinAABB)
                 {
                     last = ((MinAABB)markersfinal[i]).a;
                     open.Add(last);
@@ -290,7 +316,8 @@ namespace Fabricor.Main.Logic.Physics
                     }
                     foreach (var aa in open)
                     {
-                        pairs.Add(new CollidablePair {a=aa.root,b= markersfinal[i].a.root });
+                        if (aa.root != markersfinal[i].a.root)
+                            pairs.Add(new CollidablePair { a = aa.root, b = markersfinal[i].a.root });
                     }
                     if (open.Contains(markersfinal[i].a))
                     {

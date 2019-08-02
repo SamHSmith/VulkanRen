@@ -23,6 +23,15 @@ namespace Fabricor.Main.Logic.Physics.State
             state = new NativeMemory<RigidbodyState>(InitialCapacity);
         }
 
+        public void Grow()
+        {
+            NativeMemory<RigidbodyState> newstate = new NativeMemory<RigidbodyState>(state.length * 2);
+            state.CopyTo(newstate);
+            NativeMemory<RigidbodyState> old = state;
+            state = newstate;
+            old.Free();
+        }
+
         public void CleanUp()
         {
             state.Free();

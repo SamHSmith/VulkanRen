@@ -21,7 +21,7 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 8;
+        private static float fixedDelta = 1f / 10;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
 
 
@@ -37,7 +37,7 @@ namespace Fabricor.Main.Logic
 
 
             Random r = new Random();
-            for (int i = 0; i < 1000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 ConvexShape cube = new ConvexShape(new Vector3[] {
                 new Vector3(-0.5f,0.5f,0.5f),
