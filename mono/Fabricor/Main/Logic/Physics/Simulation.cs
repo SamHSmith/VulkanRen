@@ -196,12 +196,9 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = c.bodyA.state;
                 Span<RigidbodyState> spanb = c.bodyB.state;
 
-                float p = c.depth / (spana[0].GetMass() + spanb[0].GetMass());
 
-                //spana[0].transform.position += c.normal * p * spana[0].GetMass();
-                //spanb[0].transform.position -= c.normal * p * spanb[0].GetMass();
 
-                float e = 1f;
+                float e = 0.5f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -225,6 +222,12 @@ namespace Fabricor.Main.Logic.Physics
                 spana[0].ApplyTorque(Vector3.Cross(ra, j * normal));
                 spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
+
+                float p = (c.depth * 3);
+                p *= p;
+
+                spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
+                spanb[0].ApplyLinearForce(normal * p * spanb[0].GetMass());
 
             }
         }
