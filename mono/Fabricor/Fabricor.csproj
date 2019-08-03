@@ -88,6 +88,8 @@
     <Compile Include="Main\Logic\Physics\RigidbodyHandle.cs" />
     <Compile Include="Main\Toolbox\MathHelper.cs" />
     <Compile Include="Main\Logic\Physics\IShapeRoot.cs" />
+    <Compile Include="Main\Logic\Physics\GJK.cs" />
+    <Compile Include="Main\Logic\Physics\ISupportable.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />

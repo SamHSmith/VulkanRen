@@ -5,7 +5,7 @@ using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
-    public class ConvexShape : IShape
+    public class ConvexShape : IShape, ISupportable
     {
         public IShapeRoot root { get; set; }
 
@@ -222,7 +222,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 }
             }
 
-            if(contactPoints.Count<1)
+            if (contactPoints.Count < 1)
                 return new ContactPoint[] { };//And so, No intersect
 
             float friction = this.frictionFactor * other.frictionFactor;
@@ -247,9 +247,9 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
             if (!nofriction)
             {
-                Vector3 frictionVecA = Vector3.Normalize(Vector3.Cross(cp.normal, cp.normal+Vector3.UnitX));
+                Vector3 frictionVecA = Vector3.Normalize(Vector3.Cross(cp.normal, cp.normal + Vector3.UnitX));
                 Vector3 frictionVecB = Vector3.Normalize(Vector3.Cross(cp.normal, frictionVecA));
-                cp.normal = frictionVecA*friction;
+                cp.normal = frictionVecA * friction;
                 cp.depth = 0;
                 cps[1] = cp;
                 cp.normal = frictionVecB * friction;
@@ -322,7 +322,20 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 if (p.Length() > radius)
                     radius = p.Length();
             }
-            return new BoundSphere(radius,root);
+            return new BoundSphere(radius, root);
+        }
+
+        public Vector3 GetFurthestPointInDirection(Vector3 dir)
+        {
+            dir = Vector3.Normalize(dir);
+            float maxdot = float.MinValue;
+            for (int i = 0; i < points.Length; i++)
+            {
+                float dot = Vector3.Dot(dir, points[i]);
+                if (dot > maxdot)
+                    maxdot = dot;
+            }
+            return maxdot * dir;
         }
     }
 
