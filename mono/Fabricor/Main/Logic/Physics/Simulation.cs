@@ -57,8 +57,10 @@ namespace Fabricor.Main.Logic.Physics
             return GetNewRigidbody();
         }
 
-        public unsafe static void UpdateInterpolation(float t, float fixeddelta)
+        public unsafe static bool UpdateInterpolation(float t, float fixeddelta)
         {
+            while (IsSwapping) { }
+
             oldState.state.CopyTo(interpolatedState.state);
 
             RigidbodyState* iptr = (RigidbodyState*)interpolatedState.state.ptr;
@@ -74,7 +76,14 @@ namespace Fabricor.Main.Logic.Physics
                 }
                 iptr++;
                 nptr++;
+
+                if (IsSwapping)
+                {
+                    return false;
+                }
+
             }
+            return true;
         }
 
         public static Vector3 Hermite(
@@ -121,47 +130,62 @@ namespace Fabricor.Main.Logic.Physics
             s.Reset();
 
             s.Start();
-            int part = broad.Length / 2;
-            Memory<CollidablePair> spanorig = broad.AsMemory();
 
-            Console.WriteLine("Narrow Checks: " + spanorig.Length);
-
-            Memory<CollidablePair> span1 = spanorig.Slice(0, part);
-            Memory<CollidablePair> span2 = spanorig.Slice(part, part);
-            Memory<CollidablePair> span3 = spanorig.Slice(part * 2);
-
-            Task<List<ContactPoint>> task1 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span1)));
-            Task<List<ContactPoint>> task2 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span2)));
-            Task<List<ContactPoint>> task3 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span3)));
-
-            List<ContactPoint> narrow = new List<ContactPoint>();
-            narrow.AddRange(task1.Result);
-            narrow.AddRange(task2.Result);
-            narrow.AddRange(task3.Result);
+            List<ContactPoint> narrow = DoNarrowPhase(10, broad.AsMemory());
 
             s.Stop();
             long narrowTime = s.ElapsedMilliseconds;
             s.Reset();
 
             s.Start();
-            PerformCollisions(narrow,delta);
+            PerformCollisions(narrow, delta);
             s.Stop();
             frametime.Stop();
 
-            Console.WriteLine("Physics Frame " + frame + ", Broadtime: " + broadTime + ", Narrowtime: " + narrowTime + ", Performtime: " + s.ElapsedMilliseconds);
             Console.WriteLine("Frametime: " + frametime.ElapsedMilliseconds);
-            
+
             frame++;
         }
 
+        private static List<ContactPoint> DoNarrowPhase(int threads, Memory<CollidablePair> spanorig)
+        {
+            int part = spanorig.Length / threads;
+            List<Task<List<ContactPoint>>> tasks = new List<Task<List<ContactPoint>>>();
+            for (int i = 0; i < threads; i++)
+            {
+                Memory<CollidablePair> span;
+                if (i < threads - 1)
+                {
+                    span = spanorig.Slice(i * part, part);
+                }
+                else
+                {
+                    span = spanorig.Slice(i * part);
+                }
+                Task<List<ContactPoint>> task = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span)));
+                tasks.Add(task);
+            }
+            List<ContactPoint> narrow = new List<ContactPoint>();
+            foreach (var task in tasks)
+            {
+                narrow.AddRange(task.Result);
+            }
+            return narrow;
+        }
+         static bool IsSwapping = false;
         public static void SwapBuffers()
         {
+            IsSwapping = true;
             //Swap buffers
             newState.state.CopyTo(oldState.state);//Move back buffer
             PhysicsState oldComplete = newState;
             newState = editState;
             editState = oldComplete;
             newState.state.CopyTo(editState.state);
+
+            IsSwapping = false;
+
+
         }
 
         private static void Move(float delta)
@@ -175,7 +199,7 @@ namespace Fabricor.Main.Logic.Physics
                         span[i].angularVelocity.Length() * delta) * span[i].transform.rotation;
             }
         }
-        private static void PerformCollisions(List<ContactPoint> contacts,float delta)
+        private static void PerformCollisions(List<ContactPoint> contacts, float delta)
         {
 
             foreach (var c in contacts)
@@ -239,8 +263,10 @@ namespace Fabricor.Main.Logic.Physics
             {
                 RigidbodyHandle a = (RigidbodyHandle)pa[i].a;
                 RigidbodyHandle b = (RigidbodyHandle)pa[i].b;
-
-                contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
+                if (a.GetBound().IsColliding(a.state[0].transform, b.state[0].transform, b.GetBound()).Length > 0)
+                {
+                    contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
+                }
 
             }
             return contacts;
@@ -278,7 +304,7 @@ namespace Fabricor.Main.Logic.Physics
             List<CollidablePair> pairs = new List<CollidablePair>();
 
 
-            int splitChunks = 0,proccesChunks=0;
+            int splitChunks = 0, proccesChunks = 0;
             for (int m = 0; m < final.Count; m++)
             {
                 splitChunks++;
@@ -325,10 +351,8 @@ namespace Fabricor.Main.Logic.Physics
                                 RigidbodyHandle a = (RigidbodyHandle)aa.root;
                                 RigidbodyHandle b = (RigidbodyHandle)markersfinal[j].a.root;
 
-                                if ((a.state[0].transform.position - b.state[0].transform.position).Length() < a.shape.ToBoundSphere().radius + b.shape.ToBoundSphere().radius)
-                                {
-                                    pairs.Add(new CollidablePair { a = a, b = b });
-                                }
+                                pairs.Add(new CollidablePair { a = a, b = b });
+
                             }
 
                         }
@@ -342,8 +366,7 @@ namespace Fabricor.Main.Logic.Physics
 
             }
 
-            Console.WriteLine("SplitChunks: " + splitChunks);
-            Console.WriteLine("ProccesChunks: " + proccesChunks);
+
             return pairs;
         }
 

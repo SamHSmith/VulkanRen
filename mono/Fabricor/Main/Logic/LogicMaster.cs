@@ -21,7 +21,7 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 30;
+        private static float fixedDelta = 1f / 100;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
 
 
@@ -37,7 +37,7 @@ namespace Fabricor.Main.Logic
 
 
             Random r = new Random(42);
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 4000; i++)
             {
                 ConvexShape cube = new ConvexShape(new Vector3[] {
                 new Vector3(-0.5f,0.5f,0.5f),
@@ -59,7 +59,7 @@ namespace Fabricor.Main.Logic
                 g.Put(0, 0, 0, 1);
                 g.rb = Simulation.GetNewRigidbody();
                 g.rb.AddShape(cube);
-                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 5000, (float)r.NextDouble() * 50, (float)r.NextDouble() * 50);
+                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 5000, (float)r.NextDouble() * 500, (float)r.NextDouble() * 500);
                 g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
@@ -106,7 +106,7 @@ namespace Fabricor.Main.Logic
             int timePassed = (int)(currentTime - lastUpdate);
             float updates = (((float)timePassed) / updateRate) * Time;
 
-            Simulation.UpdateInterpolation(Maths.Clamp(updates, 0, 1), fixedDelta);
+            while (!Simulation.UpdateInterpolation(Maths.Clamp(updates, 0, 1), fixedDelta)) { }
 
             foreach (var u in updatables)
             {
