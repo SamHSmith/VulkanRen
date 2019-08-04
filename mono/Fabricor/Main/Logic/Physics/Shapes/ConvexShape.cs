@@ -48,10 +48,13 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public ContactPoint[] IsColliding(Transform at, Transform bt, ConvexShape other)
         {
 
-            float dopth=GJK.DoGJK(this, other, out var normal);
+            float depth=GJK.DoGJK(this, other,at,bt, out var normal);
 
-            Console.WriteLine(dopth + " " + normal);
-
+            if (depth < 0)
+            {
+                return new ContactPoint[] { };
+            }
+            Console.WriteLine(normal);
             List<Vector3> otherlocal = new List<Vector3>();
             foreach (var otherpoint in other.points)
             {
@@ -61,35 +64,9 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             }
 
             List<Vector3> axis = new List<Vector3>();
-            axis.AddRange(this.planes);
-            foreach (var plane in other.planes)
-            {
-                Vector3 worldPlane = Vector3.Transform(plane, bt.rotation);
-                Vector3 localPlane = Vector3.Transform(worldPlane, Quaternion.Inverse(at.rotation));
-                axis.Add(localPlane);
-            }
-
-            List<Vector3> edges = new List<Vector3>();
-            for (int i = 0; i < axis.Count; i++)
-            {
-                for (int k = i + 1; k < axis.Count; k++)
-                {
-                    Vector3 edge = axis[i] + axis[k];
-                    if (edge.Length() > float.Epsilon)
-                    {
-                        edges.Add(Vector3.Normalize(edge));
-                    }
-                }
-            }
-            axis.AddRange(edges);
-
-            float depth = float.MaxValue;
-            Vector3 localPoint = Vector3.Zero;
-            Vector3 normal = Vector3.Zero;
-
-
-
-            //axis.Add(Vector3.Transform(Vector3.UnitY, Quaternion.Inverse(at.rotation)));
+            axis.Add(normal);
+            axis.Add(Vector3.Normalize(Vector3.Cross(normal, new Vector3(-normal.X, normal.Y, normal.Z) + Vector3.One)));
+            axis.Add(Vector3.Cross(axis[0], axis[1]));
 
             List<Vector3> meInsideother = new List<Vector3>();
             meInsideother.AddRange(points);
@@ -98,19 +75,11 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
             foreach (var a in axis)
             {
-                //Debug only
-                Vector3 worldAxis = Vector3.Transform(a, at.rotation);
 
-                if (Vector3.Abs(Maths.SnapVector(worldAxis)) == Vector3.UnitY)
-                {
-
-                }
 
                 float minother = float.MaxValue, maxother = float.MinValue;
-                foreach (var otherpoint in other.points)
+                foreach (var local in otherlocal)
                 {
-                    Vector3 local = Vector3.Transform(bt.position + Vector3.Transform(otherpoint, bt.rotation) - at.position,
-                    Quaternion.Inverse(at.rotation));
 
                     float value = Vector3.Dot(a, local);
                     if (value > maxother)
@@ -119,10 +88,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                         minother = value;
                 }
 
-
-                bool ainside = false;
-
-                float max = 0, min = 0;
+                float max = float.MinValue, min = float.MaxValue;
                 foreach (var mypoint in points)
                 {
 
@@ -132,52 +98,6 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                     if (value < min)
                         min = value;
                 }
-
-                //calculate values
-                float center, centerother;
-                center = (max + min) / 2;
-                centerother = (maxother + minother) / 2;
-                bool more = center > centerother;
-
-                float d = float.MaxValue;
-
-                if (more && min > minother && min <= maxother)
-                {
-                    ainside = true;
-                    d = min - maxother;
-                }
-
-                if (!more && max < maxother && max >= minother)
-                {
-                    ainside = true;
-                    d = max - minother;
-                }
-
-                if (max >= maxother && min <= minother)//We encapsulate other
-                {
-                    ainside = true;
-                    if (more)
-                    {
-                        d = min - maxother;
-                    }
-                    else
-                    {
-                        d = max - minother;
-                    }
-                }
-
-                float flipFactor = 1;
-                if (ainside && d < 0)
-                {
-                    flipFactor = -1;
-                }
-
-                if (d * flipFactor < depth)
-                {
-                    depth = d * flipFactor;
-                    normal = -a * flipFactor;
-                }
-
 
                 //Contact point generation
 
@@ -193,11 +113,6 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                     float mp = Vector3.Dot(a, meInsideother[i]);
                     if (mp > maxother || mp < minother)// Is outside other
                         meInsideother.RemoveAt(i);
-                }
-
-                if (!ainside)
-                {
-                    return new ContactPoint[] { };//And so, No intersect
                 }
 
             }
@@ -242,7 +157,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             ContactPoint cp = (new ContactPoint
             {
                 position = contactPoints.ToArray(),
-                normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
+                normal = normal,
                 depth = depth,
                 bodyA = (RigidbodyHandle)this.root,
                 bodyB = (RigidbodyHandle)other.root
@@ -251,8 +166,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
             if (!nofriction)
             {
-                Vector3 frictionVecA = Vector3.Normalize(Vector3.Cross(cp.normal, cp.normal + Vector3.UnitX));
-                Vector3 frictionVecB = Vector3.Normalize(Vector3.Cross(cp.normal, frictionVecA));
+                Vector3 frictionVecA = axis[1];
+                Vector3 frictionVecB = axis[2];
                 cp.normal = frictionVecA * friction;
                 cp.depth = 0;
                 cps[1] = cp;
@@ -329,17 +244,21 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             return new BoundSphere(radius, root);
         }
 
-        public Vector3 GetFurthestPointInDirection(Vector3 dir)
+        public Vector3 GetFurthestPointInDirection(Vector3 dir, Transform t)
         {
-            dir = Vector3.Normalize(dir);
             float maxdot = float.MinValue;
+            Vector3 maxpoint = float.MinValue * dir;
             for (int i = 0; i < points.Length; i++)
             {
-                float dot = Vector3.Dot(dir, points[i]);
+                Vector3 p = t.position + Vector3.Transform(points[i], t.rotation);
+                float dot = Vector3.Dot(dir, p);
                 if (dot > maxdot)
+                {
                     maxdot = dot;
+                    maxpoint = p;
+                }
             }
-            return maxdot * dir;
+            return maxpoint;
         }
     }
 

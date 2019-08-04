@@ -5,6 +5,6 @@ namespace Fabricor.Main.Logic.Physics
 {
     public interface ISupportable
     {
-        Vector3 GetFurthestPointInDirection(Vector3 dir);
+        Vector3 GetFurthestPointInDirection(Vector3 dir,Transform t);
     }
 }

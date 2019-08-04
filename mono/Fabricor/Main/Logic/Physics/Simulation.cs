@@ -289,7 +289,7 @@ namespace Fabricor.Main.Logic.Physics
                 proccesChunks++;
 
                 Console.WriteLine(final[m].Count);
-
+                /*
                 final[m].Sort((x, y) => x.position.X.CompareTo(y.position.X));
                 Prune(final[m], out var markersy);
 
@@ -298,8 +298,8 @@ namespace Fabricor.Main.Logic.Physics
 
                 markersz.Sort((x, y) => x.position.Z.CompareTo(y.position.Z));
                 Prune(markersz, out var markersfinal);
-
-
+                */
+                var markersfinal = final[m];
                 Console.WriteLine(markersfinal.Count);
 
                 AABB last = null;

@@ -21,7 +21,7 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 10;
+        private static float fixedDelta = 1f / 30;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
 
 
@@ -36,7 +36,7 @@ namespace Fabricor.Main.Logic
 
 
 
-            Random r = new Random(42);
+            Random r = new Random(424);
             for (int i = 0; i < 2; i++)
             {
                 ConvexShape cube = new ConvexShape(new Vector3[] {
@@ -59,8 +59,9 @@ namespace Fabricor.Main.Logic
                 g.Put(0, 0, 0, 1);
                 g.rb = Simulation.GetNewRigidbody();
                 g.rb.AddShape(cube);
-                g.rb.state[0].transform.position = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 10, (float)r.NextDouble() * 10);
-                g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
+                g.rb.state[0].transform.position = new Vector3(((float)r.NextDouble() - 0.5f) * 1, ((float)r.NextDouble()-0.5f) * 10,
+                 ((float)r.NextDouble() - 0.5f) * 1);
+                //g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
                 MasterRenderer.toRenderGrids.Add(g);
@@ -83,7 +84,7 @@ namespace Fabricor.Main.Logic
 
                 foreach (var g in gs)
                 {
-                    g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*10 * fixedDelta;
+                    g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*0.1f * fixedDelta;
                 }
 
                 Simulation.TimeStep(fixedDelta);
