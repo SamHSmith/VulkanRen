@@ -7,7 +7,7 @@
       <File FileName="Main/Logic/Physics/RigidbodyHandle.cs" Line="1" Column="1" />
       <File FileName="Main/Logic/Physics/Shapes/AABB.cs" Line="1" Column="1" />
       <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="338" Column="33" />
-      <File FileName="Main/Logic/Physics/GJK.cs" Line="10" Column="13" />
+      <File FileName="Main/Logic/Physics/GJK.cs" Line="10" Column="10" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">

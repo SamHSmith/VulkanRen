@@ -48,6 +48,10 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public ContactPoint[] IsColliding(Transform at, Transform bt, ConvexShape other)
         {
 
+            float dopth=GJK.DoGJK(this, other, out var normal);
+
+            Console.WriteLine(dopth + " " + normal);
+
             List<Vector3> otherlocal = new List<Vector3>();
             foreach (var otherpoint in other.points)
             {
