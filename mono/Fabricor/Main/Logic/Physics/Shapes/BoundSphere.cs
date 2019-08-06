@@ -8,6 +8,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
     {
         public float radius;
 
+        public Vector3 CompoundOffset=Vector3.Zero;
+
         public IShapeRoot root { get; set; }
 
         public BoundSphere(float radius)
@@ -18,6 +20,11 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public BoundSphere(float radius, IShapeRoot root) : this(radius)
         {
             this.root = root;
+        }
+
+        public BoundSphere(float radius, IShapeRoot root, Vector3 localposition) : this(radius, root)
+        {
+            CompoundOffset = localposition;
         }
 
         public bool HasImplementation(IShape s)
@@ -41,7 +48,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 dir = (at.position - bt.position);
             if (dir.Length() < this.radius + other.radius)
                 return new ContactPoint[] { new ContactPoint { position=new Vector3[]{Maths.Average(at.position, bt.position) }, normal = dir,
-                    bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
+                    bodyA = this.root, bodyB = other.root } };
 
             return new ContactPoint[0];
         }

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
+using Fabricor.Main.Logic.Physics.Shapes;
 using Fabricor.Main.Rendering;
 using Fabricor.Main.Rendering.Loading;
 using Fabricor.Main.Rendering.Models;
@@ -12,6 +14,8 @@ namespace Fabricor.Main.Logic.Grids
         public TexturedModel model { get; private set; }
         public int xCoord = 0, yCoord = 0, zCoord = 0;
         public bool ShouldUpdate = false;
+        public CompoundShape shape =new CompoundShape();
+        private ICompoundSubShape[,,] subshapes = new ICompoundSubShape[16, 16, 16];
 
         public Chunk(int xCoord, int yCoord, int zCoord)
         {
@@ -19,6 +23,40 @@ namespace Fabricor.Main.Logic.Grids
             this.yCoord = yCoord;
             this.zCoord = zCoord;
             model = new TexturedModel(MasterRenderer.GlLoader.LoadToDynamicVAO(new float[0], new float[0], new int[0]), BlockLookup.AtlasTexture);
+            shape.Localposition = new Vector3(xCoord * 16, yCoord * 16, zCoord * 16);
+        }
+
+        public void SetValue(int x, int y, int z, ushort block)
+        {
+            if (x > 16 || y > 16 || z > 16 || x < 0 || y < 0 || z < 0)
+            {
+                Console.Error.WriteLine("SetValue on chunk" + xCoord + "" + yCoord + "" + zCoord + " is out of range.");
+                return;
+            }
+            blocks[x, y, z] = block;
+            if (block <= 0)
+            {
+                shape.shapes.Remove(subshapes[x, y, z]);
+            }
+            else
+            {
+                ConvexShape cube = new ConvexShape(new Vector3[] {
+                new Vector3(-0.5f,0.5f,0.5f),
+                new Vector3(-0.5f,-0.5f,0.5f),
+                new Vector3(-0.5f,-0.5f,-0.5f),
+                new Vector3(-0.5f,0.5f,-0.5f),
+                new Vector3(0.5f,0.5f,0.5f),
+                new Vector3(0.5f,-0.5f,0.5f),
+                new Vector3(0.5f,-0.5f,-0.5f),
+                new Vector3(0.5f,0.5f,-0.5f), }, new Vector3[] {
+                Vector3.UnitX,
+                Vector3.UnitY,
+                Vector3.UnitZ});
+                cube.Localposition = new Vector3(x, y, z);
+                shape.shapes.Add(cube);
+                cube.root = shape;
+            }
+            shape.UpdateBound();
         }
 
         private int Value(int x, int y, int z)

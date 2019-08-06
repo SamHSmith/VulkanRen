@@ -142,7 +142,7 @@ namespace Fabricor.Main.Logic.Physics
             s.Stop();
             frametime.Stop();
 
-            Console.WriteLine("Frametime: " + frametime.ElapsedMilliseconds);
+            Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
 
             frame++;
         }
@@ -218,10 +218,11 @@ namespace Fabricor.Main.Logic.Physics
                     continue;
                 }
 
-                Span<RigidbodyState> spana = c.bodyA.state;
-                Span<RigidbodyState> spanb = c.bodyB.state;
 
-                float e = 0.5f;
+                Span<RigidbodyState> spana = ((RigidbodyHandle)c.bodyA).state;
+                Span<RigidbodyState> spanb = ((RigidbodyHandle)c.bodyB).state;
+
+                float e = 1f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -230,8 +231,12 @@ namespace Fabricor.Main.Logic.Physics
                 Vector3 pointvel1 = spana[0].GetLinearVelocity() + Vector3.Cross(spana[0].GetAngularVelocity(), ra);
                 Vector3 pointvel2 = spanb[0].GetLinearVelocity() + Vector3.Cross(spanb[0].GetAngularVelocity(), rb);
 
+                float relvel = Vector3.Dot(normal, pointvel1 - pointvel2);
 
-                float j = -(1 + e) * Vector3.Dot(normal, pointvel1 - pointvel2);
+                if (relvel < 0)
+                    continue;
+
+                float j = -(1 + e) * relvel;
                 j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() +
                     (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
                     (Vector3.Cross(rb, normal) * Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();

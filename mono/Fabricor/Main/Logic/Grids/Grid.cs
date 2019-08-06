@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Fabricor.Main.Logic.Physics;
+using Fabricor.Main.Logic.Physics.Shapes;
 using Fabricor.Main.Rendering;
 
 namespace Fabricor.Main.Logic.Grids
@@ -11,6 +12,15 @@ namespace Fabricor.Main.Logic.Grids
         private List<Chunk> chunks = new List<Chunk>();
         public Transform transform = new Transform(new Vector3());
         public RigidbodyHandle rb;
+        private CompoundShape shape;
+
+        public Grid(RigidbodyHandle rigidbodyHandle)
+        {
+            this.rb = rigidbodyHandle;
+            shape= new CompoundShape();
+            rb.shape = shape;
+            shape.root = rb;
+        }
 
         public List<RenderObject> GetRenderObjects()
         {
@@ -40,12 +50,28 @@ namespace Fabricor.Main.Logic.Grids
 
         public void Put(int x, int y, int z, ushort block)
         {
-            int cx = x - (x % 16);
-            int cy = y - (y % 16);
-            int cz = z - (z % 16);
+            int extrax = 0;
+            int extray = 0;
+            int extraz = 0;
+            while (x+ extrax < 0)
+            {
+                extrax += 16;
+            }
+            while (y + extray < 0)
+            {
+                extray += 16;
+            }
+            while (z + extraz < 0)
+            {
+                extraz += 16;
+            }
+            int cx = x - ((x  % 16) + extrax);
+            int cy = y - ((y  % 16) + extray);
+            int cz = z - ((z  % 16) + extraz);
 
             Chunk c = GetChunk(cx / 16, cy / 16, cz / 16);
-            c.blocks[x - cx, y - cy, z - cz]=block;
+            //c.blocks[x - cx, y - cy, z - cz]=block;
+            c.SetValue(x - cx, y - cy, z - cz, block);
             c.ShouldUpdate = true;
         }
 
@@ -73,6 +99,9 @@ namespace Fabricor.Main.Logic.Grids
             if (c == null)
             {
                 c = new Chunk(x,y,z);
+
+                shape.shapes.Add(c.shape);
+                c.shape.root = shape;
                 chunks.Add(c);
             }
             return c;

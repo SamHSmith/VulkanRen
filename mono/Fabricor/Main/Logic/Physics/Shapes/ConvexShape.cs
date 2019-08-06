@@ -5,9 +5,10 @@ using Fabricor.Main.Toolbox;
 
 namespace Fabricor.Main.Logic.Physics.Shapes
 {
-    public class ConvexShape : IShape
+    public class ConvexShape : ICompoundSubShape
     {
         public IShapeRoot root { get; set; }
+        public Vector3 Localposition { get; set; }
 
         public Vector3[] points;
 
@@ -39,7 +40,13 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 List<ContactPoint> cntcts = new List<ContactPoint>();
                 cntcts.AddRange(IsColliding(at, bt, (ConvexShape)other));
                 return cntcts.ToArray();
+            }else if(other is CompoundShape)
+            {
+                List<ContactPoint> cntcts = new List<ContactPoint>();
+                cntcts.AddRange(other.IsColliding(bt, at, this));
+                return cntcts.ToArray();
             }
+
 
 
             return new ContactPoint[0];
@@ -97,7 +104,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 //Debug only
                 Vector3 worldAxis = Vector3.Transform(a, at.rotation);
 
-                if (Vector3.Abs(Maths.SnapVector(worldAxis)) == Vector3.UnitY)
+                if (Vector3.Abs(Maths.SnapVector(worldAxis)) == Vector3.UnitX)
                 {
 
                 }
@@ -240,8 +247,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 position = contactPoints.ToArray(),
                 normal = Vector3.Normalize(Vector3.Transform(normal, at.rotation)),
                 depth = depth,
-                bodyA = (RigidbodyHandle)this.root,
-                bodyB = (RigidbodyHandle)other.root
+                bodyA = this.root,
+                bodyB = other.root
             });
             cps[0] = cp;//Normal contact
 
@@ -322,7 +329,12 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 if (p.Length() > radius)
                     radius = p.Length();
             }
-            return new BoundSphere(radius,root);
+            return new BoundSphere(radius,root,Localposition);
+        }
+
+        public void UpdateBound()
+        {
+            root.UpdateBound();
         }
     }
 
