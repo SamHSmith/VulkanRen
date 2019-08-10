@@ -40,7 +40,7 @@ namespace Fabricor.Main.Logic.Grids
             }
             else
             {
-                ConvexShape cube = new ConvexShape(new Vector3[] {
+                ConvexHull cube = new ConvexHull(new Vector3[] {
                 new Vector3(-0.5f,0.5f,0.5f),
                 new Vector3(-0.5f,-0.5f,0.5f),
                 new Vector3(-0.5f,-0.5f,-0.5f),
@@ -48,10 +48,7 @@ namespace Fabricor.Main.Logic.Grids
                 new Vector3(0.5f,0.5f,0.5f),
                 new Vector3(0.5f,-0.5f,0.5f),
                 new Vector3(0.5f,-0.5f,-0.5f),
-                new Vector3(0.5f,0.5f,-0.5f), }, new Vector3[] {
-                Vector3.UnitX,
-                Vector3.UnitY,
-                Vector3.UnitZ});
+                new Vector3(0.5f,0.5f,-0.5f)});
                 cube.Localposition = new Vector3(x, y, z);
                 shape.shapes.Add(cube);
                 cube.root = shape;

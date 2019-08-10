@@ -90,6 +90,9 @@
     <Compile Include="Main\Logic\Physics\IShapeRoot.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\CompoundShape.cs" />
     <Compile Include="Main\Logic\Physics\Shapes\ICompoundSubShape.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\ConvexHull.cs" />
+    <Compile Include="Main\Logic\Physics\Shapes\ISupportable.cs" />
+    <Compile Include="Main\Logic\Physics\GJKS.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Main\" />
