@@ -76,7 +76,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 return new ContactPoint[0];
 
             Vector3 pos = Maths.Clamp(relpos, radii * -1, radii)+at.position;
-            return new ContactPoint[] { new ContactPoint { position = new Vector3[] { pos },normal=Vector3.Normalize(Maths.SnapVector(relpos)), bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
+            return new ContactPoint[] { new ContactPoint { position =  pos ,normal=Vector3.Normalize(Maths.SnapVector(relpos)), bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
         }
 
         public ContactPoint[] IsColliding(Transform at, Transform bt, BoundSphere other)
@@ -85,7 +85,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 closest = Maths.Clamp(relpos, radii * -1, radii);
 
             if ((relpos - closest).Length() < other.radius)
-                return new ContactPoint[] { new ContactPoint {position=new Vector3[]{(relpos / 2)+at.position },
+                return new ContactPoint[] { new ContactPoint {position=(relpos / 2)+at.position ,
                 normal=Vector3.Normalize(closest),
                     bodyA = (RigidbodyHandle)this.root, bodyB = (RigidbodyHandle)other.root } };
 

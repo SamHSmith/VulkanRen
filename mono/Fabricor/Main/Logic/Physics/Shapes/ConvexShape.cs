@@ -48,13 +48,50 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public ContactPoint[] IsColliding(Transform at, Transform bt, ConvexShape other)
         {
 
-            float depth=GJK.DoGJK(this, other,at,bt, out var normal);
+            float depth=GJK.DoGJK(this, other,at,bt, out var normal,out var pos);
 
             if (depth < 0)
             {
                 return new ContactPoint[] { };
             }
-            Console.WriteLine(normal);
+            else
+            {
+                float friction = this.frictionFactor * other.frictionFactor;
+                bool nofriction = Math.Abs(friction) < float.Epsilon;
+
+                ContactPoint[] cps;
+
+                if (nofriction)
+                    cps = new ContactPoint[1];
+                else
+                    cps = new ContactPoint[3];
+
+                ContactPoint cp = new ContactPoint
+                {
+                    position = pos,
+                    normal = normal,
+                    depth = depth,
+                    bodyA = (RigidbodyHandle)this.root,
+                    bodyB = (RigidbodyHandle)other.root
+                };
+                cps[0] = cp;//Normal contact
+
+                if (!nofriction)
+                {
+                    Vector3 frictionVecA = Vector3.Normalize(Vector3.Cross(cp.normal, cp.normal + Vector3.UnitX));
+                    Vector3 frictionVecB = Vector3.Normalize(Vector3.Cross(cp.normal, frictionVecA));
+                    cp.normal = frictionVecA * friction;
+                    cp.depth = 0;
+                    cps[1] = cp;
+                    cp.normal = frictionVecB * friction;
+                    cps[2] = cp;
+                }
+
+                return cps;
+            }
+
+            /*
+
             List<Vector3> otherlocal = new List<Vector3>();
             foreach (var otherpoint in other.points)
             {
@@ -175,7 +212,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
                 cps[2] = cp;
             }
 
-            return cps;
+            return cps;*/
         }
         /*
         public Intersect IsInside(Vector3 point)

@@ -180,13 +180,9 @@ namespace Fabricor.Main.Logic.Physics
             foreach (var c in contacts)
             {
                 Vector3 normal = -c.normal;
-                int contactCount = c.position.Length;
-                Vector3 position = Vector3.Zero;
-                foreach (var pos in c.position)
-                {
-                    position += pos;
-                }
-                position /= contactCount;
+
+                Vector3 position =c.position;
+
 
                 if (float.IsNaN(normal.Length()))
                 {
@@ -196,7 +192,7 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = c.bodyA.state;
                 Span<RigidbodyState> spanb = c.bodyB.state;
 
-                float e = 0.5f;
+                float e = 1f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -211,7 +207,8 @@ namespace Fabricor.Main.Logic.Physics
                     (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
                     (Vector3.Cross(rb, normal) * Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
 
-
+                if (j > 0)
+                    continue;
 
 
                 spana[0].ApplyLinearForce(j * normal);
@@ -220,13 +217,13 @@ namespace Fabricor.Main.Logic.Physics
                 spana[0].ApplyTorque(Vector3.Cross(ra, j * normal));
                 spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
-
+                /*
                 float p = (c.depth * 3);
                 p *= p;
 
                 spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
                 spanb[0].ApplyLinearForce(normal * p * spanb[0].GetMass());
-
+                */
             }
         }
 
