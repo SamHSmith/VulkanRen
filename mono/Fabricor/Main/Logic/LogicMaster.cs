@@ -21,7 +21,7 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 5;
+        private static float fixedDelta = 1f / 100;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
 
 
@@ -63,7 +63,7 @@ namespace Fabricor.Main.Logic
                  ((float)r.NextDouble() - 0.5f) * 200);
                 g.rb.state[0].transform.rotation = Quaternion.CreateFromAxisAngle(new Vector3((float)r.NextDouble(), (float)r.NextDouble(),
                  (float)r.NextDouble()), (float)(r.NextDouble() * Math.PI * 2));
-                //g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
+                g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
                 MasterRenderer.toRenderGrids.Add(g);
@@ -96,7 +96,7 @@ namespace Fabricor.Main.Logic
                 {
                     currentTime = DateTime.UtcNow.Ticks;
                     timePassed = (int)(currentTime - lastUpdate);
-                    updates = (((float)timePassed) / updateRate) * Time;
+                    updates = ((float)timePassed) / updateRate * Time;
                 }
                 Simulation.SwapBuffers();
                 lastUpdate = DateTime.UtcNow.Ticks;
