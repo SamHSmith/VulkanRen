@@ -57,8 +57,10 @@ namespace Fabricor.Main.Logic.Physics
             return GetNewRigidbody();
         }
 
-        public unsafe static void UpdateInterpolation(float t, float fixeddelta)
+        public unsafe static bool UpdateInterpolation(float t, float fixeddelta)
         {
+            while (IsSwapping) { }
+
             oldState.state.CopyTo(interpolatedState.state);
 
             RigidbodyState* iptr = (RigidbodyState*)interpolatedState.state.ptr;
@@ -74,7 +76,14 @@ namespace Fabricor.Main.Logic.Physics
                 }
                 iptr++;
                 nptr++;
+
+                if (IsSwapping)
+                {
+                    return false;
+                }
+
             }
+            return true;
         }
 
         public static Vector3 Hermite(
@@ -121,46 +130,62 @@ namespace Fabricor.Main.Logic.Physics
             s.Reset();
 
             s.Start();
-            int part = broad.Length / 2;
-            Memory<CollidablePair> spanorig = broad.AsMemory();
 
-            Console.WriteLine("Narrow Checks: " + spanorig.Length);
-
-            Memory<CollidablePair> span1 = spanorig.Slice(0, part);
-            Memory<CollidablePair> span2 = spanorig.Slice(part, part);
-            Memory<CollidablePair> span3 = spanorig.Slice(part * 2);
-
-            Task<List<ContactPoint>> task1 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span1)));
-            Task<List<ContactPoint>> task2 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span2)));
-            Task<List<ContactPoint>> task3 = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span3)));
-
-            List<ContactPoint> narrow = new List<ContactPoint>();
-            narrow.AddRange(task1.Result);
-            narrow.AddRange(task2.Result);
-            narrow.AddRange(task3.Result);
+            List<ContactPoint> narrow = DoNarrowPhase(10, broad.AsMemory());
 
             s.Stop();
             long narrowTime = s.ElapsedMilliseconds;
             s.Reset();
 
             s.Start();
-            PerformCollisions(narrow,delta);
+            PerformCollisions(narrow, delta);
             s.Stop();
             frametime.Stop();
 
-            Console.WriteLine("Physics Frame " + frame + ", Broadtime: " + broadTime + ", Narrowtime: " + narrowTime + ", Performtime: " + s.ElapsedMilliseconds);
-            Console.WriteLine("Frametime: " + frametime.ElapsedMilliseconds);
+            Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
+
             frame++;
         }
 
+        private static List<ContactPoint> DoNarrowPhase(int threads, Memory<CollidablePair> spanorig)
+        {
+            int part = spanorig.Length / threads;
+            List<Task<List<ContactPoint>>> tasks = new List<Task<List<ContactPoint>>>();
+            for (int i = 0; i < threads; i++)
+            {
+                Memory<CollidablePair> span;
+                if (i < threads - 1)
+                {
+                    span = spanorig.Slice(i * part, part);
+                }
+                else
+                {
+                    span = spanorig.Slice(i * part);
+                }
+                Task<List<ContactPoint>> task = Task.Factory.StartNew<List<ContactPoint>>((() => NarrowPhase(span)));
+                tasks.Add(task);
+            }
+            List<ContactPoint> narrow = new List<ContactPoint>();
+            foreach (var task in tasks)
+            {
+                narrow.AddRange(task.Result);
+            }
+            return narrow;
+        }
+         static bool IsSwapping = false;
         public static void SwapBuffers()
         {
+            IsSwapping = true;
             //Swap buffers
             newState.state.CopyTo(oldState.state);//Move back buffer
             PhysicsState oldComplete = newState;
             newState = editState;
             editState = oldComplete;
             newState.state.CopyTo(editState.state);
+
+            IsSwapping = false;
+
+
         }
 
         private static void Move(float delta)
@@ -174,7 +199,7 @@ namespace Fabricor.Main.Logic.Physics
                         span[i].angularVelocity.Length() * delta) * span[i].transform.rotation;
             }
         }
-        private static void PerformCollisions(List<ContactPoint> contacts,float delta)
+        private static void PerformCollisions(List<ContactPoint> contacts, float delta)
         {
 
             foreach (var c in contacts)
@@ -189,10 +214,10 @@ namespace Fabricor.Main.Logic.Physics
                     continue;
                 }
 
-                Span<RigidbodyState> spana = c.bodyA.state;
-                Span<RigidbodyState> spanb = c.bodyB.state;
+                Span<RigidbodyState> spana = ((RigidbodyHandle)c.bodyA).state;
+                Span<RigidbodyState> spanb = ((RigidbodyHandle)c.bodyB).state;
 
-                float e = 1f;
+                float e = 0.7f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -201,8 +226,12 @@ namespace Fabricor.Main.Logic.Physics
                 Vector3 pointvel1 = spana[0].GetLinearVelocity() + Vector3.Cross(spana[0].GetAngularVelocity(), ra);
                 Vector3 pointvel2 = spanb[0].GetLinearVelocity() + Vector3.Cross(spanb[0].GetAngularVelocity(), rb);
 
+                float relvel = Vector3.Dot(normal, pointvel1 - pointvel2);
 
-                float j = -(1 + e) * Vector3.Dot(normal, pointvel1 - pointvel2);
+                if (relvel < 0)
+                    continue;
+
+                float j = -(1 + e) * relvel;
                 j /= spana[0].GetInverseMass() + spanb[0].GetInverseMass() +
                     (Vector3.Cross(ra, normal) * Vector3.Cross(ra, normal) * spana[0].GetInverseInertia()).Length() +
                     (Vector3.Cross(rb, normal) * Vector3.Cross(rb, normal) * spanb[0].GetInverseInertia()).Length();
@@ -217,8 +246,14 @@ namespace Fabricor.Main.Logic.Physics
                 spana[0].ApplyTorque(Vector3.Cross(ra, j * normal));
                 spanb[0].ApplyTorque(Vector3.Cross(rb, -j * normal));
 
+
+                float p = c.depth/2 / (spana[0].GetMass() + spanb[0].GetMass());
+
+                spana[0].transform.position += normal * -p * spanb[0].GetMass();
+                spanb[0].transform.position += normal * p * spana[0].GetMass();
+
                 /*
-                float p = (c.depth * 3);
+                float p = (c.depth * 10);
                 p *= p;
 
                 spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
@@ -235,8 +270,10 @@ namespace Fabricor.Main.Logic.Physics
             {
                 RigidbodyHandle a = (RigidbodyHandle)pa[i].a;
                 RigidbodyHandle b = (RigidbodyHandle)pa[i].b;
-
-                contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
+                if (a.GetBound().IsColliding(a.state[0].transform, b.state[0].transform, b.GetBound()).Length > 0)
+                {
+                    contacts.AddRange(a.shape.IsColliding(a.state[0].transform, b.state[0].transform, b.shape));
+                }
 
             }
             return contacts;
@@ -274,7 +311,7 @@ namespace Fabricor.Main.Logic.Physics
             List<CollidablePair> pairs = new List<CollidablePair>();
 
 
-            int splitChunks = 0,proccesChunks=0;
+            int splitChunks = 0, proccesChunks = 0;
             for (int m = 0; m < final.Count; m++)
             {
                 splitChunks++;
@@ -284,8 +321,6 @@ namespace Fabricor.Main.Logic.Physics
                     continue;//there is only one box in this segment
                 }
                 proccesChunks++;
-
-                Console.WriteLine(final[m].Count);
                 /*
                 final[m].Sort((x, y) => x.position.X.CompareTo(y.position.X));
                 Prune(final[m], out var markersy);
@@ -297,7 +332,6 @@ namespace Fabricor.Main.Logic.Physics
                 Prune(markersz, out var markersfinal);
                 */
                 var markersfinal = final[m];
-                Console.WriteLine(markersfinal.Count);
 
                 AABB last = null;
                 List<AABB> open = new List<AABB>();
@@ -321,10 +355,8 @@ namespace Fabricor.Main.Logic.Physics
                                 RigidbodyHandle a = (RigidbodyHandle)aa.root;
                                 RigidbodyHandle b = (RigidbodyHandle)markersfinal[j].a.root;
 
-                                if ((a.state[0].transform.position - b.state[0].transform.position).Length() < a.shape.ToBoundSphere().radius + b.shape.ToBoundSphere().radius)
-                                {
-                                    pairs.Add(new CollidablePair { a = a, b = b });
-                                }
+                                pairs.Add(new CollidablePair { a = a, b = b });
+
                             }
 
                         }
@@ -338,8 +370,7 @@ namespace Fabricor.Main.Logic.Physics
 
             }
 
-            Console.WriteLine("SplitChunks: " + splitChunks);
-            Console.WriteLine("ProccesChunks: " + proccesChunks);
+
             return pairs;
         }
 

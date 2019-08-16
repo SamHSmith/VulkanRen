@@ -8,7 +8,7 @@ namespace Fabricor.Main.Logic.Physics
         public Vector3 position;
         public Vector3 normal;
         public float depth;
-        public RigidbodyHandle bodyA;
-        public RigidbodyHandle bodyB;
+        public IShapeRoot bodyA;
+        public IShapeRoot bodyB;
     }
 }

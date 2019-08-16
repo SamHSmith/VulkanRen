@@ -21,9 +21,8 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 100;
+        private static float fixedDelta = 1f / 500;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
-
 
         private static List<Grid> gs = new List<Grid>();
 
@@ -34,36 +33,27 @@ namespace Fabricor.Main.Logic
             MasterRenderer.Init();
             updatables.Add(camera);
 
-
-
-            Random r = new Random(424);
-            for (int i = 0; i < 1000; i++)
+            Random r = new Random(20);
+            for (int i = 0; i < 20; i++)
             {
-                ConvexShape cube = new ConvexShape(new Vector3[] {
-                new Vector3(-0.5f,0.5f,0.5f),
-                new Vector3(-0.5f,-0.5f,0.5f),
-                new Vector3(-0.5f,-0.5f,-0.5f),
-                new Vector3(-0.5f,0.5f,-0.5f),
-                new Vector3(0.5f,0.5f,0.5f),
-                new Vector3(0.5f,-0.5f,0.5f),
-                new Vector3(0.5f,-0.5f,-0.5f),
-                new Vector3(0.5f,0.5f,-0.5f), }, new Vector3[] {
-                Vector3.UnitX,
-                -Vector3.UnitX,
-                Vector3.UnitY,
-                -Vector3.UnitY,
-                Vector3.UnitZ,
-                -Vector3.UnitZ});
 
-                Grid g = new Grid();
-                g.Put(0, 0, 0, 1);
-                g.rb = Simulation.GetNewRigidbody();
-                g.rb.AddShape(cube);
-                g.rb.state[0].transform.position = new Vector3(((float)r.NextDouble() - 0.5f) * 200, ((float)r.NextDouble()-0.5f) * 200,
-                 ((float)r.NextDouble() - 0.5f) * 200);
-                g.rb.state[0].transform.rotation = Quaternion.CreateFromAxisAngle(new Vector3((float)r.NextDouble(), (float)r.NextDouble(),
-                 (float)r.NextDouble()), (float)(r.NextDouble() * Math.PI * 2));
-                g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
+
+                Grid g = new Grid(Simulation.GetNewRigidbody());
+                //for (int x = 0; x < 4; x++)
+                {
+                    //for (int y = 0; y < 2; y++)
+                    {
+                        //for (int z = 0; z < 2; z++)
+                        {
+                            g.Put(0, 0, -1, 1);
+                        }
+                    }
+                }
+                g.rb.state[0].mass = 10;
+                g.rb.state[0].inertia = Vector3.One * 20;
+                g.rb.state[0].transform.position =
+                new Vector3(((float)r.NextDouble() - 0.5f) * 1, ((float)r.NextDouble() - 0.5f) * 100, ((float)r.NextDouble() - 0.5f) * 1);
+                g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 0, (float)r.NextDouble() * 0, (float)r.NextDouble() * 0);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
                 MasterRenderer.toRenderGrids.Add(g);
@@ -83,8 +73,7 @@ namespace Fabricor.Main.Logic
             {
                 long currentTime = DateTime.UtcNow.Ticks;
                 int timePassed = (int)(currentTime - lastUpdate);
-                float updates = (((float)timePassed) / updateRate) * Time;
-
+                float updates = (((float)timePassed) / (updateRate / Time));
                 foreach (var g in gs)
                 {
                     g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*5f * fixedDelta;
@@ -96,21 +85,31 @@ namespace Fabricor.Main.Logic
                 {
                     currentTime = DateTime.UtcNow.Ticks;
                     timePassed = (int)(currentTime - lastUpdate);
-                    updates = ((float)timePassed) / updateRate * Time;
+                    updates = (((float)timePassed) / (updateRate / Time));
                 }
+                while (doingframe) { }
                 Simulation.SwapBuffers();
                 lastUpdate = DateTime.UtcNow.Ticks;
             }
         }
 
-
+        static bool doingframe = false;
         public static void Update(float delta)
         {
             long currentTime = DateTime.UtcNow.Ticks;
             int timePassed = (int)(currentTime - lastUpdate);
             float updates = (((float)timePassed) / updateRate) * Time;
 
-            Simulation.UpdateInterpolation(Maths.Clamp(updates, 0, 1), fixedDelta);
+            while (updates > 1)
+            {
+                currentTime = DateTime.UtcNow.Ticks;
+                timePassed = (int)(currentTime - lastUpdate);
+                updates = (((float)timePassed) / updateRate) * Time;
+            }
+
+            doingframe = true;
+            while (!Simulation.UpdateInterpolation(Maths.Clamp(updates, 0, 1), fixedDelta)) { }
+            doingframe = false;
 
             foreach (var u in updatables)
             {
@@ -120,7 +119,8 @@ namespace Fabricor.Main.Logic
             if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.E))
             {
                 Time = 0.1f;
-            }else if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.R))
+            }
+            else if (OpenTK.Input.Keyboard.GetState().IsKeyDown(OpenTK.Input.Key.R))
             {
                 Time = 0.01f;
             }

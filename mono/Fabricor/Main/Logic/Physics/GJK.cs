@@ -30,6 +30,7 @@ namespace Fabricor.Main.Logic.Physics
                 {
                     normal = Vector3.Zero;
                     position = Vector3.Zero;
+                    Console.WriteLine("GJK is not doing well");
                     return -0.1f;
                 }
 

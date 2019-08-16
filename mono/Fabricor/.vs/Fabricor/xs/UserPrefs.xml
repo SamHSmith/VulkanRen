@@ -1,12 +1,16 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Shapes/CompoundShape.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="58" Column="32" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="211" Column="30" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="41" Column="31" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="289" Column="1" />
       <File FileName="Main/Logic/Physics/State/PhysicsState.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/RigidbodyHandle.cs" Line="1" Column="1" />
-      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="241" Column="22" />
-      <File FileName="Main/Logic/Physics/GJK.cs" Line="45" Column="21" />
+      <File FileName="Main/Logic/Physics/RigidbodyHandle.cs" Line="33" Column="1" />
+      <File FileName="Main/Logic/Physics/Shapes/CompoundShape.cs" Line="26" Column="1" />
+      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="41" Column="14" />
+      <File FileName="Main/Logic/Physics/GJK.cs" Line="68" Column="98" />
+      <File FileName="Main/Logic/Grids/Chunk.cs" Line="57" Column="1" />
+      <File FileName="Main/Logic/Physics/ISupportable.cs" Line="1" Column="1" />
+      <File FileName="Main/Logic/Grids/Grid.cs" Line="74" Column="19" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -17,26 +21,29 @@
                 <Node name="Logic" expanded="True">
                   <Node name="Grids" expanded="True" />
                   <Node name="Physics" expanded="True">
-                    <Node name="Shapes" expanded="True" />
-                    <Node name="State" expanded="True" />
+                    <Node name="Shapes" expanded="True">
+                      <Node name="CompoundShape.cs" selected="True" />
+                    </Node>
                   </Node>
-                  <Node name="LogicMaster.cs" selected="True" />
                 </Node>
-                <Node name="Rendering" expanded="True" />
-                <Node name="Toolbox" expanded="True" />
               </Node>
             </Node>
-            <Node name="FabricorBenchmarking" expanded="True" />
           </Node>
         </State>
       </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>FabricorBenchmarking/FabricorBenchmarking.csproj</String>
+  </DisabledProjects>
   <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="/home/sam/Documents/git/Fabricor/mono/Fabricor/Main/Logic/Physics/Shapes/ConvexShape.cs" relfile="Main/Logic/Physics/Shapes/ConvexShape.cs" line="54" column="1" />
+      <Breakpoint file="/home/sam/Documents/git/Fabricor/mono/Fabricor/Main/Logic/Physics/Shapes/CompoundShape.cs" relfile="Main/Logic/Physics/Shapes/CompoundShape.cs" line="26" column="1" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MultiItemStartupConfigurations />
 </Properties>
