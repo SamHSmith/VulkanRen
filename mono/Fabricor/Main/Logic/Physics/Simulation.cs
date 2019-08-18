@@ -217,7 +217,7 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = ((RigidbodyHandle)c.bodyA).state;
                 Span<RigidbodyState> spanb = ((RigidbodyHandle)c.bodyB).state;
 
-                float e = 0.7f;
+                float e = 0.4f;
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
@@ -253,9 +253,6 @@ namespace Fabricor.Main.Logic.Physics
                 spanb[0].transform.position += normal * p * spana[0].GetMass();
 
                 /*
-                float p = (c.depth * 10);
-                p *= p;
-
                 spana[0].ApplyLinearForce(normal * -p * spana[0].GetMass());
                 spanb[0].ApplyLinearForce(normal * p * spanb[0].GetMass());
                 */
@@ -306,11 +303,18 @@ namespace Fabricor.Main.Logic.Physics
 
             List<List<AABBMarker>> final = Split(Split(Split(start, Vector3.UnitX), Vector3.UnitY), Vector3.UnitZ);
 
-
-
             List<CollidablePair> pairs = new List<CollidablePair>();
-
-
+            /*
+            //TODO FOR DEBUG ONLY!!!
+            for (int i = 0; i < aABBs.Count; i++)
+            {
+                for (int k = i+1; k < aABBs.Count; k++)
+                {
+                    pairs.Add(new CollidablePair { a = aABBs[i].root, b = aABBs[k].root });
+                }
+            }
+            return pairs;
+            */
             int splitChunks = 0, proccesChunks = 0;
             for (int m = 0; m < final.Count; m++)
             {

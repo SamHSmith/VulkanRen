@@ -23,8 +23,10 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             {
                 Transform a = at;
                 a.position += Vector3.Transform(sh.Localposition, at.rotation);
-                Console.WriteLine((a.position - bt.position).Length());
-                if (sh.ToBoundSphere().IsColliding(a, bt, other.ToBoundSphere()).Length > 0)
+                BoundSphere sb = sh.ToBoundSphere();
+                Transform thisT = at;
+                thisT.position+= Vector3.Transform(sb.CompoundOffset, at.rotation);
+                if (sb.IsColliding(thisT, bt, other.ToBoundSphere()).Length > 0)
                 {
                     cps.AddRange(sh.IsColliding(a, bt, other));
                 }

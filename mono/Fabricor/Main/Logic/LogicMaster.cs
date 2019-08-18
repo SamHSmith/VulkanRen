@@ -39,13 +39,13 @@ namespace Fabricor.Main.Logic
 
 
                 Grid g = new Grid(Simulation.GetNewRigidbody());
-                //for (int x = 0; x < 4; x++)
+                for (int x = 0; x < 4; x++)
                 {
                     //for (int y = 0; y < 2; y++)
                     {
                         //for (int z = 0; z < 2; z++)
                         {
-                            g.Put(0, 0, -1, 1);
+                            g.Put(x-2, 0, 0, 1);
                         }
                     }
                 }
@@ -77,6 +77,22 @@ namespace Fabricor.Main.Logic
                 foreach (var g in gs)
                 {
                     g.rb.state[0].linearVelocity += -Vector3.Normalize(g.rb.state[0].transform.position)*5f * fixedDelta;
+                }
+
+                for (int i = 0; i < gs.Count; i++)
+                {
+                    for (int k = i+1; k < gs.Count; k++)
+                    {
+                        
+                        Vector3 force = Vector3.One / 
+                        (gs[k].rb.state[0].transform.position-gs[i].rb.state[0].transform.position) * 0.03f * fixedDelta;
+
+                        if (float.IsNaN(force.Length()))
+                            continue;
+
+                        gs[k].rb.state[0].linearVelocity -= force;
+                        gs[i].rb.state[0].linearVelocity += force;
+                    }
                 }
 
                 Simulation.TimeStep(fixedDelta);
