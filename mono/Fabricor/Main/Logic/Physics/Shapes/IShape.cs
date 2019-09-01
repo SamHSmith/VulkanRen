@@ -11,6 +11,8 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         AABB ToAABB();
         BoundSphere ToBoundSphere();
 
+        Vector3 CenterOfMass();
+
         IShapeRoot root { get; set; }
     }
 }

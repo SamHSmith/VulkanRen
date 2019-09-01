@@ -62,5 +62,10 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         {
             return this;
         }
+
+        public Vector3 CenterOfMass()
+        {
+            return Vector3.Zero;
+        }
     }
 }

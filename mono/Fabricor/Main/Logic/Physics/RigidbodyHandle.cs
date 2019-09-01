@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Fabricor.Main.Logic.Physics.Shapes;
 using Fabricor.Main.Logic.Physics.State;
 
@@ -29,6 +30,7 @@ namespace Fabricor.Main.Logic.Physics
             if (boundcache == null)
             {
                 boundcache=shape.ToBoundSphere();
+                state[0].massOffset = shape.CenterOfMass();
             }
             return boundcache;
         }

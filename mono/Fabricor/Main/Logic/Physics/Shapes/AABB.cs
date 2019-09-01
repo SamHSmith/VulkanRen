@@ -111,5 +111,10 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         {
             return new BoundSphere((radii + Vector3.Abs(offset)).Length(),root);
         }
+
+        public Vector3 CenterOfMass()
+        {
+            return offset;
+        }
     }
 }

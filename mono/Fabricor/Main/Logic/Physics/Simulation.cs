@@ -70,9 +70,13 @@ namespace Fabricor.Main.Logic.Physics
             {
                 if ((*nptr).IsAssigned)
                 {
-                    (*iptr).transform.position = Hermite((*iptr).transform.position, (*iptr).linearVelocity * fixeddelta,
-                        (*nptr).transform.position, (*nptr).linearVelocity * fixeddelta, t);
+                    Vector3 worldposold = (*iptr).transform.position + Vector3.Transform((*iptr).massOffset, (*iptr).transform.rotation);
+                    Vector3 worldposnew = (*nptr).transform.position + Vector3.Transform((*nptr).massOffset, (*nptr).transform.rotation);
+                    Vector3 worldposi= Hermite(worldposold, (*iptr).linearVelocity * fixeddelta,
+                        worldposnew, (*nptr).linearVelocity * fixeddelta, t);
+
                     (*iptr).transform.rotation = Quaternion.Lerp((*iptr).transform.rotation, (*nptr).transform.rotation, t);
+                    (*iptr).transform.position = worldposi - Vector3.Transform((*iptr).massOffset, (*iptr).transform.rotation);
                 }
                 iptr++;
                 nptr++;
@@ -142,7 +146,7 @@ namespace Fabricor.Main.Logic.Physics
             s.Stop();
             frametime.Stop();
 
-            Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
+            //Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
 
             frame++;
         }
@@ -193,10 +197,16 @@ namespace Fabricor.Main.Logic.Physics
             Span<RigidbodyState> span = editState.Span;
             for (int i = 0; i < span.Length; i++)
             {
-                span[i].transform.position += span[i].linearVelocity * delta;
+                Vector3 worldpos = span[i].transform.position + Vector3.Transform(span[i].massOffset, span[i].transform.rotation);
+
+
+                worldpos += span[i].linearVelocity * delta;
                 if (span[i].angularVelocity.Length() > 0)
-                    span[i].transform.rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(span[i].angularVelocity),
-                        span[i].angularVelocity.Length() * delta) * span[i].transform.rotation;
+                {
+                    Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.Normalize(span[i].angularVelocity), span[i].angularVelocity.Length() * delta);
+                    span[i].transform.rotation = rotation * span[i].transform.rotation;
+                }
+                span[i].transform.position = worldpos - Vector3.Transform(span[i].massOffset, span[i].transform.rotation);
             }
         }
         private static void PerformCollisions(List<ContactPoint> contacts, float delta)
@@ -219,8 +229,8 @@ namespace Fabricor.Main.Logic.Physics
 
                 float e = 0.4f;
 
-                Vector3 ra = spana[0].GetDistanceToCenterOfMass(position);
-                Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position);
+                Vector3 ra = spana[0].GetDistanceToCenterOfMass(position- spana[0].massOffset);
+                Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position- spanb[0].massOffset);
 
 
                 Vector3 pointvel1 = spana[0].GetLinearVelocity() + Vector3.Cross(spana[0].GetAngularVelocity(), ra);

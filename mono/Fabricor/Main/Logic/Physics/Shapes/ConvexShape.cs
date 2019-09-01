@@ -9,6 +9,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
     {
         public IShapeRoot root { get; set; }
         public Vector3 Localposition { get; set; }
+        public float Mass { get; set; } = 1;
 
         public Vector3[] points;
 
@@ -153,6 +154,21 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public void UpdateBound()
         {
             root.UpdateBound();
+        }
+
+        public Vector3 CenterOfMass()
+        {
+            Vector3 pointsum = Vector3.Zero;
+            for (int i = 0; i < points.Length; i++)
+            {
+                pointsum += points[i];
+            }
+            Vector3 final= pointsum /= points.Length;
+            if (float.IsNaN(final.Length()))
+            {
+                final = Vector3.Zero;
+            }
+            return final;
         }
     }
 

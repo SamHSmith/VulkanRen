@@ -11,6 +11,7 @@ namespace Fabricor.Main.Logic.Physics.State
         public Vector3 inertia;
         public float mass;
         public bool IsAssigned;
+        public Vector3 massOffset;
 
         public Vector3 GetInertia()
         {

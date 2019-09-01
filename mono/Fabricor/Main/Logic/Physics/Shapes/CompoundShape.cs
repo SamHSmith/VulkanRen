@@ -8,6 +8,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
     {
         public IShapeRoot root { get; set; }
         public Vector3 Localposition { get; set; }
+        public float Mass { get; set; }
 
         public List<ICompoundSubShape> shapes = new List<ICompoundSubShape>();
 
@@ -84,6 +85,25 @@ namespace Fabricor.Main.Logic.Physics.Shapes
         public void UpdateBound()
         {
             root.UpdateBound();
+        }
+
+        public Vector3 CenterOfMass()
+        {
+            Vector3 sum = Vector3.Zero;
+            float totalmass = 0;
+            for (int i = 0; i < shapes.Count; i++)
+            {
+                sum += (shapes[i].CenterOfMass()+shapes[i].Localposition) * shapes[i].Mass;
+                totalmass += shapes[i].Mass;
+            }
+            Vector3 final = sum / totalmass;
+            Mass = totalmass;
+
+            if (float.IsNaN(final.Length()))
+            {
+                final = Vector3.Zero;
+            }
+            return final;
         }
     }
 }
