@@ -34,7 +34,7 @@ namespace Fabricor.Main.Logic
             updatables.Add(camera);
 
             Random r = new Random(1);
-            for (int i = 0; i < 700; i++)
+            for (int i = 0; i < 2; i++)
             {
 
 
@@ -45,16 +45,16 @@ namespace Fabricor.Main.Logic
                     {
                         //for (int z = 0; z < 2; z++)
                         {
-                            g.Put(0, 0, 0, 1);
+                            g.Put(2, 0, 0, 1);
                         }
                     }
                 }
                 g.rb.state[0].mass = 10;
                 g.rb.state[0].inertia = Vector3.One * 20;
                 g.rb.state[0].transform.position =
-                new Vector3(((float)r.NextDouble() - 0.5f) * 100, ((float)r.NextDouble() - 0.5f) * 1000, ((float)r.NextDouble() - 0.5f) * 100);
+                new Vector3(((float)r.NextDouble() - 0.5f) * 0, ((float)r.NextDouble() - 0.5f) * 10, ((float)r.NextDouble() - 0.5f) * 0);
                 //g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 0, (float)r.NextDouble() * 0, (float)r.NextDouble() * 0);
-                //g.rb.state[0].angularVelocity= new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
+                g.rb.state[0].angularVelocity= new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;
                 updatables.Add(g);
                 MasterRenderer.toRenderGrids.Add(g);

@@ -146,7 +146,7 @@ namespace Fabricor.Main.Logic.Physics
             s.Stop();
             frametime.Stop();
 
-            //Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
+            Console.WriteLine("Broad: " + broadTime+" Narrow: "+narrowTime);
 
             frame++;
         }
@@ -218,7 +218,6 @@ namespace Fabricor.Main.Logic.Physics
 
                 Vector3 position =c.position;
 
-
                 if (float.IsNaN(normal.Length()))
                 {
                     continue;
@@ -227,7 +226,7 @@ namespace Fabricor.Main.Logic.Physics
                 Span<RigidbodyState> spana = ((RigidbodyHandle)c.bodyA).state;
                 Span<RigidbodyState> spanb = ((RigidbodyHandle)c.bodyB).state;
 
-                float e = 0.4f;
+                float e = 0.4f;//TODO make E material based
 
                 Vector3 ra = spana[0].GetDistanceToCenterOfMass(position- spana[0].massOffset);
                 Vector3 rb = spanb[0].GetDistanceToCenterOfMass(position- spanb[0].massOffset);
@@ -314,17 +313,7 @@ namespace Fabricor.Main.Logic.Physics
             List<List<AABBMarker>> final = Split(Split(Split(start, Vector3.UnitX), Vector3.UnitY), Vector3.UnitZ);
 
             List<CollidablePair> pairs = new List<CollidablePair>();
-            /*
-            //TODO FOR DEBUG ONLY!!!
-            for (int i = 0; i < aABBs.Count; i++)
-            {
-                for (int k = i+1; k < aABBs.Count; k++)
-                {
-                    pairs.Add(new CollidablePair { a = aABBs[i].root, b = aABBs[k].root });
-                }
-            }
-            return pairs;
-            */
+
             int splitChunks = 0, proccesChunks = 0;
             for (int m = 0; m < final.Count; m++)
             {

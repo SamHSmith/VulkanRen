@@ -1,10 +1,11 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/LogicMaster.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/GJK.cs">
     <Files>
-      <File FileName="Main/Logic/LogicMaster.cs" Line="24" Column="50" />
-      <File FileName="Main/Logic/Physics/Simulation.cs" Line="149" Column="15" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="48" Column="36" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="175" Column="1" />
       <File FileName="Main/Logic/Physics/Shapes/CompoundShape.cs" Line="102" Column="1" />
-      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="12" Column="45" />
+      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="56" Column="1" />
+      <File FileName="Main/Logic/Physics/GJK.cs" Line="46" Column="1" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -17,8 +18,8 @@
                   <Node name="Physics" expanded="True">
                     <Node name="Shapes" expanded="True" />
                     <Node name="State" expanded="True" />
+                    <Node name="GJK.cs" selected="True" />
                   </Node>
-                  <Node name="LogicMaster.cs" selected="True" />
                 </Node>
               </Node>
             </Node>
@@ -32,10 +33,10 @@
     <String>FabricorBenchmarking/FabricorBenchmarking.csproj</String>
   </DisabledProjects>
   <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
     <BreakpointStore>
-      <Breakpoint file="/home/sam/Documents/git/Fabricor/mono/Fabricor/Main/Logic/Physics/Shapes/ConvexShape.cs" relfile="Main/Logic/Physics/Shapes/ConvexShape.cs" line="55" column="1" />
+      <Breakpoint file="/home/sam/Documents/git/Fabricor/mono/Fabricor/Main/Logic/Physics/GJK.cs" relfile="Main/Logic/Physics/GJK.cs" line="46" column="1" />
     </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MultiItemStartupConfigurations />
