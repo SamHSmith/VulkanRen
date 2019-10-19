@@ -1,5 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using Fabricor.Main.Logic;
+using Fabricor.Main.Logic.Grids;
+using Fabricor.Main.Rendering.Loading;
+using Fabricor.Main.Rendering.Models;
+using Fabricor.Main.Rendering.Textures;
+using OpenTK;
 using OpenTK.Graphics;
 using OpenTK.Graphics.OpenGL4;
 
@@ -7,21 +14,27 @@ namespace Fabricor.Main.Rendering
 {
     public class MasterRenderer
     {
+        public static float AspectRatio = 1;
+
+        public static Transform camera = new Transform(new System.Numerics.Vector3());
+        public static List<Grid> toRenderGrids = new List<Grid>();
+        public static List<RenderObject> toRender = new List<RenderObject>();
+        public static Loader GlLoader { get { return loader; } }
         private static Loader loader;
 
         private static Shader shader;
 
-        private static RawModel model;
-
         public static void Init()
         {
+            GL.Enable(EnableCap.DepthTest);
+            GL.DepthFunc(DepthFunction.Less);
+            GL.Enable(EnableCap.CullFace);
+            GL.CullFace(CullFaceMode.Back);
             loader = new Loader();
 
-            shader = loader.loadShader("block");
-
-            float[] vertices = { -0.5f, 0.5f, 0f, -0.5f, -0.5f, 0f, 0.5f, -0.5f, 0f, 0.5f, -0.5f, 0f, 0.5f, 0.5f, 0f, -0.5f, 0.5f, 0f };
-
-            model = loader.loadToVAO(vertices);
+            shader = loader.LoadShader("block",new ShaderAttribute[] {new ShaderAttribute("pos",0),new ShaderAttribute("uvCoords",1) },
+                new ShaderAttribute[] { new ShaderAttribute("transform", 0), new ShaderAttribute("persp", 0),
+                new ShaderAttribute("view", 0) });
         }
 
         public static void CleanUp()
@@ -36,19 +49,42 @@ namespace Fabricor.Main.Rendering
             frameCount++;
             prepare();
 
-            renderRawModel(model);
+            shader.StartProgram();
 
+            shader.LoadMatrix("view", camera.ToGLMatrix());
+            shader.LoadMatrix("persp", Matrix4.CreatePerspectiveFieldOfView(1.6f, AspectRatio, 0.01f, 1000000));
+
+            foreach (var g in toRenderGrids)
+            {
+                foreach (var o in g.GetRenderObjects())
+                {
+                    RenderModel(o);
+                }
+            }
+
+            foreach (var o in toRender)
+            {
+                RenderModel(o);
+            }
+            shader.StopProgram();
 
         }
-
-        private static void renderRawModel(RawModel m)
+        private static void RenderModel(RenderObject o)
         {
-            GL.UseProgram(shader.getShaderProgram());
+            if (o == null)
+                return;
 
-            GL.BindVertexArray(m.vaoID);
+            GL.BindVertexArray(o.Model.RawModel.vaoID);
             GL.EnableVertexAttribArray(0);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, m.vertexCount);
+            GL.EnableVertexAttribArray(1);
+
+            shader.LoadMatrix("transform", o.Transform.ToGLMatrix());
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, o.Model.Texture.textureID);
+            GL.DrawElements(BeginMode.Triangles, o.Model.RawModel.vertexCount, DrawElementsType.UnsignedInt, 0);
             GL.DisableVertexAttribArray(0);
+            GL.DisableVertexAttribArray(1);
             GL.BindVertexArray(0);
         }
 

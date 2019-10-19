@@ -1,13 +1,11 @@
 ﻿<Properties StartupConfiguration="{50CAB656-1888-49B0-A93C-6F0303F81B26}|Default">
-  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Rendering/Shader.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Main/Logic/Physics/Shapes/ConvexShape.cs">
     <Files>
-      <File FileName="Program.cs" Line="1" Column="1" />
-      <File FileName="Main/FabricorWindow.cs" Line="1" Column="1" />
-      <File FileName="Main/Rendering/MasterRenderer.cs" Line="1" Column="1" />
-      <File FileName="Main/Rendering/Shader.cs" Line="1" Column="1" />
-      <File FileName="Main/Rendering/Loader.cs" Line="1" Column="1" />
-      <File FileName="Main/Rendering/Shaders/block.vert" Line="1" Column="1" />
-      <File FileName="Main/Rendering/Shaders/block.frag" Line="1" Column="1" />
+      <File FileName="Main/Logic/LogicMaster.cs" Line="37" Column="35" />
+      <File FileName="Main/Logic/Physics/Simulation.cs" Line="230" Column="30" />
+      <File FileName="Main/Logic/Physics/GJK.cs" Line="16" Column="31" />
+      <File FileName="Main/Logic/Physics/EPA.cs" Line="91" Column="35" />
+      <File FileName="Main/Logic/Physics/Shapes/ConvexShape.cs" Line="18" Column="42" />
     </Files>
     <Pads>
       <Pad Id="ProjectPad">
@@ -15,17 +13,29 @@
           <Node name="Fabricor" expanded="True">
             <Node name="Fabricor" expanded="True">
               <Node name="Main" expanded="True">
-                <Node name="Rendering" expanded="True">
-                  <Node name="Shader.cs" selected="True" />
+                <Node name="Logic" expanded="True">
+                  <Node name="Grids" expanded="True" />
+                  <Node name="Physics" expanded="True">
+                    <Node name="Shapes" expanded="True">
+                      <Node name="ConvexShape.cs" selected="True" />
+                    </Node>
+                    <Node name="State" expanded="True" />
+                  </Node>
                 </Node>
               </Node>
             </Node>
           </Node>
         </State>
       </Pad>
+      <Pad Id="MonoDevelop.Debugger.WatchPad">
+        <State />
+      </Pad>
     </Pads>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <DisabledProjects>
+    <String>FabricorBenchmarking/FabricorBenchmarking.csproj</String>
+  </DisabledProjects>
   <MonoDevelop.Ide.ItemProperties.Fabricor PreferredExecutionTarget="MonoDevelop.Default" />
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
