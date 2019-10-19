@@ -21,7 +21,7 @@ namespace Fabricor.Main.Logic
         private static Thread fixedthread;
         private static bool shutdown = false;
         private static float Time = 1;
-        private static float fixedDelta = 1f / 1000;
+        private static float fixedDelta = 1f / 100;
         private static int updateRate = (int)TimeSpan.FromSeconds(fixedDelta).Ticks;
 
         private static List<Grid> gs = new List<Grid>();
@@ -34,25 +34,25 @@ namespace Fabricor.Main.Logic
             updatables.Add(camera);
 
             Random r = new Random(1);
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 10; i++)
             {
 
 
                 Grid g = new Grid(Simulation.GetNewRigidbody());
-                //for (int x = 0; x < 4; x++)
+                for (int x = 0; x < 1; x++)
                 {
-                    //for (int y = 0; y < 2; y++)
+                    for (int y = 0; y < 1; y++)
                     {
-                        //for (int z = 0; z < 2; z++)
+                        for (int z = 0; z < 2; z++)
                         {
-                            g.Put(2, 0, 0, 1);
+                            g.Put(x, y, z, 1);
                         }
                     }
                 }
                 g.rb.state[0].mass = 10;
                 g.rb.state[0].inertia = Vector3.One * 20;
                 g.rb.state[0].transform.position =
-                new Vector3(((float)r.NextDouble() - 0.5f) * 0, ((float)r.NextDouble() - 0.5f) * 10, ((float)r.NextDouble() - 0.5f) * 0);
+                new Vector3(((float)r.NextDouble() - 0.5f) * 10, ((float)r.NextDouble() - 0.5f) * 30, ((float)r.NextDouble() - 0.5f) * 15);
                 //g.rb.state[0].linearVelocity = new Vector3((float)r.NextDouble() * 0, (float)r.NextDouble() * 0, (float)r.NextDouble() * 0);
                 g.rb.state[0].angularVelocity= new Vector3((float)r.NextDouble() * 1, (float)r.NextDouble() * 1, (float)r.NextDouble() * 1);
                 g.transform = g.rb.state[0].transform;

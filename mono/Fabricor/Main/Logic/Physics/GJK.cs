@@ -6,58 +6,16 @@ namespace Fabricor.Main.Logic.Physics
 {
     public static class GJK
     {
-        public const int iterationCap = 16;
+        public const int iterationCap = 10;
 
         public static float DoEPA(ISupportable a, ISupportable b, Transform at, Transform bt, out Vector3 normal,
              out Vector3 position, in List<Triangle> poly, List<SupportPoint> polyAsPointList)
         {
-            bool notFinished = true;
-            while (notFinished)
-            {
-                poly.Sort((x, y) => (-x.depth).CompareTo(-y.depth));
+            EPA e = new EPA(a, b, at, bt, poly);
 
+            float depth = e.GetDepth(out normal,out position);
 
-                Triangle triangle = poly[0];
-                if(poly.Count > 0)
-                    poly.RemoveAt(0);
-                SupportPoint newp = Support(a, b, at, bt, triangle.normal);
-
-                Triangle atr = new Triangle(newp, triangle.b, triangle.a, false);
-                Triangle btr = new Triangle(newp, triangle.c, triangle.b, false);
-                Triangle ctr = new Triangle(newp, triangle.a, triangle.c, false);
-
-                Console.WriteLine("Triangle " + triangle);
-                Console.WriteLine(atr);
-                Console.WriteLine(btr);
-                Console.WriteLine(ctr);
-                Console.WriteLine(triangle.Contains(newp.point));
-
-                if (triangle.Contains(newp.point)||(poly.Contains(atr)&& poly.Contains(btr)&& poly.Contains(ctr)))
-                {
-                    //done
-                    position = triangle.normal*Vector3.Dot(triangle.normal,triangle.a.point);
-                    position += (triangle.a.sup_a + triangle.a.sup_b + triangle.b.sup_a + triangle.b.sup_b + triangle.c.sup_a + triangle.c.sup_b) / 6;
-                    normal = triangle.normal;
-                    Vector3 AtoB = at.position - bt.position;
-                    if (Vector3.Dot(normal, AtoB) < 0)
-                        normal *= -1;
-                    return -triangle.NormalDepth();
-                }
-                else
-                {
-
-                    if (!poly.Contains(atr)&&atr.depth<0)
-                        poly.Add(atr);
-                    if (!poly.Contains(btr) && btr.depth < 0)
-                        poly.Add(btr);
-                    if (!poly.Contains(ctr) && ctr.depth < 0)
-                        poly.Add(ctr);
-                }
-
-            }
-            position = Vector3.Zero;
-            normal = Vector3.UnitX;
-            return 0.1f;
+            return depth;
         }
 
         public static float DoGJK(ISupportable a, ISupportable b, Transform at, Transform bt, out Vector3 normal,out Vector3 position)
@@ -99,6 +57,17 @@ namespace Fabricor.Main.Logic.Physics
                     poly.Add(new Triangle(simplex[0], simplex[2], simplex[3], true));
                     poly.Add(new Triangle(simplex[0], simplex[3], simplex[1], true));
                     poly.Add(new Triangle(simplex[1], simplex[2], simplex[3], true));
+
+                    for (int k = 0; k < simplex.Count; k++)
+                    {
+                        for (int j = k+1; j < simplex.Count; j++)
+                        {
+                            if (simplex[k].point == simplex[j].point)
+                            {
+                                Console.WriteLine("Not good");
+                            }
+                        }
+                    }
 
                     return DoEPA(a, b, at, bt, out normal, out position, poly,new List<SupportPoint>(simplex));
                     normal = Vector3.Normalize(dir);
@@ -247,15 +216,24 @@ namespace Fabricor.Main.Logic.Physics
         public Vector3 sup_a;
         public Vector3 sup_b;
 
+        public Vector3 AverageSupport {
+            get
+            {
+                return (sup_a+sup_b)/ 2;
+            }
+        }
+
         public override string ToString()
         {
             return point.ToString();
         }
+
     }
 
     public struct Triangle
     {
-        const float CompareError = 1f / 1000;
+        const float CompareError = 1f / 100;
+        
 
         public SupportPoint a;
         public SupportPoint b;
@@ -271,70 +249,57 @@ namespace Fabricor.Main.Logic.Physics
             this.c = c;
 
             this.normal = Vector3.Normalize(Vector3.Cross(a.point-b.point, a.point-c.point));
-            this.depth = NormalDepth();//This is to figure out if the normal is pointing the right way
+            this.depth = DepthProper();//This is to figure out if the normal is pointing the right way
 
-            if (fixNormal&&this.depth > 0)
+            if (fixNormal&&depth<0)
             {
-                SupportPoint p = a;
-                a = b;
-                b = p;
-                this.normal = Vector3.Normalize(Vector3.Cross(a.point - b.point, a.point - c.point));
-                this.depth = CalculateDepth();
-            }
-            else
-            {
-                this.depth = CalculateDepth();
+                normal *= -1;
+                this.depth = DepthProper();
             }
         }
 
-        private float CalculateDepth()
+        public bool ContainsLine(Line l)
         {
+            List<SupportPoint> points = new List<SupportPoint>();
+            points.Add(a);
+            points.Add(b);
+            points.Add(c);
 
-                Vector3 ba = -Vector3.Normalize(Vector3.Cross(b.point - a.point, normal));
-                Vector3 cb = -Vector3.Normalize(Vector3.Cross(c.point - b.point, normal));
-                Vector3 ac = -Vector3.Normalize(Vector3.Cross(a.point - c.point, normal));
-
-                float badot = Vector3.Dot(ba, -b.point);
-                float cbdot = Vector3.Dot(cb, -c.point);
-                float acdot = Vector3.Dot(ac, -a.point);
-
-                if ((badot < 0 && cbdot < 0) || (badot < 0 && acdot < 0) || (cbdot < 0 && acdot < 0))
-                {
-                    ba *= -1;
-                    cb *= -1;
-                    ac *= -1;
-                    badot = Vector3.Dot(ba, -b.point);
-                    cbdot = Vector3.Dot(cb, -c.point);
-                    acdot = Vector3.Dot(ac, -a.point);
-                }
-
-                if (badot < 0)
-                    ba = -Vector3.Normalize(Vector3.Cross(b.point - a.point, Vector3.Cross(-b.point, b.point - a.point)));
-                if (cbdot < 0)
-                    cb = -Vector3.Normalize(Vector3.Cross(c.point - b.point, Vector3.Cross(-c.point, c.point - b.point)));
-                if (acdot < 0)
-                    ac = -Vector3.Normalize(Vector3.Cross(a.point - c.point, Vector3.Cross(-a.point, a.point - c.point)));
-
-                badot = Vector3.Dot(ba, -b.point);
-                cbdot = Vector3.Dot(cb, -c.point);
-                acdot = Vector3.Dot(ac, -a.point);
-                float normdot = NormalDepth();
-
-                float result = normdot;
-
-                if (badot < 0 && badot < result)
-                    result = badot;
-                if (cbdot < 0 && cbdot < result)
-                    result = cbdot;
-                if (acdot < 0 && acdot < result)
-                    result = acdot;
-
-                return result;
+            return points.Contains(l.a) && points.Contains(l.b);
         }
 
-        public float NormalDepth()
+        public List<Line> ToLines()
         {
-            return Vector3.Dot(normal, -a.point);
+            Line[] lines = new Line[3];
+            lines[0] = new Line(a, b);
+            lines[1] = new Line(a, c);
+            lines[2] = new Line(b, c);
+            return new List<Line>(lines);
+        }
+
+        public bool Behind(SupportPoint p)
+        {
+            float point = Vector3.Dot(p.point, normal);
+            float tri = Vector3.Dot(a.point, normal);
+            return point-CompareError > tri;
+        }
+
+        public bool OriginProjectedInside()
+        {
+            Vector3 ba = -Vector3.Normalize(Vector3.Cross(b.point - a.point, normal));
+            Vector3 cb = -Vector3.Normalize(Vector3.Cross(c.point - b.point, normal));
+            Vector3 ac = -Vector3.Normalize(Vector3.Cross(a.point - c.point, normal));
+
+            float badot = Vector3.Dot(ba, -b.point);
+            float cbdot = Vector3.Dot(cb, -c.point);
+            float acdot = Vector3.Dot(ac, -a.point);
+
+            return badot > 0 && cbdot > 0 && acdot > 0;
+        }
+
+        private float DepthProper()
+        {
+            return Vector3.Dot(normal, a.point);
         }
 
         public override string ToString()

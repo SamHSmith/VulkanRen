@@ -51,7 +51,7 @@ namespace Fabricor.Main.Logic.Physics.State
 
         public Vector3 GetDistanceToCenterOfMass(Vector3 worldposition)
         {
-            return (worldposition - transform.position);
+            return (worldposition - (transform.position+Vector3.Transform(massOffset,transform.rotation)));
         }
 
         public void ApplyTorque(Vector3 torque)

@@ -15,12 +15,11 @@ namespace Fabricor.Main.Logic.Physics.Shapes
 
         public const float margin = 0.02f;
 
-        public float frictionFactor;
+        public float frictionFactor=0.4f;
 
         public ConvexShape(Vector3[] points)
         {
             this.points = points;
-            frictionFactor = 0.5f;
         }
 
         public bool HasImplementation(IShape s)
@@ -140,6 +139,7 @@ namespace Fabricor.Main.Logic.Physics.Shapes
             Vector3 maxpoint = float.MinValue * dir;
             for (int i = 0; i < points.Length; i++)
             {
+
                 Vector3 p = t.position + Vector3.Transform(points[i], t.rotation);
                 float dot = Vector3.Dot(dir, p);
                 if (dot > maxdot)
