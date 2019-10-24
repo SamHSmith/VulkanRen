@@ -1,2 +1,0 @@
-glslangValidator -V ./*.vert
-glslangValidator -V ./*.frag
