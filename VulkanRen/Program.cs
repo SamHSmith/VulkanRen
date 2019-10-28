@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using GLFW;
 using static GLFW.Glfw;
 using Vulkan;
+using Vulkan.Wayland;
 using static Vulkan.VulkanNative;
 
 namespace VulkanRen
@@ -59,13 +60,14 @@ namespace VulkanRen
             Console.WriteLine("Hello Vulkan!");
             Init();
 
-            if(!GLFW.Vulkan.IsSupported){
+            if (!GLFW.Vulkan.IsSupported)
+            {
                 Console.Error.WriteLine("GLFW says that vulkan is not supported.");
                 return;
             }
 
             WindowHint(Hint.ClientApi, ClientApi.None);
-            Window window = CreateWindow(width, height, "Hello Vulkan!", Monitor.None, Window.None);
+            NativeWindow window = new NativeWindow(width, height, "Hello Native?");
 
             VkInstance instance = CreateInstance();
             VkPhysicalDevice physicalDevice = PickPhysicalDevice(instance);
@@ -89,6 +91,8 @@ namespace VulkanRen
 
             VkSurfaceKHR surface = CreateSurface(instance, window);
 
+            
+
             while (!WindowShouldClose(window))
             {
                 PollEvents();
@@ -98,10 +102,34 @@ namespace VulkanRen
             DestroyWindow(window);
             Terminate();
         }
-
-        static VkSurfaceKHR CreateSurface(VkInstance instance, Window window)
+        static wl_display waylandDisplay;
+        static wl_surface waylandSurface;
+        static VkSurfaceKHR CreateSurface(VkInstance instance, NativeWindow window)
         {
-            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                //Todo check if running wayland or xorg
+                //waylandDisplay = *((wl_display*)window.Monitor.UserPointer);
+                waylandSurface = *((wl_surface*)window.DangerousGetHandle());
+
+
+
+
+                VkWaylandSurfaceCreateInfoKHR createInfoKHR = VkWaylandSurfaceCreateInfoKHR.New();
+                fixed (wl_display* ptr = &waylandDisplay)
+                    createInfoKHR.display = ptr;
+                fixed (wl_surface* ptr = &waylandSurface)
+                    createInfoKHR.surface = ptr;
+
+                VkSurfaceKHR surface = VkSurfaceKHR.Null;
+                vkCreateWaylandSurfaceKHR(instance, &createInfoKHR, null, &surface);
+            }
+            return new VkSurfaceKHR();
         }
 
         private static VkInstance CreateInstance()
@@ -135,13 +163,15 @@ namespace VulkanRen
                 }
             }
 
-            List<string> requiredExtensions=new List<string>();
+            List<string> requiredExtensions = new List<string>();
             requiredExtensions.Add("VK_EXT_debug_report");
             requiredExtensions.AddRange(GLFW.Vulkan.GetRequiredInstanceExtensions());
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                requiredExtensions.Add("VK_KHR_wayland_surface");
 
             string[] extensionNames = requiredExtensions.ToArray();
 
-            
+
 
             byte[][] pExtensionNames = new byte[extensionNames.Length][];
 
