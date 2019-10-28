@@ -66,4 +66,3 @@ Ankh.NoLoad
 !*/libs/*.dll
 !*/libs/*.pbd
 !*/libs/*.xml
-*.deps.json

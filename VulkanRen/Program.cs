@@ -3,6 +3,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using GLFW;
+using static GLFW.Glfw;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -36,6 +37,10 @@ namespace VulkanRen
             for (int i = 0; i < deviceCount; i++)
             {
                 vkGetPhysicalDeviceProperties(devices[i], &props);
+
+                /*fixed (VkPhysicalDevice* ptr = &devices[i])
+                    GLFW.Vulkan.GetPhysicalDevicePresentationSupport((IntPtr)(&instance),(IntPtr)ptr,0);*/
+
                 if (props.deviceType == VkPhysicalDeviceType.DiscreteGpu)
                 {
                     Console.WriteLine($"Picking discrete GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
@@ -52,23 +57,51 @@ namespace VulkanRen
         static void Main(string[] args)
         {
             Console.WriteLine("Hello Vulkan!");
-            Glfw.Init();
+            Init();
+
+            if(!GLFW.Vulkan.IsSupported){
+                Console.Error.WriteLine("GLFW says that vulkan is not supported.");
+                return;
+            }
+
+            WindowHint(Hint.ClientApi, ClientApi.None);
+            Window window = CreateWindow(width, height, "Hello Vulkan!", Monitor.None, Window.None);
 
             VkInstance instance = CreateInstance();
-
-
             VkPhysicalDevice physicalDevice = PickPhysicalDevice(instance);
 
+            float[] pQueuePriorities = new float[] { 1.0f };
 
-            Glfw.WindowHint(Hint.ClientApi, ClientApi.None);
-            Window window = Glfw.CreateWindow(width, height, "Hello Vulkan!", Monitor.None, Window.None);
-            while (!Glfw.WindowShouldClose(window))
+            VkDeviceQueueCreateInfo deviceQueueCreateInfo = VkDeviceQueueCreateInfo.New();
+            deviceQueueCreateInfo.queueFamilyIndex = 0;//SHORTCUT computed from queue properties
+            deviceQueueCreateInfo.queueCount = 1;
+            fixed (float* ptr = &(pQueuePriorities[0]))
+                deviceQueueCreateInfo.pQueuePriorities = ptr;
+
+            VkDeviceCreateInfo createInfo = VkDeviceCreateInfo.New();
+            createInfo.queueCreateInfoCount = 1;
+            createInfo.pQueueCreateInfos = &deviceQueueCreateInfo;
+
+            VkDevice device = VkDevice.Null;
+            Assert(vkCreateDevice(physicalDevice, &createInfo, null, &device));
+
+
+
+            VkSurfaceKHR surface = CreateSurface(instance, window);
+
+            while (!WindowShouldClose(window))
             {
-                Glfw.PollEvents();
+                PollEvents();
 
             }
 
-            Glfw.DestroyWindow(window);
+            DestroyWindow(window);
+            Terminate();
+        }
+
+        static VkSurfaceKHR CreateSurface(VkInstance instance, Window window)
+        {
+            
         }
 
         private static VkInstance CreateInstance()
@@ -76,7 +109,14 @@ namespace VulkanRen
             List<GCHandle> handles = new List<GCHandle>();
 
             string[] debugLayers = new string[] {
-                "VK_LAYER_LUNARG_core_validation"
+                "VK_LAYER_GOOGLE_threading",
+                "VK_LAYER_LUNARG_parameter_validation",
+                //"VK_LAYER_LUNARG_device_limits", Not Present?
+                "VK_LAYER_LUNARG_object_tracker",
+                //"VK_LAYER_LUNARG_image", Not Present?
+                "VK_LAYER_LUNARG_core_validation",
+                //"VK_LAYER_LUNARG_swapchain",
+                "VK_LAYER_GOOGLE_unique_objects",
             };
 
             byte[][] pDebugLayers = new byte[debugLayers.Length][];
@@ -95,7 +135,13 @@ namespace VulkanRen
                 }
             }
 
-            string[] extensionNames = new string[] { "VK_EXT_debug_report", "VK_KHR_surface" };
+            List<string> requiredExtensions=new List<string>();
+            requiredExtensions.Add("VK_EXT_debug_report");
+            requiredExtensions.AddRange(GLFW.Vulkan.GetRequiredInstanceExtensions());
+
+            string[] extensionNames = requiredExtensions.ToArray();
+
+            
 
             byte[][] pExtensionNames = new byte[extensionNames.Length][];
 
@@ -133,15 +179,14 @@ namespace VulkanRen
                 handle.Free();
             }
 
-            vkEnumeratePhysicalDevices(instance, null, null);
-
             PFN_vkDebugReportCallbackEXT _debugCallbackFunc = DebugCallback;
 
             IntPtr debugFunctionPtr = Marshal.GetFunctionPointerForDelegate(_debugCallbackFunc);
 
             VkDebugReportCallbackCreateInfoEXT createInfoEXT = VkDebugReportCallbackCreateInfoEXT.New();
             createInfoEXT.pfnCallback = Marshal.GetFunctionPointerForDelegate(_debugCallbackFunc);
-            createInfoEXT.flags = VkDebugReportFlagsEXT.DebugEXT | VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT;
+            createInfoEXT.flags = //VkDebugReportFlagsEXT.DebugEXT | VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT | 
+            (VkDebugReportFlagsEXT)int.MaxValue;
 
             byte[] debugExtFnName = Encoding.UTF8.GetBytes("vkCreateDebugReportCallbackEXT" + char.MinValue);
 
@@ -171,7 +216,10 @@ namespace VulkanRen
         public static uint DebugCallback(uint flags, VkDebugReportObjectTypeEXT objectType, ulong @object, UIntPtr location,
          int messageCode, byte* pLayerPrefix, byte* pMessage, void* pUserData)
         {
-            Console.WriteLine("HI");
+            string layerString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)pLayerPrefix);
+            string messageString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)pMessage);
+
+            System.Console.WriteLine("DebugReport layer: {0} message: {1}", layerString, messageString);
             return VkBool32.False;
         }
 
