@@ -5,9 +5,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="glfw-net" Version="3.3.1"/>
     <Reference Include="vk">
       <HintPath>./libs/vk.dll</HintPath>
-      </Reference>
-  </ItemGroup>
+    </Reference>
+    <Reference Include="GLFW.NET">
+      <HintPath>./libs/GLFW.NET.dll</HintPath>
+    </Reference>
+    </ItemGroup>
 </Project>

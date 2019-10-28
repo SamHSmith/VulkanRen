@@ -1,3 +1,6 @@
 [submodule "vk"]
 	path = vk
 	url = https://github.com/mellinoe/vk.git
+[submodule "glfw-net"]
+	path = glfw-net
+	url = https://github.com/ForeverZer0/glfw-net.git
