@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using GLFW;
 using Vulkan;
+using static Vulkan.Vk;
 
 namespace VulkanRen
 {
@@ -76,7 +77,7 @@ namespace VulkanRen
                     createInfo.ppEnabledExtensionNames = (IntPtr)extensions;
 
                     createInfo.enabledExtensionCount = (uint)extensionNames.Length;
-                    Assert(Vk.vkCreateInstance((IntPtr)(&createInfo), IntPtr.Zero, inst));
+                    Assert(vkCreateInstance((IntPtr)(&createInfo), IntPtr.Zero, inst));
                 }
             }
 
@@ -103,7 +104,7 @@ namespace VulkanRen
 
             fixed (byte* namePtr = &(debugExtFnName[0]))
             {
-                createFnPtr = Vk.vkGetInstanceProcAddr(instance, (IntPtr)namePtr);
+                createFnPtr = vkGetInstanceProcAddr(instance, (IntPtr)namePtr);
             }
 
             vkCreateDebugReportCallbackEXT_d createDelegate = Marshal.GetDelegateForFunctionPointer<vkCreateDebugReportCallbackEXT_d>(createFnPtr);
@@ -133,7 +134,7 @@ namespace VulkanRen
             for (int i = 0; i < deviceCount; i++)
             {
                 VkPhysicalDeviceProperties props = new VkPhysicalDeviceProperties();
-                Vk.vkGetPhysicalDeviceProperties(physicalDevices[i], (IntPtr)(&props));
+                vkGetPhysicalDeviceProperties(physicalDevices[i], (IntPtr)(&props));
 
                 if (props.deviceType == VkPhysicalDeviceType.DiscreteGpu)
                 {
@@ -152,15 +153,15 @@ namespace VulkanRen
 
 
             VkInstance inst = CreateInstance();
-            
+
             uint deviceCount = 0;
-            Assert(Vk.vkEnumeratePhysicalDevices(inst, (IntPtr)(&deviceCount), IntPtr.Zero));
+            Assert(vkEnumeratePhysicalDevices(inst, out uint devicesCount, IntPtr.Zero));
 
             VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[deviceCount];
 
             fixed (VkPhysicalDevice* devPtr = &physicalDevices[0])
             {
-                Assert(Vk.vkEnumeratePhysicalDevices(inst, (IntPtr)(&deviceCount), (IntPtr)devPtr));
+                Assert(vkEnumeratePhysicalDevices(inst, (IntPtr)(&deviceCount), (IntPtr)devPtr));
             }
 
             VkPhysicalDevice physicalDevice = _PickPhysicsDevice(physicalDevices, deviceCount);
