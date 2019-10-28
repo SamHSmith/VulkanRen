@@ -4,27 +4,75 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using GLFW;
 using Vulkan;
-using static Vulkan.Vk;
+using static Vulkan.VulkanNative;
 
 namespace VulkanRen
 {
     unsafe class Program
     {
         static int width = 640, height = 400;
-        static VkDebugReportCallbackEXT debugReport;
+        static VkDebugReportCallbackEXT debugReport = new VkDebugReportCallbackEXT();
+
         static void Assert(VkResult result)
         {
             if (result != VkResult.Success)
             {
-                Console.Error.WriteLine("Vulkan Error: " + result);
-                throw new System.Exception("Vulkan Error: " + result);
+                Console.Error.WriteLine($"Error: {result}");
+                throw new System.Exception($"Error: {result}");
             }
         }
-        static VkInstance CreateInstance()
-        {
-            VkApplicationInfo applicationInfo = new VkApplicationInfo();
-            applicationInfo.apiVersion = new Vulkan.Version(1, 1, 0);
 
+        static VkPhysicalDevice PickPhysicalDevice(VkInstance instance)
+        {
+            uint deviceCount = 0;
+            vkEnumeratePhysicalDevices(instance, &deviceCount, null);
+            Console.WriteLine($"There are {deviceCount} devices available.");
+            VkPhysicalDevice[] devices = new VkPhysicalDevice[deviceCount];
+            if (deviceCount <= 0)
+                return VkPhysicalDevice.Null;
+            fixed (VkPhysicalDevice* ptr = &devices[0])
+                vkEnumeratePhysicalDevices(instance, &deviceCount, ptr);
+            VkPhysicalDeviceProperties props = new VkPhysicalDeviceProperties();
+            for (int i = 0; i < deviceCount; i++)
+            {
+                vkGetPhysicalDeviceProperties(devices[i], &props);
+                if (props.deviceType == VkPhysicalDeviceType.DiscreteGpu)
+                {
+                    Console.WriteLine($"Picking discrete GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
+                    return devices[i];
+                }
+            }
+
+
+            vkGetPhysicalDeviceProperties(devices[0], &props);
+
+            Console.WriteLine($"Picking backup GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
+            return devices[0];
+        }
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Hello Vulkan!");
+            Glfw.Init();
+
+            VkInstance instance = CreateInstance();
+
+
+            VkPhysicalDevice physicalDevice = PickPhysicalDevice(instance);
+
+
+            Glfw.WindowHint(Hint.ClientApi, ClientApi.None);
+            Window window = Glfw.CreateWindow(width, height, "Hello Vulkan!", Monitor.None, Window.None);
+            while (!Glfw.WindowShouldClose(window))
+            {
+                Glfw.PollEvents();
+
+            }
+
+            Glfw.DestroyWindow(window);
+        }
+
+        private static VkInstance CreateInstance()
+        {
             List<GCHandle> handles = new List<GCHandle>();
 
             string[] debugLayers = new string[] {
@@ -64,20 +112,19 @@ namespace VulkanRen
                 }
             }
             VkInstance instance = new VkInstance();
-            IntPtr inst = (IntPtr)(&instance);
             fixed (byte** layers = &ppDebugLayerArray[0])
             {
 
                 fixed (byte** extensions = &ppExtensionNamesArray[0])
                 {
-                    VkInstanceCreateInfo createInfo = new VkInstanceCreateInfo();
-                    createInfo.pApplicationInfo = (IntPtr)(&applicationInfo);
-                    createInfo.ppEnabledLayerNames = (IntPtr)layers;
-                    createInfo.enabledLayerCount = (uint)pDebugLayers.Length;
-                    createInfo.ppEnabledExtensionNames = (IntPtr)extensions;
+                    VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.New();
+                    pCreateInfo.ppEnabledLayerNames = layers;
+                    pCreateInfo.ppEnabledExtensionNames = extensions;
+                    pCreateInfo.enabledLayerCount = (uint)debugLayers.Length;
+                    pCreateInfo.enabledExtensionCount = (uint)extensionNames.Length;
 
-                    createInfo.enabledExtensionCount = (uint)extensionNames.Length;
-                    Assert(vkCreateInstance((IntPtr)(&createInfo), IntPtr.Zero, inst));
+                    Assert(vkCreateInstance(&pCreateInfo, null, &instance));
+
                 }
             }
 
@@ -86,6 +133,7 @@ namespace VulkanRen
                 handle.Free();
             }
 
+            vkEnumeratePhysicalDevices(instance, null, null);
 
             PFN_vkDebugReportCallbackEXT _debugCallbackFunc = DebugCallback;
 
@@ -93,8 +141,7 @@ namespace VulkanRen
 
             VkDebugReportCallbackCreateInfoEXT createInfoEXT = VkDebugReportCallbackCreateInfoEXT.New();
             createInfoEXT.pfnCallback = Marshal.GetFunctionPointerForDelegate(_debugCallbackFunc);
-            createInfoEXT.flags = VkDebugReportFlagsEXT.WarningEXT | VkDebugReportFlagsEXT.ErrorEXT;
-
+            createInfoEXT.flags = VkDebugReportFlagsEXT.DebugEXT | VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT;
 
             byte[] debugExtFnName = Encoding.UTF8.GetBytes("vkCreateDebugReportCallbackEXT" + char.MinValue);
 
@@ -104,7 +151,7 @@ namespace VulkanRen
 
             fixed (byte* namePtr = &(debugExtFnName[0]))
             {
-                createFnPtr = vkGetInstanceProcAddr(instance, (IntPtr)namePtr);
+                createFnPtr = vkGetInstanceProcAddr(instance, namePtr);
             }
 
             vkCreateDebugReportCallbackEXT_d createDelegate = Marshal.GetDelegateForFunctionPointer<vkCreateDebugReportCallbackEXT_d>(createFnPtr);
@@ -116,76 +163,18 @@ namespace VulkanRen
             }
             return instance;
         }
-
         internal unsafe delegate VkResult vkCreateDebugReportCallbackEXT_d(
         VkInstance instance,
         VkDebugReportCallbackCreateInfoEXT* createInfo,
         IntPtr allocatorPtr,
         out VkDebugReportCallbackEXT ret);
-        private static VkBool32 DebugCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
-        ulong @object, UIntPtr location, int messageCode, IntPtr pLayerPrefix, IntPtr pMessage, IntPtr pUserData)
+        public static uint DebugCallback(uint flags, VkDebugReportObjectTypeEXT objectType, ulong @object, UIntPtr location,
+         int messageCode, byte* pLayerPrefix, byte* pMessage, void* pUserData)
         {
-            Console.WriteLine(*(byte*)pMessage);
+            Console.WriteLine("HI");
             return VkBool32.False;
         }
 
-        static VkPhysicalDevice _PickPhysicsDevice(VkPhysicalDevice[] physicalDevices, uint deviceCount)
-        {
-            for (int i = 0; i < deviceCount; i++)
-            {
-                VkPhysicalDeviceProperties props = new VkPhysicalDeviceProperties();
-                vkGetPhysicalDeviceProperties(physicalDevices[i], (IntPtr)(&props));
 
-                if (props.deviceType == VkPhysicalDeviceType.DiscreteGpu)
-                {
-
-                    Console.WriteLine("Picking discrete GPU: " + Marshal.PtrToStringUTF8((IntPtr)props.deviceName));
-                    return physicalDevices[i];
-                }
-            }
-
-            return physicalDevices[0];
-        }
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello Vulkan!");
-            Glfw.Init();
-
-
-            VkInstance inst = CreateInstance();
-
-            uint deviceCount = 0;
-            Assert(vkEnumeratePhysicalDevices(inst, out uint devicesCount, IntPtr.Zero));
-
-            VkPhysicalDevice[] physicalDevices = new VkPhysicalDevice[deviceCount];
-
-            fixed (VkPhysicalDevice* devPtr = &physicalDevices[0])
-            {
-                Assert(vkEnumeratePhysicalDevices(inst, (IntPtr)(&deviceCount), (IntPtr)devPtr));
-            }
-
-            VkPhysicalDevice physicalDevice = _PickPhysicsDevice(physicalDevices, deviceCount);
-
-            Glfw.WindowHint(Hint.ClientApi, ClientApi.None);
-            Window window = Glfw.CreateWindow(width, height, "Hello Vulkan!", Monitor.None, Window.None);
-            Console.WriteLine("HI");
-            while (!Glfw.WindowShouldClose(window))
-            {
-                Glfw.PollEvents();
-
-            }
-
-            Glfw.DestroyWindow(window);
-        }
-        /*
-                static Bool32 DebugReportCallback(DebugReportFlagsExt flags, DebugReportObjectTypeExt objectType, ulong objectHandle, IntPtr location, int messageCode, IntPtr layerPrefix, IntPtr message, IntPtr userData)
-                {
-                    string layerString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(layerPrefix);
-                    string messageString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi(message);
-
-                    Console.WriteLine("DebugReport layer: {0} message: {1}", layerString, messageString);
-
-                    return false;
-                }*/
     }
 }

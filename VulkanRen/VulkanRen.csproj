@@ -6,6 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="glfw-net" Version="3.3.1"/>
-    <PackageReference Include="Vulkan" Version="0.1.7"/>
+    <Reference Include="vk">
+      <HintPath>./libs/vk.dll</HintPath>
+      </Reference>
   </ItemGroup>
 </Project>
