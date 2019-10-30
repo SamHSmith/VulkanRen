@@ -11,5 +11,6 @@
     <Reference Include="GLFW.NET">
       <HintPath>./libs/GLFW.NET.dll</HintPath>
     </Reference>
+    <None Update="./shaders/*.spv" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
