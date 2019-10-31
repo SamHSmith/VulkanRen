@@ -25,9 +25,11 @@ namespace VulkanRen
             }
         }
 
-        static VkPhysicalDevice PickPhysicalDevice(VkInstance instance)
+        static VkPhysicalDevice PickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, out uint queueFamilyIndex)
         {
+            queueFamilyIndex = 0;
             uint deviceCount = 0;
+
             vkEnumeratePhysicalDevices(instance, &deviceCount, null);
             Console.WriteLine($"There are {deviceCount} devices available.");
             VkPhysicalDevice[] devices = new VkPhysicalDevice[deviceCount];
@@ -36,25 +38,61 @@ namespace VulkanRen
             fixed (VkPhysicalDevice* ptr = &devices[0])
                 vkEnumeratePhysicalDevices(instance, &deviceCount, ptr);
             VkPhysicalDeviceProperties props = new VkPhysicalDeviceProperties();
+
+
             for (int i = 0; i < deviceCount; i++)
             {
+                bool badGpu = true;
+                bool onlyPickDiscrete = true;
+
                 vkGetPhysicalDeviceProperties(devices[i], &props);
 
-                /*fixed (VkPhysicalDevice* ptr = &devices[i])
-                    GLFW.Vulkan.GetPhysicalDevicePresentationSupport((IntPtr)(&instance),(IntPtr)ptr,0);*/
+                uint familyQueueCount = 0;
+                vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyQueueCount, null);
+                VkQueueFamilyProperties[] famProps = new VkQueueFamilyProperties[familyQueueCount];
+                fixed (VkQueueFamilyProperties* ptr = famProps)
+                    vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyQueueCount, ptr);
 
-                if (props.deviceType == VkPhysicalDeviceType.DiscreteGpu)
+                for (uint k = 0; k < familyQueueCount; k++)
                 {
-                    Console.WriteLine($"Picking discrete GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
-                    return devices[i];
+                    if ((int)(famProps[k].queueFlags & VkQueueFlags.Graphics) <= 0)
+                    {
+                        continue;
+                    }
+                    VkBool32 supported = VkBool32.False;
+                    Assert(vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], k, surface, &supported));
+                    if (supported == VkBool32.False)
+                    {
+                        continue;
+                    }
+
+                    /*fixed (VkPhysicalDevice* ptr = &(devices[i]))
+                        if (!GLFW.Vulkan.GetPhysicalDevicePresentationSupport((IntPtr)(&instance), (IntPtr)ptr, k))//Throws exception
+                        {
+                            continue;
+                        }*/
+                    if (onlyPickDiscrete && !(props.deviceType == VkPhysicalDeviceType.DiscreteGpu))
+                    {
+                        continue;
+                    }
+
+                    queueFamilyIndex = k;
+                    badGpu = false;
                 }
+
+
+
+                //Here we pick if its acceptable
+                if (badGpu)
+                    continue;
+
+
+                Console.WriteLine($"Picking GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
+                return devices[i];
+
             }
 
-
-            vkGetPhysicalDeviceProperties(devices[0], &props);
-
-            Console.WriteLine($"Picking backup GPU: {Marshal.PtrToStringUTF8((IntPtr)props.deviceName)}");
-            return devices[0];
+            throw new System.Exception("There was no GPU that filled our needs.");
         }
 
         static VkRenderPass CreateRenderPass(VkDevice device)
@@ -129,8 +167,8 @@ namespace VulkanRen
             uint length = (uint)bytes.Length;
 
             VkShaderModuleCreateInfo pCreateInfo = VkShaderModuleCreateInfo.New();
-            pCreateInfo.codeSize = new UIntPtr(length);
-            fixed (byte* ptr = &bytes[0])
+            pCreateInfo.codeSize = (UIntPtr)length;
+            fixed (byte* ptr = bytes)
                 pCreateInfo.pCode = (uint*)ptr;
 
             VkShaderModule shaderModule = new VkShaderModule();
@@ -151,27 +189,27 @@ namespace VulkanRen
         static VkPipeline CreatePipeline(VkDevice device, VkPipelineCache pipelineCache, VkRenderPass renderPass,
         VkShaderModule vs, VkShaderModule fs, VkPipelineLayout layout)
         {
-            
+
             VkGraphicsPipelineCreateInfo pCreateInfo = VkGraphicsPipelineCreateInfo.New();
-            pCreateInfo.flags=VkPipelineCreateFlags.DisableOptimization;
+            pCreateInfo.flags = VkPipelineCreateFlags.DisableOptimization;
 
             VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
             shaderStages[0] = VkPipelineShaderStageCreateInfo.New();
             shaderStages[0].stage = VkShaderStageFlags.Vertex;
             shaderStages[0].module = vs;
-            
+
             byte[] vsFuncName = Encoding.UTF8.GetBytes("main" + char.MinValue);
             fixed (byte* ptr = &(vsFuncName[0]))
                 shaderStages[0].pName = ptr;
 
             shaderStages[1] = VkPipelineShaderStageCreateInfo.New();
             shaderStages[1].stage = VkShaderStageFlags.Fragment;
-            shaderStages[1].module = vs;
+            shaderStages[1].module = fs;
             byte[] fsFuncName = Encoding.UTF8.GetBytes("main" + char.MinValue);
             fixed (byte* ptr = &(fsFuncName[0]))
                 shaderStages[1].pName = ptr;
 
-            fixed (VkPipelineShaderStageCreateInfo* ptr = &(shaderStages[0]))
+            fixed (VkPipelineShaderStageCreateInfo* ptr = shaderStages)
                 pCreateInfo.pStages = ptr;
             pCreateInfo.stageCount = 2;
 
@@ -180,7 +218,7 @@ namespace VulkanRen
 
             VkPipelineInputAssemblyStateCreateInfo inputAssembly = VkPipelineInputAssemblyStateCreateInfo.New();
             inputAssembly.topology = VkPrimitiveTopology.TriangleList;
-            pCreateInfo.pInputAssemblyState=&inputAssembly;
+            pCreateInfo.pInputAssemblyState = &inputAssembly;
 
             VkPipelineViewportStateCreateInfo viewportState = VkPipelineViewportStateCreateInfo.New();
             viewportState.viewportCount = 1;
@@ -218,9 +256,9 @@ namespace VulkanRen
 
             pCreateInfo.layout = layout;
             pCreateInfo.renderPass = renderPass;
-            pCreateInfo.subpass=0;
+            pCreateInfo.subpass = 0;
 
-            
+
             VkPipeline pipeline = VkPipeline.Null;
             Assert(vkCreateGraphicsPipelines(device, VkPipelineCache.Null, 1, &pCreateInfo, null, &pipeline));
             return pipeline;
@@ -241,32 +279,30 @@ namespace VulkanRen
             NativeWindow window = new GLFW.NativeWindow(width, height, "Now native!");
 
 
-            VkInstance instance = CreateInstance();Console.WriteLine("Instance");
-            VkSurfaceKHR surface = CreateSurface(instance, window);Console.WriteLine("surface");
-            VkDevice device = CreateDevice(instance, out var physicalDevice, surface, out var queueFamilyIndex);Console.WriteLine("device");
+            VkInstance instance = CreateInstance();
+            VkSurfaceKHR surface = CreateSurface(instance, window);
+            VkDevice device = CreateDevice(instance, out var physicalDevice, surface, out var queueFamilyIndex);
             VkSwapchainKHR swapchain = CreateSwapchain(VkSwapchainKHR.Null, instance, device, physicalDevice, surface, queueFamilyIndex);
-            Console.WriteLine("swapchain");
             VkSemaphoreCreateInfo pCreateInfo = VkSemaphoreCreateInfo.New();
 
             VkSemaphore acquireSemaphore = new VkSemaphore();
             vkCreateSemaphore(device, &pCreateInfo, null, &acquireSemaphore);
 
             VkSemaphore releaseSemaphore = new VkSemaphore();
-            vkCreateSemaphore(device, &pCreateInfo, null, &releaseSemaphore);Console.WriteLine("Semaphores");
+            vkCreateSemaphore(device, &pCreateInfo, null, &releaseSemaphore);
 
             VkQueue queue = VkQueue.Null;
-            vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);Console.WriteLine("queue");
-            
+            vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
+
             VkShaderModule traingleVS = LoadShader(device, "shaders/triangle.vert.spv");
             VkShaderModule traingleFS = LoadShader(device, "shaders/triangle.frag.spv");
 
-            VkRenderPass renderPass = CreateRenderPass(device);Console.WriteLine("renderpass");
+            VkRenderPass renderPass = CreateRenderPass(device);
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            VkPipelineLayout pipelineLayout = CreatePipelineLayout(device);Console.WriteLine("pipelineLayout");
+            VkPipelineLayout pipelineLayout = CreatePipelineLayout(device);
             VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, traingleVS, traingleFS, pipelineLayout);
-            Console.WriteLine("pipeline");
-            
+
             uint swapchainImageCount = 0;
             Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, null));////////////IMAGES
             VkImage[] swapchainImages = new VkImage[swapchainImageCount];
@@ -284,9 +320,15 @@ namespace VulkanRen
                 frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i]);
             }
 
-
-
             VkCommandPool pool = CreateCommandPool(device, queueFamilyIndex);
+
+            VkCommandBufferAllocateInfo pAllocateInfo = VkCommandBufferAllocateInfo.New();
+                pAllocateInfo.commandPool = pool;
+                pAllocateInfo.level = VkCommandBufferLevel.Primary;
+                pAllocateInfo.commandBufferCount = 1;
+
+                VkCommandBuffer cmdBuffer = VkCommandBuffer.Null;
+                Assert(vkAllocateCommandBuffers(device, &pAllocateInfo, &cmdBuffer));
 
             while (!WindowShouldClose(window))
             {
@@ -297,14 +339,6 @@ namespace VulkanRen
                 Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &ImageIndex));
 
                 Assert(vkResetCommandPool(device, pool, VkCommandPoolResetFlags.None));
-
-                VkCommandBufferAllocateInfo pAllocateInfo = VkCommandBufferAllocateInfo.New();
-                pAllocateInfo.commandPool = pool;
-                pAllocateInfo.level = VkCommandBufferLevel.Primary;
-                pAllocateInfo.commandBufferCount = 1;
-
-                VkCommandBuffer cmdBuffer = VkCommandBuffer.Null;
-                Assert(vkAllocateCommandBuffers(device, &pAllocateInfo, &cmdBuffer));
 
                 VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
                 beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
@@ -327,9 +361,9 @@ namespace VulkanRen
 
                 VkViewport viewport = new VkViewport();
                 viewport.x = 0;
-                viewport.y = 0;
+                viewport.y = (float)height;
                 viewport.width = (float)width;
-                viewport.height = (float)height;
+                viewport.height = -(float)height;
 
                 VkRect2D scissor = new VkRect2D();
                 scissor.offset.x = 0;
@@ -446,11 +480,7 @@ namespace VulkanRen
         VkSurfaceKHR surface, out uint queueFamilyIndex)
         {
             queueFamilyIndex = 0;//SHORTCUT computed from queue properties
-            physicalDevice = PickPhysicalDevice(instance);
-
-            VkBool32 supported = VkBool32.False;
-            Assert(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIndex, surface, &supported));
-
+            physicalDevice = PickPhysicalDevice(instance,surface,out queueFamilyIndex);
 
             List<GCHandle> handles = new List<GCHandle>();
             List<string> requiredExtensions = new List<string>();
@@ -504,14 +534,14 @@ namespace VulkanRen
             bool debug = true;
 
             string[] debugOnlyLayers = new string[] {
-                "VK_LAYER_GOOGLE_threading",
-                "VK_LAYER_LUNARG_parameter_validation",
+                //"VK_LAYER_GOOGLE_threading",
+                //"VK_LAYER_LUNARG_parameter_validation",
                 //"VK_LAYER_LUNARG_device_limits", Not Present?
-                "VK_LAYER_LUNARG_object_tracker",
+                //"VK_LAYER_LUNARG_object_tracker",
                 //"VK_LAYER_LUNARG_image", Not Present?
                 "VK_LAYER_LUNARG_core_validation",
                 //"VK_LAYER_LUNARG_swapchain",
-                "VK_LAYER_GOOGLE_unique_objects",
+                //"VK_LAYER_GOOGLE_unique_objects",
             };
             List<string> layerList = new List<string>();
             if (debug)
@@ -581,18 +611,24 @@ namespace VulkanRen
                 handle.Free();
             }
 
-            PFN_vkDebugReportCallbackEXT _debugCallbackFunc = DebugCallback;
+            DebugDelegate debugDelegate=new DebugDelegate(DebugCallback);
 
-            IntPtr debugFunctionPtr = Marshal.GetFunctionPointerForDelegate(_debugCallbackFunc);
+            //PFN_vkDebugReportCallbackEXT _debugCallbackFunc =(PFN_vkDebugReportCallbackEXT) debugDelegate;
+
+            
+
+            IntPtr debugFunctionPtr = Marshal.GetFunctionPointerForDelegate(debugDelegate);
+
+            debugDelegateHandle=GCHandle.Alloc(debugDelegate);
 
             VkDebugReportCallbackCreateInfoEXT createInfoEXT = VkDebugReportCallbackCreateInfoEXT.New();
-            createInfoEXT.pfnCallback = Marshal.GetFunctionPointerForDelegate(_debugCallbackFunc);
+            createInfoEXT.pfnCallback = debugFunctionPtr;
             createInfoEXT.flags = //VkDebugReportFlagsEXT.DebugEXT | VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT | 
             (VkDebugReportFlagsEXT)int.MaxValue;
 
             byte[] debugExtFnName = Encoding.UTF8.GetBytes("vkCreateDebugReportCallbackEXT" + char.MinValue);
 
-
+            
 
             IntPtr createFnPtr;
 
@@ -603,14 +639,22 @@ namespace VulkanRen
 
             vkCreateDebugReportCallbackEXT_d createDelegate = Marshal.GetDelegateForFunctionPointer<vkCreateDebugReportCallbackEXT_d>(createFnPtr);
 
+            
+
             VkDebugReportCallbackCreateInfoEXT* createInfoPtr = (&createInfoEXT);
             fixed (ulong* ptr = &(debugReport.Handle))
             {
-                //Assert(createDelegate(instance, createInfoPtr, IntPtr.Zero, out debugReport)); //Caused memory corrupt when pointer to
-                //DebugCallback was wrong because of gc moving stuff around
+                Assert(createDelegate(instance, createInfoPtr, IntPtr.Zero, out debugReport));
+                
             }
             return instance;
         }
+
+        public delegate uint DebugDelegate(uint flags, VkDebugReportObjectTypeEXT objectType, ulong @object, UIntPtr location,
+         int messageCode, byte* pLayerPrefix, byte* pMessage, void* pUserData);
+        
+
+        static GCHandle debugDelegateHandle;
         internal unsafe delegate VkResult vkCreateDebugReportCallbackEXT_d(
         VkInstance instance,
         VkDebugReportCallbackCreateInfoEXT* createInfo,
