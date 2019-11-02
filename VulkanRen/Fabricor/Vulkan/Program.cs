@@ -9,12 +9,11 @@ using static GLFW.Glfw;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
-namespace VulkanRen
+namespace Fabricor.Vulkan
 {
     unsafe class Program
     {
-        static int width = 640, height = 400;
-        static VkDebugReportCallbackEXT debugReport = new VkDebugReportCallbackEXT();
+        public static int width = 640, height = 400;
 
         static void Assert(VkResult result)
         {
@@ -279,10 +278,14 @@ namespace VulkanRen
             NativeWindow window = new GLFW.NativeWindow(width, height, "Now native!");
 
 
-            VkInstance instance = CreateInstance();
-            VkSurfaceKHR surface = CreateSurface(instance, window);
-            VkDevice device = CreateDevice(instance, out var physicalDevice, surface, out var queueFamilyIndex);
-            VkSwapchainKHR swapchain = CreateSwapchain(VkSwapchainKHR.Null, instance, device, physicalDevice, surface, queueFamilyIndex);
+            FInstance finst = new FInstance();
+            VkSurfaceKHR surface = CreateSurface(finst.instance, window);
+            VkDevice device = CreateDevice(finst.instance, out var physicalDevice, surface, out var queueFamilyIndex);
+            VkSwapchainKHR swapchain = CreateSwapchain(VkSwapchainKHR.Null, finst.instance, device, physicalDevice, surface, queueFamilyIndex);
+            CommandPoolManager.Init(device, queueFamilyIndex);
+
+
+
             VkSemaphoreCreateInfo pCreateInfo = VkSemaphoreCreateInfo.New();
 
             VkSemaphore acquireSemaphore = new VkSemaphore();
@@ -320,66 +323,28 @@ namespace VulkanRen
                 frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i]);
             }
 
-            VkCommandPool pool = CreateCommandPool(device, queueFamilyIndex);
+            int poolId = CommandPoolManager.CreateCommandPool();
 
-            VkCommandBufferAllocateInfo pAllocateInfo = VkCommandBufferAllocateInfo.New();
-                pAllocateInfo.commandPool = pool;
-                pAllocateInfo.level = VkCommandBufferLevel.Primary;
-                pAllocateInfo.commandBufferCount = 1;
-
-                VkCommandBuffer cmdBuffer = VkCommandBuffer.Null;
-                Assert(vkAllocateCommandBuffers(device, &pAllocateInfo, &cmdBuffer));
+            FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
             while (!WindowShouldClose(window))
             {
                 PollEvents();
 
-                uint ImageIndex = 0;
+                uint imageIndex = 0;
 
-                Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &ImageIndex));
+                Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &imageIndex));
 
-                Assert(vkResetCommandPool(device, pool, VkCommandPoolResetFlags.None));
+                Assert(vkResetCommandPool(device, CommandPoolManager.GetPool(poolId), VkCommandPoolResetFlags.None));
 
                 VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
                 beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
-                Assert(vkBeginCommandBuffer(cmdBuffer, &beginInfo));
+                cmdBuffer.renderPass = renderPass;
+                cmdBuffer.pipeline = trianglePipeline;
+                cmdBuffer.framebuffer = frambuffers[imageIndex];
 
-                VkClearColorValue clearColorValue = new VkClearColorValue { float32_0 = 0, float32_1 = 1f / 10, float32_2 = 1f / 10, float32_3 = 1 };
-                VkClearValue clearValue = new VkClearValue();
-                clearValue.color = clearColorValue;
-
-                VkRenderPassBeginInfo passBeginInfo = VkRenderPassBeginInfo.New();
-                passBeginInfo.renderPass = renderPass;
-                passBeginInfo.framebuffer = frambuffers[ImageIndex];
-                passBeginInfo.renderArea.extent.width = (uint)width;
-                passBeginInfo.renderArea.extent.height = (uint)height;
-                passBeginInfo.clearValueCount = 1;
-                passBeginInfo.pClearValues = &clearValue;
-
-                vkCmdBeginRenderPass(cmdBuffer, &passBeginInfo, VkSubpassContents.Inline);
-
-                VkViewport viewport = new VkViewport();
-                viewport.x = 0;
-                viewport.y = (float)height;
-                viewport.width = (float)width;
-                viewport.height = -(float)height;
-
-                VkRect2D scissor = new VkRect2D();
-                scissor.offset.x = 0;
-                scissor.offset.y = 0;
-                scissor.extent.width = (uint)width;
-                scissor.extent.height = (uint)height;
-
-                vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-                vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
-
-                vkCmdBindPipeline(cmdBuffer, VkPipelineBindPoint.Graphics, trianglePipeline);
-                vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
-
-                vkCmdEndRenderPass(cmdBuffer);
-
-                Assert(vkEndCommandBuffer(cmdBuffer));
+                cmdBuffer.RecordCommandBuffer();
 
                 VkPipelineStageFlags submitStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
 
@@ -388,7 +353,8 @@ namespace VulkanRen
                 submitInfo.pWaitSemaphores = &acquireSemaphore;
                 submitInfo.pWaitDstStageMask = &submitStageMask;
                 submitInfo.commandBufferCount = 1;
-                submitInfo.pCommandBuffers = &cmdBuffer;
+                fixed (VkCommandBuffer* ptr = &(cmdBuffer.buffer))
+                    submitInfo.pCommandBuffers = ptr;
 
                 submitInfo.signalSemaphoreCount = 1;
                 submitInfo.pSignalSemaphores = &releaseSemaphore;
@@ -398,7 +364,7 @@ namespace VulkanRen
                 VkPresentInfoKHR presentInfoKHR = VkPresentInfoKHR.New();
                 presentInfoKHR.swapchainCount = 1;
                 presentInfoKHR.pSwapchains = &swapchain;
-                presentInfoKHR.pImageIndices = &ImageIndex;
+                presentInfoKHR.pImageIndices = &imageIndex;
 
                 presentInfoKHR.waitSemaphoreCount = 1;
                 presentInfoKHR.pWaitSemaphores = &releaseSemaphore;
@@ -410,17 +376,6 @@ namespace VulkanRen
 
             DestroyWindow(window);
             Terminate();
-        }
-
-        static VkCommandPool CreateCommandPool(VkDevice device, uint queueFamilyIndex)
-        {
-            VkCommandPool commandPool = new VkCommandPool();
-            VkCommandPoolCreateInfo pCreateInfo = VkCommandPoolCreateInfo.New();
-            pCreateInfo.flags = VkCommandPoolCreateFlags.Transient;
-            pCreateInfo.queueFamilyIndex = queueFamilyIndex;
-
-            Assert(vkCreateCommandPool(device, &pCreateInfo, IntPtr.Zero, &commandPool));
-            return commandPool;
         }
 
         static void GetSwapchainFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
@@ -480,7 +435,7 @@ namespace VulkanRen
         VkSurfaceKHR surface, out uint queueFamilyIndex)
         {
             queueFamilyIndex = 0;//SHORTCUT computed from queue properties
-            physicalDevice = PickPhysicalDevice(instance,surface,out queueFamilyIndex);
+            physicalDevice = PickPhysicalDevice(instance, surface, out queueFamilyIndex);
 
             List<GCHandle> handles = new List<GCHandle>();
             List<string> requiredExtensions = new List<string>();
@@ -526,150 +481,5 @@ namespace VulkanRen
 
             return device;
         }
-
-        private static VkInstance CreateInstance()
-        {
-            List<GCHandle> handles = new List<GCHandle>();
-
-            bool debug = true;
-
-            string[] debugOnlyLayers = new string[] {
-                //"VK_LAYER_GOOGLE_threading",
-                //"VK_LAYER_LUNARG_parameter_validation",
-                //"VK_LAYER_LUNARG_device_limits", Not Present?
-                //"VK_LAYER_LUNARG_object_tracker",
-                //"VK_LAYER_LUNARG_image", Not Present?
-                "VK_LAYER_LUNARG_core_validation",
-                //"VK_LAYER_LUNARG_swapchain",
-                //"VK_LAYER_GOOGLE_unique_objects",
-            };
-            List<string> layerList = new List<string>();
-            if (debug)
-                layerList.AddRange(debugOnlyLayers);
-
-            string[] layers = layerList.ToArray();
-            byte[][] pDebugLayers = new byte[layers.Length][];
-
-
-            byte*[] ppDebugLayerArray = new byte*[pDebugLayers.Length];
-            if (!debug)
-                ppDebugLayerArray = new byte*[1];//this is to give a null ptr to use later
-
-
-            for (int i = 0; i < pDebugLayers.Length; i++)
-            {
-                pDebugLayers[i] = Encoding.UTF8.GetBytes(layers[i] + char.MinValue);
-                GCHandle handle = GCHandle.Alloc(pDebugLayers[i]);
-                handles.Add(handle);
-                fixed (byte* p = &(((byte[])handle.Target)[0]))
-                {
-                    ppDebugLayerArray[i] = p;
-                }
-            }
-
-            List<string> requiredExtensions = new List<string>();
-            requiredExtensions.Add("VK_EXT_debug_report");
-            requiredExtensions.AddRange(GLFW.Vulkan.GetRequiredInstanceExtensions());
-
-            string[] extensionNames = requiredExtensions.ToArray();
-
-
-
-            byte[][] pExtensionNames = new byte[extensionNames.Length][];
-
-            byte*[] ppExtensionNamesArray = new byte*[extensionNames.Length];
-
-            for (int i = 0; i < pExtensionNames.Length; i++)
-            {
-                pExtensionNames[i] = Encoding.UTF8.GetBytes(extensionNames[i] + char.MinValue);
-                GCHandle handle = GCHandle.Alloc(pExtensionNames[i]);
-                handles.Add(handle);
-                fixed (byte* p = &(((byte[])handle.Target)[0]))
-                {
-                    ppExtensionNamesArray[i] = p;
-                }
-            }
-            VkInstance instance = new VkInstance();
-            fixed (byte** layersptr = &ppDebugLayerArray[0])
-            {
-
-                fixed (byte** extensions = &ppExtensionNamesArray[0])
-                {
-                    VkInstanceCreateInfo pCreateInfo = VkInstanceCreateInfo.New();
-                    pCreateInfo.ppEnabledLayerNames = layersptr;
-                    pCreateInfo.ppEnabledExtensionNames = extensions;
-                    pCreateInfo.enabledLayerCount = (uint)pDebugLayers.Length;
-                    pCreateInfo.enabledExtensionCount = (uint)extensionNames.Length;
-
-                    Assert(vkCreateInstance(&pCreateInfo, null, &instance));
-
-                }
-            }
-
-            foreach (var handle in handles)
-            {
-                handle.Free();
-            }
-
-            DebugDelegate debugDelegate=new DebugDelegate(DebugCallback);
-
-            //PFN_vkDebugReportCallbackEXT _debugCallbackFunc =(PFN_vkDebugReportCallbackEXT) debugDelegate;
-
-            
-
-            IntPtr debugFunctionPtr = Marshal.GetFunctionPointerForDelegate(debugDelegate);
-
-            debugDelegateHandle=GCHandle.Alloc(debugDelegate);
-
-            VkDebugReportCallbackCreateInfoEXT createInfoEXT = VkDebugReportCallbackCreateInfoEXT.New();
-            createInfoEXT.pfnCallback = debugFunctionPtr;
-            createInfoEXT.flags = //VkDebugReportFlagsEXT.DebugEXT | VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT | 
-            (VkDebugReportFlagsEXT)int.MaxValue;
-
-            byte[] debugExtFnName = Encoding.UTF8.GetBytes("vkCreateDebugReportCallbackEXT" + char.MinValue);
-
-            
-
-            IntPtr createFnPtr;
-
-            fixed (byte* namePtr = &(debugExtFnName[0]))
-            {
-                createFnPtr = vkGetInstanceProcAddr(instance, namePtr);
-            }
-
-            vkCreateDebugReportCallbackEXT_d createDelegate = Marshal.GetDelegateForFunctionPointer<vkCreateDebugReportCallbackEXT_d>(createFnPtr);
-
-            
-
-            VkDebugReportCallbackCreateInfoEXT* createInfoPtr = (&createInfoEXT);
-            fixed (ulong* ptr = &(debugReport.Handle))
-            {
-                Assert(createDelegate(instance, createInfoPtr, IntPtr.Zero, out debugReport));
-                
-            }
-            return instance;
-        }
-
-        public delegate uint DebugDelegate(uint flags, VkDebugReportObjectTypeEXT objectType, ulong @object, UIntPtr location,
-         int messageCode, byte* pLayerPrefix, byte* pMessage, void* pUserData);
-        
-
-        static GCHandle debugDelegateHandle;
-        internal unsafe delegate VkResult vkCreateDebugReportCallbackEXT_d(
-        VkInstance instance,
-        VkDebugReportCallbackCreateInfoEXT* createInfo,
-        IntPtr allocatorPtr,
-        out VkDebugReportCallbackEXT ret);
-        public static uint DebugCallback(uint flags, VkDebugReportObjectTypeEXT objectType, ulong @object, UIntPtr location,
-         int messageCode, byte* pLayerPrefix, byte* pMessage, void* pUserData)
-        {
-            string layerString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)pLayerPrefix);
-            string messageString = System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)pMessage);
-
-            System.Console.WriteLine("DebugReport layer: {0} message: {1}", layerString, messageString);
-            return VkBool32.False;
-        }
-
-
     }
 }
