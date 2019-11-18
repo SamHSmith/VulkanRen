@@ -4,7 +4,7 @@ using Vulkan;
 using System.Collections.Concurrent;
 using System;
 
-namespace Fabricor.Vulkan
+namespace Fabricor.VulkanRendering
 {
     public static unsafe class CommandPoolManager
     {

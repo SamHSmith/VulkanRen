@@ -6,7 +6,7 @@ using System;
 using static Vulkan.VulkanNative;
 using Vulkan;
 
-namespace Fabricor.Vulkan{
+namespace Fabricor.VulkanRendering{
     unsafe class FInstance{
 
         static void Assert(VkResult result)

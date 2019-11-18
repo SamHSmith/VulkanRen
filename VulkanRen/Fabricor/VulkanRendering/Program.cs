@@ -9,7 +9,7 @@ using static GLFW.Glfw;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
-namespace Fabricor.Vulkan
+namespace Fabricor.VulkanRendering
 {
     unsafe class Program
     {
@@ -212,7 +212,25 @@ namespace Fabricor.Vulkan
                 pCreateInfo.pStages = ptr;
             pCreateInfo.stageCount = 2;
 
+            VkVertexInputBindingDescription[] bindings = new VkVertexInputBindingDescription[1];
+            bindings[0] = new VkVertexInputBindingDescription();
+            bindings[0].binding = 0;
+            bindings[0].stride = 3 * 4;
+            bindings[0].inputRate = VkVertexInputRate.Vertex;
+
+            VkVertexInputAttributeDescription[] attribs = new VkVertexInputAttributeDescription[1];
+            attribs[0].binding = 0;
+            attribs[0].location = 0;
+            attribs[0].format = VkFormat.R32g32b32Sfloat;
+            attribs[0].offset = 0;
+
             VkPipelineVertexInputStateCreateInfo vertexInput = VkPipelineVertexInputStateCreateInfo.New();
+            fixed (VkVertexInputBindingDescription* ptr = bindings)
+                vertexInput.pVertexBindingDescriptions = ptr;
+            vertexInput.vertexBindingDescriptionCount = (uint)bindings.Length;
+            fixed (VkVertexInputAttributeDescription* ptr = attribs)
+                vertexInput.pVertexAttributeDescriptions = ptr;
+            vertexInput.vertexAttributeDescriptionCount = (uint)attribs.Length;
             pCreateInfo.pVertexInputState = &vertexInput;
 
             VkPipelineInputAssemblyStateCreateInfo inputAssembly = VkPipelineInputAssemblyStateCreateInfo.New();
@@ -259,7 +277,7 @@ namespace Fabricor.Vulkan
 
 
             VkPipeline pipeline = VkPipeline.Null;
-            Assert(vkCreateGraphicsPipelines(device, VkPipelineCache.Null, 1, &pCreateInfo, null, &pipeline));
+            Assert(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pCreateInfo, null, &pipeline));
             return pipeline;
         }
         static void Main(string[] args)
@@ -306,6 +324,13 @@ namespace Fabricor.Vulkan
             VkPipelineLayout pipelineLayout = CreatePipelineLayout(device);
             VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, traingleVS, traingleFS, pipelineLayout);
 
+            FDataBuffer<float> dataBuffer = new FDataBuffer<float>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
+            Span<float> span = dataBuffer.Map();
+            span[0] = 0; span[1] = 0.5f; span[2] = 0;
+            span[3] = 0.5f; span[4] = -0.5f; span[5] = 0;
+            span[6] = 0.45f; span[7] = -0.5f; span[8] = 1;
+            span = dataBuffer.UnMap();
+
             uint swapchainImageCount = 0;
             Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, null));////////////IMAGES
             VkImage[] swapchainImages = new VkImage[swapchainImageCount];
@@ -331,6 +356,12 @@ namespace Fabricor.Vulkan
             {
                 PollEvents();
 
+
+                //temp
+                span = dataBuffer.Map();
+                span[6] -= 0.000002f;
+                span = dataBuffer.UnMap();
+
                 uint imageIndex = 0;
 
                 Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &imageIndex));
@@ -343,6 +374,8 @@ namespace Fabricor.Vulkan
                 cmdBuffer.renderPass = renderPass;
                 cmdBuffer.pipeline = trianglePipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
+
+                cmdBuffer.dataBuffer = dataBuffer;
 
                 cmdBuffer.RecordCommandBuffer();
 
