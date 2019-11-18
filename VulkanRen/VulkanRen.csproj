@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="vk">
+      <HintPath>./libs/vk.dll</HintPath>
+    </Reference>
+    <Reference Include="GLFW.NET">
+      <HintPath>./libs/GLFW.NET.dll</HintPath>
+    </Reference>
+    <None Update="./shaders/*.spv" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>

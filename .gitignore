@@ -27,8 +27,8 @@ hs_err_pid*
 # Visual Studio / MonoDevelop
 *.[Oo]bj
 *.exe
-*.dll
-*.pdb
+*/bin/*.dll
+*/bin/*.pdb
 *.user
 *.aps
 *.pch
@@ -60,3 +60,9 @@ Ankh.NoLoad
 .vs/
 
 */Fabricor/obj/*
+
+# no lib folders
+
+!*/libs/*.dll
+!*/libs/*.pbd
+!*/libs/*.xml

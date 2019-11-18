@@ -1,0 +1,2 @@
+glslangValidator shaders/triangle.vert.glsl -V -o shaders/triangle.vert.spv
+glslangValidator shaders/triangle.frag.glsl -V -o shaders/triangle.frag.spv
