@@ -11,6 +11,9 @@ namespace Fabricor.VulkanRendering
         public VkRenderPass renderPass;
         public VkFramebuffer framebuffer;
         public VkPipeline pipeline;
+        public VkImage image;
+
+        public uint QueueFamilyIndex;
 
 
 
@@ -35,6 +38,20 @@ namespace Fabricor.VulkanRendering
             beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
             Assert(vkBeginCommandBuffer(buffer, &beginInfo));
+
+            VkImageMemoryBarrier imageMemoryBarrier=VkImageMemoryBarrier.New();
+            imageMemoryBarrier.srcAccessMask=VkAccessFlags.None;
+            imageMemoryBarrier.dstAccessMask=VkAccessFlags.ColorAttachmentRead|VkAccessFlags.ColorAttachmentWrite;
+            imageMemoryBarrier.oldLayout=VkImageLayout.Undefined;
+            imageMemoryBarrier.newLayout=VkImageLayout.ColorAttachmentOptimal;
+            imageMemoryBarrier.srcQueueFamilyIndex=QueueFamilyIndex;
+            imageMemoryBarrier.dstQueueFamilyIndex=QueueFamilyIndex;
+            imageMemoryBarrier.image=image;
+            imageMemoryBarrier.subresourceRange=new VkImageSubresourceRange(){baseMipLevel=0,levelCount=1,
+            baseArrayLayer=0,layerCount=1,aspectMask=VkImageAspectFlags.Color};
+
+            vkCmdPipelineBarrier(buffer,VkPipelineStageFlags.AllGraphics,VkPipelineStageFlags.AllGraphics,VkDependencyFlags.ByRegion,
+            0,null,0,null,1,&imageMemoryBarrier);
 
             VkClearColorValue clearColorValue = new VkClearColorValue { float32_0 = 0, float32_1 = 1f / 10, float32_2 = 1f / 10, float32_3 = 1 };
             VkClearValue clearValue = new VkClearValue();

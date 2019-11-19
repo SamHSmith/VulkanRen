@@ -79,7 +79,10 @@ namespace Fabricor.VulkanRendering
             return new Span<T>();
         }
 
-        //TODO add cleanup
+        public void Free(){
+            vkDestroyBuffer(device,Buffer,null);
+            vkFreeMemory(device,Memory,null);
+        }
 
         private VkMemoryType[] GetMemoryTypes(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties)
         {

@@ -105,7 +105,7 @@ namespace Fabricor.VulkanRendering
             attachmentDescription[0].stencilLoadOp = VkAttachmentLoadOp.DontCare;
             attachmentDescription[0].stencilStoreOp = VkAttachmentStoreOp.DontCare;
             attachmentDescription[0].initialLayout = VkImageLayout.ColorAttachmentOptimal;
-            attachmentDescription[0].finalLayout = VkImageLayout.ColorAttachmentOptimal;
+            attachmentDescription[0].finalLayout = VkImageLayout.PresentSrcKHR;
 
             VkAttachmentReference attachmentReference = new VkAttachmentReference();
             attachmentReference.attachment = 0;//refers to the index in the array above
@@ -315,8 +315,8 @@ namespace Fabricor.VulkanRendering
             VkQueue queue = VkQueue.Null;
             vkGetDeviceQueue(device, queueFamilyIndex, 0, &queue);
 
-            VkShaderModule traingleVS = LoadShader(device, "shaders/triangle.vert.spv");
-            VkShaderModule traingleFS = LoadShader(device, "shaders/triangle.frag.spv");
+            VkShaderModule traingleVS = LoadShader(device, "shaders/voxel.vert.spv");
+            VkShaderModule traingleFS = LoadShader(device, "shaders/voxel.frag.spv");
 
             VkRenderPass renderPass = CreateRenderPass(device);
 
@@ -328,7 +328,7 @@ namespace Fabricor.VulkanRendering
             Span<float> span = dataBuffer.Map();
             span[0] = 0; span[1] = 0.5f; span[2] = 0;
             span[3] = 0.5f; span[4] = -0.5f; span[5] = 0;
-            span[6] = 0.45f; span[7] = -0.5f; span[8] = 1;
+            span[6] = 0.3f; span[7] = -0.5f; span[8] = 1;
             span = dataBuffer.UnMap();
 
             uint swapchainImageCount = 0;
@@ -356,7 +356,6 @@ namespace Fabricor.VulkanRendering
             {
                 PollEvents();
 
-
                 //temp
                 span = dataBuffer.Map();
                 span[6] -= 0.000002f;
@@ -374,6 +373,8 @@ namespace Fabricor.VulkanRendering
                 cmdBuffer.renderPass = renderPass;
                 cmdBuffer.pipeline = trianglePipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
+                cmdBuffer.image=swapchainImages[imageIndex];
+                cmdBuffer.QueueFamilyIndex=queueFamilyIndex;
 
                 cmdBuffer.dataBuffer = dataBuffer;
 
