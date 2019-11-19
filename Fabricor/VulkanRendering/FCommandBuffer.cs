@@ -17,7 +17,7 @@ namespace Fabricor.VulkanRendering
 
 
 
-        public FDataBuffer<float> dataBuffer;
+        public FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer;
 
         public FCommandBuffer(VkDevice device, VkCommandPool pool)
         {
@@ -84,11 +84,11 @@ namespace Fabricor.VulkanRendering
 
             vkCmdBindPipeline(buffer, VkPipelineBindPoint.Graphics, pipeline);
 
-            VkBuffer[] databuffers = new VkBuffer[] { dataBuffer.Buffer };
-            ulong[] offsets = new ulong[] { 0 };
+            VkBuffer[] databuffers = new VkBuffer[] { dataBuffer.Buffer,dataBuffer.Buffer,dataBuffer.Buffer,dataBuffer.Buffer };
+            ulong[] offsets = new ulong[] { 0,3*4,6*4,6*4+2*4 };
             fixed (VkBuffer* bptr = databuffers)
                 fixed (ulong* optr = offsets)
-                    vkCmdBindVertexBuffers(buffer, 0, 1, bptr, optr);
+                    vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
 
             vkCmdDraw(buffer, 3, 1, 0, 0);
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Numerics;
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -212,17 +213,47 @@ namespace Fabricor.VulkanRendering
                 pCreateInfo.pStages = ptr;
             pCreateInfo.stageCount = 2;
 
-            VkVertexInputBindingDescription[] bindings = new VkVertexInputBindingDescription[1];
+            VkVertexInputBindingDescription[] bindings = new VkVertexInputBindingDescription[4];
             bindings[0] = new VkVertexInputBindingDescription();
             bindings[0].binding = 0;
-            bindings[0].stride = 3 * 4;
+            bindings[0].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
             bindings[0].inputRate = VkVertexInputRate.Vertex;
 
-            VkVertexInputAttributeDescription[] attribs = new VkVertexInputAttributeDescription[1];
+            bindings[1] = new VkVertexInputBindingDescription();
+            bindings[1].binding = 1;
+            bindings[1].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
+            bindings[1].inputRate = VkVertexInputRate.Vertex;
+
+            bindings[2] = new VkVertexInputBindingDescription();
+            bindings[2].binding = 2;
+            bindings[2].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
+            bindings[2].inputRate = VkVertexInputRate.Vertex;
+
+            bindings[3] = new VkVertexInputBindingDescription();
+            bindings[3].binding = 3;
+            bindings[3].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
+            bindings[3].inputRate = VkVertexInputRate.Vertex;
+
+            VkVertexInputAttributeDescription[] attribs = new VkVertexInputAttributeDescription[4];
             attribs[0].binding = 0;
             attribs[0].location = 0;
             attribs[0].format = VkFormat.R32g32b32Sfloat;
             attribs[0].offset = 0;
+
+            attribs[1].binding = 1;
+            attribs[1].location = 1;
+            attribs[1].format = VkFormat.R32g32b32Sfloat;
+            attribs[1].offset = 0;
+
+            attribs[2].binding = 2;
+            attribs[2].location = 2;
+            attribs[2].format = VkFormat.R32g32b32Sfloat;
+            attribs[2].offset = 0;
+
+            attribs[3].binding = 3;
+            attribs[3].location = 3;
+            attribs[3].format = VkFormat.R32g32b32Sfloat;
+            attribs[3].offset = 0;
 
             VkPipelineVertexInputStateCreateInfo vertexInput = VkPipelineVertexInputStateCreateInfo.New();
             fixed (VkVertexInputBindingDescription* ptr = bindings)
@@ -324,11 +355,15 @@ namespace Fabricor.VulkanRendering
             VkPipelineLayout pipelineLayout = CreatePipelineLayout(device);
             VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, traingleVS, traingleFS, pipelineLayout);
 
-            FDataBuffer<float> dataBuffer = new FDataBuffer<float>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
-            Span<float> span = dataBuffer.Map();
-            span[0] = 0; span[1] = 0.5f; span[2] = 0;
-            span[3] = 0.5f; span[4] = -0.5f; span[5] = 0;
-            span[6] = 0.3f; span[7] = -0.5f; span[8] = 1;
+            FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer = 
+            new FDataBuffer<VoxelRenderer.VoxelVertex>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
+            Span<VoxelRenderer.VoxelVertex> span = dataBuffer.Map();
+            span[0].position=new Vector3(0,0.5f,0);
+            span[0].texcoords= new Vector2(1,0);
+            span[1].position=new Vector3(0.5f,-0.5f,0);
+            span[1].texcoords= new Vector2(0,0);
+            span[2].position=new Vector3(0.3f,-0.5f,0);
+            span[2].texcoords= new Vector2(0,1);
             span = dataBuffer.UnMap();
 
             uint swapchainImageCount = 0;
@@ -352,13 +387,26 @@ namespace Fabricor.VulkanRendering
 
             FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
+            double lastTime = Glfw.Time;
+            int nbFrames = 0;
             while (!WindowShouldClose(window))
             {
                 PollEvents();
 
+                // Measure speed
+                double currentTime = Glfw.Time;
+                nbFrames++;
+                if (currentTime - lastTime >= 1.0)
+                { // If last prinf() was more than 1 sec ago
+                  // printf and reset timer
+                    Console.WriteLine($"ms/frame: {1000.0/nbFrames}");
+                    nbFrames = 0;
+                    lastTime += 1.0;
+                }
+
                 //temp
                 span = dataBuffer.Map();
-                span[6] -= 0.000002f;
+                span[2].position -= 0.000002f*Vector3.UnitX;
                 span = dataBuffer.UnMap();
 
                 uint imageIndex = 0;
@@ -373,8 +421,8 @@ namespace Fabricor.VulkanRendering
                 cmdBuffer.renderPass = renderPass;
                 cmdBuffer.pipeline = trianglePipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
-                cmdBuffer.image=swapchainImages[imageIndex];
-                cmdBuffer.QueueFamilyIndex=queueFamilyIndex;
+                cmdBuffer.image = swapchainImages[imageIndex];
+                cmdBuffer.QueueFamilyIndex = queueFamilyIndex;
 
                 cmdBuffer.dataBuffer = dataBuffer;
 
