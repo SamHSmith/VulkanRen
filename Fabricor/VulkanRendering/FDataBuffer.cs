@@ -52,7 +52,7 @@ namespace Fabricor.VulkanRendering
             
         }
 
-        private uint SelectMemoryType(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties, uint memoryTypeBits, VkMemoryPropertyFlags flags)
+        public static uint SelectMemoryType(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties, uint memoryTypeBits, VkMemoryPropertyFlags flags)
         {
             VkMemoryType[] types = GetMemoryTypes(memoryProperties);
             for (uint i = 0; i < types.Length; i++)
@@ -72,7 +72,7 @@ namespace Fabricor.VulkanRendering
             spanStart=data;
             return Span;
         }
-
+        
         /*You should assign your old span variable with this blank value to stop an exception from the debugger */
         public Span<T> UnMap(){
             vkUnmapMemory(device,Memory);
@@ -84,7 +84,7 @@ namespace Fabricor.VulkanRendering
             vkFreeMemory(device,Memory,null);
         }
 
-        private VkMemoryType[] GetMemoryTypes(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties)
+        private static VkMemoryType[] GetMemoryTypes(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties)
         {
             VkMemoryType[] types = new VkMemoryType[32];
             types[0] = memoryProperties.memoryTypes_0;

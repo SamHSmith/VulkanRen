@@ -13,9 +13,6 @@ namespace Fabricor.VulkanRendering
         public VkPipeline pipeline;
         public VkImage image;
 
-        public uint QueueFamilyIndex;
-
-
 
         public FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer;
 
@@ -44,8 +41,8 @@ namespace Fabricor.VulkanRendering
             imageMemoryBarrier.dstAccessMask=VkAccessFlags.ColorAttachmentRead|VkAccessFlags.ColorAttachmentWrite;
             imageMemoryBarrier.oldLayout=VkImageLayout.Undefined;
             imageMemoryBarrier.newLayout=VkImageLayout.ColorAttachmentOptimal;
-            imageMemoryBarrier.srcQueueFamilyIndex=QueueFamilyIndex;
-            imageMemoryBarrier.dstQueueFamilyIndex=QueueFamilyIndex;
+            imageMemoryBarrier.srcQueueFamilyIndex=VulkanNative.QueueFamilyIgnored;
+            imageMemoryBarrier.dstQueueFamilyIndex=VulkanNative.QueueFamilyIgnored;
             imageMemoryBarrier.image=image;
             imageMemoryBarrier.subresourceRange=new VkImageSubresourceRange(){baseMipLevel=0,levelCount=1,
             baseArrayLayer=0,layerCount=1,aspectMask=VkImageAspectFlags.Color};
