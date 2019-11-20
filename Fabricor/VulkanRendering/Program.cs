@@ -148,7 +148,7 @@ namespace Fabricor.VulkanRendering
             return framebuffer;
         }
 
-        static VkImageView CreateImageView(VkDevice device, VkImage image,VkFormat imageFormat)
+        static VkImageView CreateImageView(VkDevice device, VkImage image, VkFormat imageFormat)
         {
             VkImageViewCreateInfo createInfo = VkImageViewCreateInfo.New();
             createInfo.image = image;
@@ -179,11 +179,30 @@ namespace Fabricor.VulkanRendering
 
             return shaderModule;
         }
-        static VkPipelineLayout CreatePipelineLayout(VkDevice device)
+
+        private static VkDescriptorSetLayout CreateSamplerLayout(VkDevice device)
+        {
+            VkDescriptorSetLayoutBinding samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
+            samplerLayoutBinding.binding = 0;
+            samplerLayoutBinding.descriptorCount = 1;
+            samplerLayoutBinding.descriptorType = VkDescriptorType.CombinedImageSampler;
+            samplerLayoutBinding.pImmutableSamplers = null;
+            samplerLayoutBinding.stageFlags = VkShaderStageFlags.Fragment;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.New();
+            layoutInfo.bindingCount = 1;
+            layoutInfo.pBindings = &samplerLayoutBinding;
+
+            VkDescriptorSetLayout descriptorSetLayout = VkDescriptorSetLayout.Null;
+            Assert(vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout));
+            return descriptorSetLayout;
+        }
+        static VkPipelineLayout CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout setLayout)
         {
             VkPipelineLayoutCreateInfo pCreateInfo = VkPipelineLayoutCreateInfo.New();
             pCreateInfo.pushConstantRangeCount = 0;
-            pCreateInfo.setLayoutCount = 0;
+            pCreateInfo.setLayoutCount = 1;
+            pCreateInfo.pSetLayouts = &setLayout;
 
             VkPipelineLayout layout = VkPipelineLayout.Null;
             Assert(vkCreatePipelineLayout(device, &pCreateInfo, null, &layout));
@@ -334,6 +353,25 @@ namespace Fabricor.VulkanRendering
             VkSurfaceKHR surface = CreateSurface(finst.instance, window);
             VkDevice device = CreateDevice(finst.instance, out var physicalDevice, surface, out var queueFamilyIndex);
             VkSwapchainKHR swapchain = CreateSwapchain(VkSwapchainKHR.Null, finst.instance, device, physicalDevice, surface, queueFamilyIndex);
+            VkRenderPass renderPass = CreateRenderPass(device);
+
+            uint swapchainImageCount = 0;
+            Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, null));////////////IMAGES
+            VkImage[] swapchainImages = new VkImage[swapchainImageCount];
+            fixed (VkImage* ptr = &swapchainImages[0])
+                Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, ptr));
+
+            VkImageView[] swapchainImageViews = new VkImageView[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                swapchainImageViews[i] = CreateImageView(device, swapchainImages[i], surfaceFormat.format);
+            }
+            VkFramebuffer[] frambuffers = new VkFramebuffer[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i]);
+            }
+
             CommandPoolManager.Init(device, queueFamilyIndex);
             int poolId = CommandPoolManager.CreateCommandPool();
 
@@ -352,43 +390,51 @@ namespace Fabricor.VulkanRendering
             VkShaderModule traingleVS = LoadShader(device, "shaders/voxel.vert.spv");
             VkShaderModule traingleFS = LoadShader(device, "shaders/voxel.frag.spv");
 
-            VkRenderPass renderPass = CreateRenderPass(device);
-            VkSampler sampler=CreateSampler(device);
+            VkImage tex = LoadTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex.png");
+            VkImageView texView = CreateImageView(device, tex, VkFormat.R8g8b8a8Unorm);
+
+            VkSampler sampler = CreateSampler(device);
+
+            VkDescriptorPool descriptorPool = CreateDescriptorPool(device, swapchainImageCount);
+
+            VkDescriptorSetLayout[] samplerlayouts = new VkDescriptorSetLayout[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+                samplerlayouts[i] = CreateSamplerLayout(device);
+            VkPipelineLayout pipelineLayout = CreatePipelineLayout(device, samplerlayouts[0]);
+            VkDescriptorSet[] descriptorSets = AllocateDescriptorSets(device, samplerlayouts, descriptorPool,
+            swapchainImageCount);
+
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                VkDescriptorImageInfo imageInfo = new VkDescriptorImageInfo();
+                imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+                imageInfo.imageView = texView;
+                imageInfo.sampler = sampler;
+
+                VkWriteDescriptorSet[] writes = new VkWriteDescriptorSet[1];
+                writes[0].dstSet = descriptorSets[i];
+                writes[0].dstBinding = 0;
+                writes[0].dstArrayElement = 0;
+                writes[0].descriptorType = VkDescriptorType.CombinedImageSampler;
+                writes[0].descriptorCount = 1;
+                writes[0].pImageInfo = &imageInfo;
+                fixed (VkWriteDescriptorSet* ptr = writes)
+                    vkUpdateDescriptorSets(device, (uint)writes.Length, ptr, 0, null);
+            }
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            VkPipelineLayout pipelineLayout = CreatePipelineLayout(device);
             VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, traingleVS, traingleFS, pipelineLayout);
 
             FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer = ////DATA
             new FDataBuffer<VoxelRenderer.VoxelVertex>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
             Span<VoxelRenderer.VoxelVertex> span = dataBuffer.Map();
-            span[0].position = new Vector3(0, 0.5f, 0);
-            span[0].texcoords = new Vector2(1, 0);
+            span[0].position = new Vector3(-0.5f, 0.5f, 0);
+            span[0].texcoords = new Vector2(0, 0);
             span[1].position = new Vector3(0.5f, -0.5f, 0);
-            span[1].texcoords = new Vector2(0, 0);
-            span[2].position = new Vector3(0.3f, -0.5f, 0);
+            span[1].texcoords = new Vector2(1, 1);
+            span[2].position = new Vector3(-0.5f, -0.5f, 0);
             span[2].texcoords = new Vector2(0, 1);
             span = dataBuffer.UnMap();
-
-            VkImage tex = LoadTexture(device, physicalDevice,poolId,graphicsQueue, "res/Alex.png");
-            VkImageView texView=CreateImageView(device,tex,VkFormat.R8g8b8a8Unorm);
-
-            uint swapchainImageCount = 0;//END DATA
-            Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, null));////////////IMAGES
-            VkImage[] swapchainImages = new VkImage[swapchainImageCount];
-            fixed (VkImage* ptr = &swapchainImages[0])
-                Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, ptr));
-
-            VkImageView[] swapchainImageViews = new VkImageView[swapchainImageCount];
-            for (int i = 0; i < swapchainImageCount; i++)
-            {
-                swapchainImageViews[i] = CreateImageView(device, swapchainImages[i],surfaceFormat.format);
-            }
-            VkFramebuffer[] frambuffers = new VkFramebuffer[swapchainImageCount];
-            for (int i = 0; i < swapchainImageCount; i++)
-            {
-                frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i]);
-            }
 
             FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
@@ -427,6 +473,8 @@ namespace Fabricor.VulkanRendering
                 cmdBuffer.pipeline = trianglePipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
                 cmdBuffer.image = swapchainImages[imageIndex];
+                cmdBuffer.descriptorSet=descriptorSets[imageIndex];
+                cmdBuffer.layout=pipelineLayout;
 
                 cmdBuffer.dataBuffer = dataBuffer;
 
@@ -464,49 +512,86 @@ namespace Fabricor.VulkanRendering
             Terminate();
         }
 
-        private static VkSampler CreateSampler(VkDevice device){
-            VkSamplerCreateInfo createInfo=VkSamplerCreateInfo.New();
-            createInfo.magFilter=VkFilter.Nearest;
-            createInfo.minFilter=VkFilter.Nearest;
+        private static VkDescriptorSet[] AllocateDescriptorSets(VkDevice device, VkDescriptorSetLayout[] layouts, VkDescriptorPool pool, uint swapchainImageCount)
+        {
+            VkDescriptorSetLayout[] localLayouts = layouts;
+            VkDescriptorSetAllocateInfo allocateInfo = VkDescriptorSetAllocateInfo.New();
+            allocateInfo.descriptorPool = pool;
+            allocateInfo.descriptorSetCount = swapchainImageCount;
+            fixed (VkDescriptorSetLayout* ptr = localLayouts)
+                allocateInfo.pSetLayouts = ptr;
 
-            createInfo.addressModeU=VkSamplerAddressMode.Repeat;
-            createInfo.addressModeV=VkSamplerAddressMode.Repeat;
-            createInfo.addressModeW=VkSamplerAddressMode.Repeat;
+            VkDescriptorSet[] sets = new VkDescriptorSet[swapchainImageCount];
+            fixed (VkDescriptorSet* ptr = sets)
+                Assert(vkAllocateDescriptorSets(device, &allocateInfo, ptr));
+            return sets;
+        }
 
-            createInfo.anisotropyEnable=VkBool32.False;
-            createInfo.maxAnisotropy=1;
+        private static VkDescriptorPool CreateDescriptorPool(VkDevice device, uint swapchainImageCount)
+        {
+            VkDescriptorPoolSize size = new VkDescriptorPoolSize();
+            size.descriptorCount = swapchainImageCount;
+            size.type = VkDescriptorType.CombinedImageSampler;
 
-            createInfo.borderColor=VkBorderColor.FloatOpaqueWhite;
-            createInfo.unnormalizedCoordinates=VkBool32.False;
+            VkDescriptorPoolCreateInfo createInfo = VkDescriptorPoolCreateInfo.New();
+            createInfo.poolSizeCount = 1;
+            createInfo.pPoolSizes = &size;
+            createInfo.maxSets = swapchainImageCount;
 
-            createInfo.compareEnable=VkBool32.False;
-            createInfo.compareOp=VkCompareOp.Always;
+            VkDescriptorPool pool = VkDescriptorPool.Null;
+            Assert(vkCreateDescriptorPool(device, &createInfo, null, &pool));
+            return pool;
+        }
 
-            createInfo.mipmapMode=VkSamplerMipmapMode.Linear;
-            createInfo.mipLodBias=0;
-            createInfo.minLod=0;
-            createInfo.maxLod=0;
+        private static VkSampler CreateSampler(VkDevice device)
+        {
+            VkSamplerCreateInfo createInfo = VkSamplerCreateInfo.New();
+            createInfo.magFilter = VkFilter.Nearest;
+            createInfo.minFilter = VkFilter.Nearest;
 
-            VkSampler sampler=VkSampler.Null;
-            Assert(vkCreateSampler(device,&createInfo,null,&sampler));
+            createInfo.addressModeU = VkSamplerAddressMode.Repeat;
+            createInfo.addressModeV = VkSamplerAddressMode.Repeat;
+            createInfo.addressModeW = VkSamplerAddressMode.Repeat;
+
+            createInfo.anisotropyEnable = VkBool32.False;
+            createInfo.maxAnisotropy = 1;
+
+            createInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
+            createInfo.unnormalizedCoordinates = VkBool32.False;
+
+            createInfo.compareEnable = VkBool32.False;
+            createInfo.compareOp = VkCompareOp.Always;
+
+            createInfo.mipmapMode = VkSamplerMipmapMode.Linear;
+            createInfo.mipLodBias = 0;
+            createInfo.minLod = 0;
+            createInfo.maxLod = 0;
+
+            VkSampler sampler = VkSampler.Null;
+            Assert(vkCreateSampler(device, &createInfo, null, &sampler));
 
             return sampler;
         }
 
-        private static VkImage LoadTexture(VkDevice device, VkPhysicalDevice physicalDevice, int poolId,VkQueue queue, string path)
+        private static VkImage LoadTexture(VkDevice device, VkPhysicalDevice physicalDevice, int poolId, VkQueue queue, string path)
         {
             Bitmap bitmap = new Bitmap(System.Drawing.Image.FromFile(path));
 
-            var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+            var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly,
+            bitmap.PixelFormat);
             Span<byte> img = new Span<byte>((void*)data.Scan0, data.Stride * data.Height);
 
             FDataBuffer<byte> tempBuffer = new FDataBuffer<byte>(device, physicalDevice, img.Length, VkBufferUsageFlags.TransferSrc,
             VkSharingMode.Exclusive);
 
             Span<byte> buffer = tempBuffer.Map();
-            for (int i = 0; i < img.Length; i++)
+            for (int i = 0; i < img.Length; i+=4)
             {
-                buffer[i] = img[i];
+                
+                buffer[i+2] = img[i];
+                buffer[i+1] = img[i+1];
+                buffer[i] = img[i+2];
+                buffer[i+3] = img[i+3];
             }
             buffer = tempBuffer.UnMap();
 
@@ -557,40 +642,46 @@ namespace Fabricor.VulkanRendering
 
             Assert(vkBeginCommandBuffer(cmdBuffer, &beginInfo));
 
-            VkImageMemoryBarrier imageMemoryBarrier=VkImageMemoryBarrier.New();
-            imageMemoryBarrier.srcAccessMask=VkAccessFlags.None;
-            imageMemoryBarrier.dstAccessMask=VkAccessFlags.ColorAttachmentRead|VkAccessFlags.ColorAttachmentWrite;
-            imageMemoryBarrier.oldLayout=VkImageLayout.Undefined;
-            imageMemoryBarrier.newLayout=VkImageLayout.TransferDstOptimal;
-            imageMemoryBarrier.srcQueueFamilyIndex=VulkanNative.QueueFamilyIgnored;
-            imageMemoryBarrier.dstQueueFamilyIndex=VulkanNative.QueueFamilyIgnored;
-            imageMemoryBarrier.image=texture;
-            imageMemoryBarrier.subresourceRange=new VkImageSubresourceRange(){baseMipLevel=0,levelCount=1,
-            baseArrayLayer=0,layerCount=1,aspectMask=VkImageAspectFlags.Color};
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New();
+            imageMemoryBarrier.srcAccessMask = VkAccessFlags.None;
+            imageMemoryBarrier.dstAccessMask = VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite;
+            imageMemoryBarrier.oldLayout = VkImageLayout.Undefined;
+            imageMemoryBarrier.newLayout = VkImageLayout.TransferDstOptimal;
+            imageMemoryBarrier.srcQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            imageMemoryBarrier.dstQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            imageMemoryBarrier.image = texture;
+            imageMemoryBarrier.subresourceRange = new VkImageSubresourceRange()
+            {
+                baseMipLevel = 0,
+                levelCount = 1,
+                baseArrayLayer = 0,
+                layerCount = 1,
+                aspectMask = VkImageAspectFlags.Color
+            };
 
-            vkCmdPipelineBarrier(cmdBuffer,VkPipelineStageFlags.AllCommands,VkPipelineStageFlags.AllCommands,VkDependencyFlags.ByRegion,
-            0,null,0,null,1,&imageMemoryBarrier);
+            vkCmdPipelineBarrier(cmdBuffer, VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.AllCommands, VkDependencyFlags.ByRegion,
+            0, null, 0, null, 1, &imageMemoryBarrier);
 
-            VkBufferImageCopy region=new VkBufferImageCopy();
-            region.bufferOffset=0;
-            region.bufferRowLength=0;
-            region.bufferImageHeight=0;
+            VkBufferImageCopy region = new VkBufferImageCopy();
+            region.bufferOffset = 0;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
 
-            region.imageSubresource.aspectMask=VkImageAspectFlags.Color;
-            region.imageSubresource.mipLevel=0;
-            region.imageSubresource.baseArrayLayer=0;
-            region.imageSubresource.layerCount=1;
+            region.imageSubresource.aspectMask = VkImageAspectFlags.Color;
+            region.imageSubresource.mipLevel = 0;
+            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.layerCount = 1;
 
-            region.imageOffset=new VkOffset3D();
-            region.imageExtent=new VkExtent3D(){width=(uint)data.Width,height=(uint)data.Height,depth=1};
+            region.imageOffset = new VkOffset3D();
+            region.imageExtent = new VkExtent3D() { width = (uint)data.Width, height = (uint)data.Height, depth = 1 };
 
-            vkCmdCopyBufferToImage(cmdBuffer,tempBuffer.Buffer,texture,VkImageLayout.TransferDstOptimal,1,&region);
+            vkCmdCopyBufferToImage(cmdBuffer, tempBuffer.Buffer, texture, VkImageLayout.TransferDstOptimal, 1, &region);
 
-            imageMemoryBarrier.oldLayout=VkImageLayout.TransferDstOptimal;
-            imageMemoryBarrier.newLayout=VkImageLayout.ShaderReadOnlyOptimal;
+            imageMemoryBarrier.oldLayout = VkImageLayout.TransferDstOptimal;
+            imageMemoryBarrier.newLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
-            vkCmdPipelineBarrier(cmdBuffer,VkPipelineStageFlags.AllCommands,VkPipelineStageFlags.AllCommands,VkDependencyFlags.ByRegion,
-            0,null,0,null,1,&imageMemoryBarrier);
+            vkCmdPipelineBarrier(cmdBuffer, VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.AllCommands, VkDependencyFlags.ByRegion,
+            0, null, 0, null, 1, &imageMemoryBarrier);
 
             Assert(vkEndCommandBuffer(cmdBuffer));
 
@@ -600,7 +691,7 @@ namespace Fabricor.VulkanRendering
 
             Assert(vkQueueSubmit(queue, 1, &submitInfo, VkFence.Null));
             Assert(vkQueueWaitIdle(queue));
-            vkFreeCommandBuffers(device,CommandPoolManager.GetPool(poolId),1,&cmdBuffer);
+            vkFreeCommandBuffers(device, CommandPoolManager.GetPool(poolId), 1, &cmdBuffer);
 
             return texture;
         }

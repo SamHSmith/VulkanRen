@@ -12,6 +12,8 @@ namespace Fabricor.VulkanRendering
         public VkFramebuffer framebuffer;
         public VkPipeline pipeline;
         public VkImage image;
+        public VkDescriptorSet descriptorSet;
+        public VkPipelineLayout layout;
 
 
         public FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer;
@@ -86,7 +88,11 @@ namespace Fabricor.VulkanRendering
             fixed (VkBuffer* bptr = databuffers)
                 fixed (ulong* optr = offsets)
                     vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
+            
+            VkDescriptorSet sets=descriptorSet;
+            VkPipelineLayout layout=this.layout;
 
+            vkCmdBindDescriptorSets(buffer,VkPipelineBindPoint.Graphics,layout,0,1,&sets,0,null);
             vkCmdDraw(buffer, 3, 1, 0, 0);
 
             vkCmdEndRenderPass(buffer);
