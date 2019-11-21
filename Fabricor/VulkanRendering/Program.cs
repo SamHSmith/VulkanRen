@@ -163,24 +163,7 @@ namespace Fabricor.VulkanRendering
             return view;
         }
 
-        static VkShaderModule LoadShader(VkDevice device, string path)
-        {
-            byte[] bytes = File.ReadAllBytes(path);
-
-            uint length = (uint)bytes.Length;
-
-            VkShaderModuleCreateInfo pCreateInfo = VkShaderModuleCreateInfo.New();
-            pCreateInfo.codeSize = (UIntPtr)length;
-            fixed (byte* ptr = bytes)
-                pCreateInfo.pCode = (uint*)ptr;
-
-            VkShaderModule shaderModule = new VkShaderModule();
-            Assert(vkCreateShaderModule(device, &pCreateInfo, null, &shaderModule));
-
-            return shaderModule;
-        }
-
-        private static VkDescriptorSetLayout CreateSamplerLayout(VkDevice device)
+        private static VkDescriptorSetLayout CreateDescriptorLayout(VkDevice device)
         {
             VkDescriptorSetLayoutBinding samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
             samplerLayoutBinding.binding = 0;
@@ -197,141 +180,13 @@ namespace Fabricor.VulkanRendering
             Assert(vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout));
             return descriptorSetLayout;
         }
-        static VkPipelineLayout CreatePipelineLayout(VkDevice device, VkDescriptorSetLayout setLayout)
-        {
-            VkPipelineLayoutCreateInfo pCreateInfo = VkPipelineLayoutCreateInfo.New();
-            pCreateInfo.pushConstantRangeCount = 0;
-            pCreateInfo.setLayoutCount = 1;
-            pCreateInfo.pSetLayouts = &setLayout;
-
-            VkPipelineLayout layout = VkPipelineLayout.Null;
-            Assert(vkCreatePipelineLayout(device, &pCreateInfo, null, &layout));
-            return layout;
-        }
         static VkPipeline CreatePipeline(VkDevice device, VkPipelineCache pipelineCache, VkRenderPass renderPass,
-        VkShaderModule vs, VkShaderModule fs, VkPipelineLayout layout)
+        VkDescriptorSetLayout layout, out VkPipelineLayout pipelineLayout)
         {
+            FGraphicsPipeline pipeline = new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", layout);
+            pipelineLayout = pipeline.pipelineLayout;
 
-            VkGraphicsPipelineCreateInfo pCreateInfo = VkGraphicsPipelineCreateInfo.New();
-            pCreateInfo.flags = VkPipelineCreateFlags.DisableOptimization;
-
-            VkPipelineShaderStageCreateInfo[] shaderStages = new VkPipelineShaderStageCreateInfo[2];
-            shaderStages[0] = VkPipelineShaderStageCreateInfo.New();
-            shaderStages[0].stage = VkShaderStageFlags.Vertex;
-            shaderStages[0].module = vs;
-
-            byte[] vsFuncName = Encoding.UTF8.GetBytes("main" + char.MinValue);
-            fixed (byte* ptr = &(vsFuncName[0]))
-                shaderStages[0].pName = ptr;
-
-            shaderStages[1] = VkPipelineShaderStageCreateInfo.New();
-            shaderStages[1].stage = VkShaderStageFlags.Fragment;
-            shaderStages[1].module = fs;
-            byte[] fsFuncName = Encoding.UTF8.GetBytes("main" + char.MinValue);
-            fixed (byte* ptr = &(fsFuncName[0]))
-                shaderStages[1].pName = ptr;
-
-            fixed (VkPipelineShaderStageCreateInfo* ptr = shaderStages)
-                pCreateInfo.pStages = ptr;
-            pCreateInfo.stageCount = 2;
-
-            VkVertexInputBindingDescription[] bindings = new VkVertexInputBindingDescription[4];
-            bindings[0] = new VkVertexInputBindingDescription();
-            bindings[0].binding = 0;
-            bindings[0].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
-            bindings[0].inputRate = VkVertexInputRate.Vertex;
-
-            bindings[1] = new VkVertexInputBindingDescription();
-            bindings[1].binding = 1;
-            bindings[1].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
-            bindings[1].inputRate = VkVertexInputRate.Vertex;
-
-            bindings[2] = new VkVertexInputBindingDescription();
-            bindings[2].binding = 2;
-            bindings[2].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
-            bindings[2].inputRate = VkVertexInputRate.Vertex;
-
-            bindings[3] = new VkVertexInputBindingDescription();
-            bindings[3].binding = 3;
-            bindings[3].stride = (uint)sizeof(VoxelRenderer.VoxelVertex);
-            bindings[3].inputRate = VkVertexInputRate.Vertex;
-
-            VkVertexInputAttributeDescription[] attribs = new VkVertexInputAttributeDescription[4];
-            attribs[0].binding = 0;
-            attribs[0].location = 0;
-            attribs[0].format = VkFormat.R32g32b32Sfloat;
-            attribs[0].offset = 0;
-
-            attribs[1].binding = 1;
-            attribs[1].location = 1;
-            attribs[1].format = VkFormat.R32g32b32Sfloat;
-            attribs[1].offset = 0;
-
-            attribs[2].binding = 2;
-            attribs[2].location = 2;
-            attribs[2].format = VkFormat.R32g32b32Sfloat;
-            attribs[2].offset = 0;
-
-            attribs[3].binding = 3;
-            attribs[3].location = 3;
-            attribs[3].format = VkFormat.R32g32b32Sfloat;
-            attribs[3].offset = 0;
-
-            VkPipelineVertexInputStateCreateInfo vertexInput = VkPipelineVertexInputStateCreateInfo.New();
-            fixed (VkVertexInputBindingDescription* ptr = bindings)
-                vertexInput.pVertexBindingDescriptions = ptr;
-            vertexInput.vertexBindingDescriptionCount = (uint)bindings.Length;
-            fixed (VkVertexInputAttributeDescription* ptr = attribs)
-                vertexInput.pVertexAttributeDescriptions = ptr;
-            vertexInput.vertexAttributeDescriptionCount = (uint)attribs.Length;
-            pCreateInfo.pVertexInputState = &vertexInput;
-
-            VkPipelineInputAssemblyStateCreateInfo inputAssembly = VkPipelineInputAssemblyStateCreateInfo.New();
-            inputAssembly.topology = VkPrimitiveTopology.TriangleList;
-            pCreateInfo.pInputAssemblyState = &inputAssembly;
-
-            VkPipelineViewportStateCreateInfo viewportState = VkPipelineViewportStateCreateInfo.New();
-            viewportState.viewportCount = 1;
-            viewportState.scissorCount = 1;
-            pCreateInfo.pViewportState = &viewportState;
-
-            VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();
-            rasterizationState.lineWidth = 1;
-            pCreateInfo.pRasterizationState = &rasterizationState;
-
-            VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
-            multisampleState.rasterizationSamples = VkSampleCountFlags.Count1;
-            pCreateInfo.pMultisampleState = &multisampleState;
-
-            VkPipelineDepthStencilStateCreateInfo depthState = VkPipelineDepthStencilStateCreateInfo.New();
-            pCreateInfo.pDepthStencilState = &depthState;
-
-            VkPipelineColorBlendAttachmentState colourAttachment = new VkPipelineColorBlendAttachmentState();
-            colourAttachment.colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A;
-
-            VkPipelineColorBlendStateCreateInfo colourState = VkPipelineColorBlendStateCreateInfo.New();
-            colourState.pAttachments = &colourAttachment;
-            colourState.attachmentCount = 1;
-            pCreateInfo.pColorBlendState = &colourState;
-
-            VkDynamicState[] dynamicStates = new VkDynamicState[2];
-            dynamicStates[0] = VkDynamicState.Viewport;
-            dynamicStates[1] = VkDynamicState.Scissor;
-
-            VkPipelineDynamicStateCreateInfo dynamicState = VkPipelineDynamicStateCreateInfo.New();
-            dynamicState.dynamicStateCount = (uint)dynamicStates.Length;
-            fixed (VkDynamicState* ptr = &(dynamicStates[0]))
-                dynamicState.pDynamicStates = ptr;
-            pCreateInfo.pDynamicState = &dynamicState;
-
-            pCreateInfo.layout = layout;
-            pCreateInfo.renderPass = renderPass;
-            pCreateInfo.subpass = 0;
-
-
-            VkPipeline pipeline = VkPipeline.Null;
-            Assert(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pCreateInfo, null, &pipeline));
-            return pipeline;
+            return pipeline.pipeline;
         }
         static void Main(string[] args)
         {
@@ -387,21 +242,15 @@ namespace Fabricor.VulkanRendering
             VkQueue graphicsQueue = VkQueue.Null;
             vkGetDeviceQueue(device, queueFamilyIndex, 0, &graphicsQueue);
 
-            VkShaderModule traingleVS = LoadShader(device, "shaders/voxel.vert.spv");
-            VkShaderModule traingleFS = LoadShader(device, "shaders/voxel.frag.spv");
-
-            VkImage tex = LoadTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex.png");
+            VkImage tex = LoadTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex2.png");
             VkImageView texView = CreateImageView(device, tex, VkFormat.R8g8b8a8Unorm);
 
             VkSampler sampler = CreateSampler(device);
 
             VkDescriptorPool descriptorPool = CreateDescriptorPool(device, swapchainImageCount);
 
-            VkDescriptorSetLayout[] samplerlayouts = new VkDescriptorSetLayout[swapchainImageCount];
-            for (int i = 0; i < swapchainImageCount; i++)
-                samplerlayouts[i] = CreateSamplerLayout(device);
-            VkPipelineLayout pipelineLayout = CreatePipelineLayout(device, samplerlayouts[0]);
-            VkDescriptorSet[] descriptorSets = AllocateDescriptorSets(device, samplerlayouts, descriptorPool,
+            VkDescriptorSetLayout desclayout = CreateDescriptorLayout(device);
+            VkDescriptorSet[] descriptorSets = AllocateDescriptorSets(device, desclayout, descriptorPool,
             swapchainImageCount);
 
             for (int i = 0; i < swapchainImageCount; i++)
@@ -423,7 +272,8 @@ namespace Fabricor.VulkanRendering
             }
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, traingleVS, traingleFS, pipelineLayout);
+            VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, desclayout,
+            out var pipelineLayout);
 
             FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer = ////DATA
             new FDataBuffer<VoxelRenderer.VoxelVertex>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
@@ -473,8 +323,8 @@ namespace Fabricor.VulkanRendering
                 cmdBuffer.pipeline = trianglePipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
                 cmdBuffer.image = swapchainImages[imageIndex];
-                cmdBuffer.descriptorSet=descriptorSets[imageIndex];
-                cmdBuffer.layout=pipelineLayout;
+                cmdBuffer.descriptorSet = descriptorSets[imageIndex];
+                cmdBuffer.layout = pipelineLayout;
 
                 cmdBuffer.dataBuffer = dataBuffer;
 
@@ -512,9 +362,13 @@ namespace Fabricor.VulkanRendering
             Terminate();
         }
 
-        private static VkDescriptorSet[] AllocateDescriptorSets(VkDevice device, VkDescriptorSetLayout[] layouts, VkDescriptorPool pool, uint swapchainImageCount)
+        private static VkDescriptorSet[] AllocateDescriptorSets(VkDevice device, VkDescriptorSetLayout layout, VkDescriptorPool pool, uint swapchainImageCount)
         {
-            VkDescriptorSetLayout[] localLayouts = layouts;
+            VkDescriptorSetLayout[] localLayouts = new VkDescriptorSetLayout[swapchainImageCount];
+            for (int i = 0; i < localLayouts.Length; i++)
+            {
+                localLayouts[i] = layout;
+            }
             VkDescriptorSetAllocateInfo allocateInfo = VkDescriptorSetAllocateInfo.New();
             allocateInfo.descriptorPool = pool;
             allocateInfo.descriptorSetCount = swapchainImageCount;
@@ -585,13 +439,13 @@ namespace Fabricor.VulkanRendering
             VkSharingMode.Exclusive);
 
             Span<byte> buffer = tempBuffer.Map();
-            for (int i = 0; i < img.Length; i+=4)
+            for (int i = 0; i < img.Length; i += 4)
             {
-                
-                buffer[i+2] = img[i];
-                buffer[i+1] = img[i+1];
-                buffer[i] = img[i+2];
-                buffer[i+3] = img[i+3];
+
+                buffer[i + 2] = img[i];
+                buffer[i + 1] = img[i + 1];
+                buffer[i] = img[i + 2];
+                buffer[i + 3] = img[i + 3];
             }
             buffer = tempBuffer.UnMap();
 
@@ -696,6 +550,10 @@ namespace Fabricor.VulkanRendering
             return texture;
         }
 
+        static readonly VkFormat[] UNORM_FORMATS ={
+            VkFormat.R8g8b8a8Unorm,
+            VkFormat.B8g8r8a8Unorm,
+        };
         static void GetSwapchainFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
             uint formatCount = 0;
@@ -704,11 +562,23 @@ namespace Fabricor.VulkanRendering
             fixed (VkSurfaceFormatKHR* ptr = &formats[0])
                 Assert(vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, ptr));
 
+
+
             for (int i = 0; i < formatCount; i++)
             {
-                Console.WriteLine($"Format {formats[i].format} is available.");
+                Console.WriteLine($"Format {formats[i].format} {formats[i].colorSpace} is available.");
+                for (int k = 0; k < UNORM_FORMATS.Length; k++)
+                {
+                    if (formats[i].format == UNORM_FORMATS[k])
+                    {
+                        surfaceFormat = formats[i];
+                        return;
+                    }
+                }
+
             }
-            surfaceFormat = formats[0];
+
+            surfaceFormat = formats[0];//Fallback
         }
         static VkSurfaceFormatKHR surfaceFormat = new VkSurfaceFormatKHR();
         static VkSwapchainKHR CreateSwapchain(VkSwapchainKHR oldSwapchain, VkInstance instance, VkDevice device, VkPhysicalDevice physicalDevice,
