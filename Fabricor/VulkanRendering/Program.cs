@@ -162,32 +162,6 @@ namespace Fabricor.VulkanRendering
             Assert(vkCreateImageView(device, &createInfo, null, &view));
             return view;
         }
-
-        private static VkDescriptorSetLayout CreateDescriptorLayout(VkDevice device)
-        {
-            VkDescriptorSetLayoutBinding samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
-            samplerLayoutBinding.binding = 0;
-            samplerLayoutBinding.descriptorCount = 1;
-            samplerLayoutBinding.descriptorType = VkDescriptorType.CombinedImageSampler;
-            samplerLayoutBinding.pImmutableSamplers = null;
-            samplerLayoutBinding.stageFlags = VkShaderStageFlags.Fragment;
-
-            VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.New();
-            layoutInfo.bindingCount = 1;
-            layoutInfo.pBindings = &samplerLayoutBinding;
-
-            VkDescriptorSetLayout descriptorSetLayout = VkDescriptorSetLayout.Null;
-            Assert(vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout));
-            return descriptorSetLayout;
-        }
-        static VkPipeline CreatePipeline(VkDevice device, VkPipelineCache pipelineCache, VkRenderPass renderPass,
-        VkDescriptorSetLayout layout, out VkPipelineLayout pipelineLayout)
-        {
-            FGraphicsPipeline pipeline = new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", layout);
-            pipelineLayout = pipeline.pipelineLayout;
-
-            return pipeline.pipeline;
-        }
         static void Main(string[] args)
         {
 
@@ -245,35 +219,9 @@ namespace Fabricor.VulkanRendering
             VkImage tex = LoadTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex2.png");
             VkImageView texView = CreateImageView(device, tex, VkFormat.R8g8b8a8Unorm);
 
-            VkSampler sampler = CreateSampler(device);
-
-            VkDescriptorPool descriptorPool = CreateDescriptorPool(device, swapchainImageCount);
-
-            VkDescriptorSetLayout desclayout = CreateDescriptorLayout(device);
-            VkDescriptorSet[] descriptorSets = AllocateDescriptorSets(device, desclayout, descriptorPool,
-            swapchainImageCount);
-
-            for (int i = 0; i < swapchainImageCount; i++)
-            {
-                VkDescriptorImageInfo imageInfo = new VkDescriptorImageInfo();
-                imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-                imageInfo.imageView = texView;
-                imageInfo.sampler = sampler;
-
-                VkWriteDescriptorSet[] writes = new VkWriteDescriptorSet[1];
-                writes[0].dstSet = descriptorSets[i];
-                writes[0].dstBinding = 0;
-                writes[0].dstArrayElement = 0;
-                writes[0].descriptorType = VkDescriptorType.CombinedImageSampler;
-                writes[0].descriptorCount = 1;
-                writes[0].pImageInfo = &imageInfo;
-                fixed (VkWriteDescriptorSet* ptr = writes)
-                    vkUpdateDescriptorSets(device, (uint)writes.Length, ptr, 0, null);
-            }
-
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            VkPipeline trianglePipeline = CreatePipeline(device, pipelineCache, renderPass, desclayout,
-            out var pipelineLayout);
+            FGraphicsPipeline trianglePipeline = 
+            new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount,texView);
 
             FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer = ////DATA
             new FDataBuffer<VoxelRenderer.VoxelVertex>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
@@ -320,11 +268,11 @@ namespace Fabricor.VulkanRendering
                 beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
                 cmdBuffer.renderPass = renderPass;
-                cmdBuffer.pipeline = trianglePipeline;
+                cmdBuffer.pipeline = trianglePipeline.pipeline;
                 cmdBuffer.framebuffer = frambuffers[imageIndex];
                 cmdBuffer.image = swapchainImages[imageIndex];
-                cmdBuffer.descriptorSet = descriptorSets[imageIndex];
-                cmdBuffer.layout = pipelineLayout;
+                cmdBuffer.descriptorSet = trianglePipeline.descriptorSets[imageIndex];
+                cmdBuffer.layout = trianglePipeline.pipelineLayout;
 
                 cmdBuffer.dataBuffer = dataBuffer;
 
@@ -360,71 +308,6 @@ namespace Fabricor.VulkanRendering
 
             DestroyWindow(window);
             Terminate();
-        }
-
-        private static VkDescriptorSet[] AllocateDescriptorSets(VkDevice device, VkDescriptorSetLayout layout, VkDescriptorPool pool, uint swapchainImageCount)
-        {
-            VkDescriptorSetLayout[] localLayouts = new VkDescriptorSetLayout[swapchainImageCount];
-            for (int i = 0; i < localLayouts.Length; i++)
-            {
-                localLayouts[i] = layout;
-            }
-            VkDescriptorSetAllocateInfo allocateInfo = VkDescriptorSetAllocateInfo.New();
-            allocateInfo.descriptorPool = pool;
-            allocateInfo.descriptorSetCount = swapchainImageCount;
-            fixed (VkDescriptorSetLayout* ptr = localLayouts)
-                allocateInfo.pSetLayouts = ptr;
-
-            VkDescriptorSet[] sets = new VkDescriptorSet[swapchainImageCount];
-            fixed (VkDescriptorSet* ptr = sets)
-                Assert(vkAllocateDescriptorSets(device, &allocateInfo, ptr));
-            return sets;
-        }
-
-        private static VkDescriptorPool CreateDescriptorPool(VkDevice device, uint swapchainImageCount)
-        {
-            VkDescriptorPoolSize size = new VkDescriptorPoolSize();
-            size.descriptorCount = swapchainImageCount;
-            size.type = VkDescriptorType.CombinedImageSampler;
-
-            VkDescriptorPoolCreateInfo createInfo = VkDescriptorPoolCreateInfo.New();
-            createInfo.poolSizeCount = 1;
-            createInfo.pPoolSizes = &size;
-            createInfo.maxSets = swapchainImageCount;
-
-            VkDescriptorPool pool = VkDescriptorPool.Null;
-            Assert(vkCreateDescriptorPool(device, &createInfo, null, &pool));
-            return pool;
-        }
-
-        private static VkSampler CreateSampler(VkDevice device)
-        {
-            VkSamplerCreateInfo createInfo = VkSamplerCreateInfo.New();
-            createInfo.magFilter = VkFilter.Nearest;
-            createInfo.minFilter = VkFilter.Nearest;
-
-            createInfo.addressModeU = VkSamplerAddressMode.Repeat;
-            createInfo.addressModeV = VkSamplerAddressMode.Repeat;
-            createInfo.addressModeW = VkSamplerAddressMode.Repeat;
-
-            createInfo.anisotropyEnable = VkBool32.False;
-            createInfo.maxAnisotropy = 1;
-
-            createInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
-            createInfo.unnormalizedCoordinates = VkBool32.False;
-
-            createInfo.compareEnable = VkBool32.False;
-            createInfo.compareOp = VkCompareOp.Always;
-
-            createInfo.mipmapMode = VkSamplerMipmapMode.Linear;
-            createInfo.mipLodBias = 0;
-            createInfo.minLod = 0;
-            createInfo.maxLod = 0;
-
-            VkSampler sampler = VkSampler.Null;
-            Assert(vkCreateSampler(device, &createInfo, null, &sampler));
-
-            return sampler;
         }
 
         private static VkImage LoadTexture(VkDevice device, VkPhysicalDevice physicalDevice, int poolId, VkQueue queue, string path)
