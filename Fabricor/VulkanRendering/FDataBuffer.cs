@@ -12,6 +12,7 @@ namespace Fabricor.VulkanRendering
         private ulong size = 0;
         private void* spanStart=(void*)0;
         private int spanLength=0;
+        public int Length{get{return spanLength;}}
         private Span<T> Span{get{return new Span<T>(spanStart,spanLength);}}
 
         public VkBuffer Buffer { get; private set; }
@@ -48,8 +49,6 @@ namespace Fabricor.VulkanRendering
             Assert(vkBindBufferMemory(device, this.Buffer, memory, 0));
 
             spanLength=length;
-
-            
         }
 
         public static uint SelectMemoryType(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties, uint memoryTypeBits, VkMemoryPropertyFlags flags)

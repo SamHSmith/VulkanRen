@@ -7,6 +7,7 @@ using GLFW;
 using static GLFW.Glfw;
 using Vulkan;
 using static Vulkan.VulkanNative;
+using Fabricor.VulkanRendering.VoxelRenderer;
 
 namespace Fabricor.VulkanRendering
 {
@@ -216,16 +217,18 @@ namespace Fabricor.VulkanRendering
                 texture6.imageView,
             });
 
-            FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer = ////DATA
-            new FDataBuffer<VoxelRenderer.VoxelVertex>(device, physicalDevice, 3 * 3, VkBufferUsageFlags.VertexBuffer, VkSharingMode.Exclusive);
-            Span<VoxelRenderer.VoxelVertex> span = dataBuffer.Map();
-            span[0].position = new Vector3(-0.5f, 0.5f, 0);
-            span[0].texcoords = new Vector2(0, 0);
-            span[1].position = new Vector3(0.5f, -0.5f, 0);
-            span[1].texcoords = new Vector2(1, 1);
-            span[2].position = new Vector3(-0.5f, -0.5f, 0);
-            span[2].texcoords = new Vector2(0, 1);
-            span = dataBuffer.UnMap();
+            VoxelVertex[] vertices=new VoxelVertex[4];
+            vertices[0].position = new Vector3(-0.5f, 0.5f, 0);
+            vertices[0].texcoords = new Vector2(0, 1);
+            vertices[1].position = new Vector3(0.5f, 0.5f, 0);
+            vertices[1].texcoords = new Vector2(1, 1);
+            vertices[2].position = new Vector3(0.5f, -0.5f, 0);
+            vertices[2].texcoords = new Vector2(1, 0);
+            vertices[3].position = new Vector3(-0.5f, -0.5f, 0);
+            vertices[3].texcoords = new Vector2(0, 0);
+            ushort[] indices=new ushort[]{0,1,2,0,2,3};
+
+            VoxelMesh mesh=new VoxelMesh(device,physicalDevice,vertices,indices);
 
             FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
@@ -247,13 +250,14 @@ namespace Fabricor.VulkanRendering
                 }
 
                 //temp
-                span = dataBuffer.Map();
-                span[2].position -= 0.000002f * Vector3.UnitX;
+                Span<VoxelVertex> span = mesh.vertices.Map();
+                span[3].position -= 0.000002f * Vector3.UnitY;
+                span[3].position += 0.00001f * Vector3.UnitX;
                 for (int j = 0; j < span.Length; j++)
                 {
                     span[j].textureId++;
                 }
-                span = dataBuffer.UnMap();
+                span = mesh.vertices.UnMap();
 
                 uint imageIndex = 0;
 
@@ -268,7 +272,7 @@ namespace Fabricor.VulkanRendering
                 trianglePipeline.swapchainImage = swapchainImages[imageIndex];
                 trianglePipeline.swapchainImageIndex=imageIndex;
 
-                trianglePipeline.dataBuffer = dataBuffer;
+                trianglePipeline.mesh = mesh;
 
                 cmdBuffer.RecordCommandBuffer(new Action<VkCommandBuffer>[]{
                     trianglePipeline.Execute,

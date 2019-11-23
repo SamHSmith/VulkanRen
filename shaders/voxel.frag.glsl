@@ -9,5 +9,5 @@ layout(binding=0) uniform sampler2D texSampler[7];
 
 void main()
 {
-    outColour=texture(texSampler[uint(mod(textureID/10000,7))],texcoords);
+    outColour=texture(texSampler[uint(mod(textureID/10000,7))],vec2(texcoords.x,-texcoords.y));
 }

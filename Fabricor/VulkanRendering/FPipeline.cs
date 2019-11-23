@@ -17,7 +17,6 @@ namespace Fabricor.VulkanRendering
 {
     public unsafe class FGraphicsPipeline
     {
-
         public VkPipeline pipeline;
         public VkRenderPass renderPass;
         public VkPipelineLayout pipelineLayout;
@@ -29,7 +28,7 @@ namespace Fabricor.VulkanRendering
         public uint swapchainImageIndex;
         public VkImage swapchainImage;
         public VkFramebuffer swapchainFramebuffer;
-        public FDataBuffer<VoxelVertex> dataBuffer;
+        public VoxelMesh mesh;
         public FGraphicsPipeline(VkDevice device, VkPipelineCache pipelineCache, VkRenderPass renderPass,
         string shaderPath, uint swapchainImageCount, VkImageView[] texViews)
         {
@@ -150,6 +149,9 @@ namespace Fabricor.VulkanRendering
 
             VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();
             rasterizationState.lineWidth = 1;
+            rasterizationState.frontFace=VkFrontFace.Clockwise;
+            rasterizationState.cullMode=VkCullModeFlags.Back;
+            rasterizationState.polygonMode=VkPolygonMode.Fill;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
@@ -241,17 +243,19 @@ namespace Fabricor.VulkanRendering
 
             vkCmdBindPipeline(buffer, VkPipelineBindPoint.Graphics, pipeline);
 
-            VkBuffer[] databuffers = new VkBuffer[] { dataBuffer.Buffer, dataBuffer.Buffer, dataBuffer.Buffer, dataBuffer.Buffer };
+            VkBuffer[] databuffers = new VkBuffer[] { mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer };
             ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
             fixed (VkBuffer* bptr = databuffers)
             fixed (ulong* optr = offsets)
                 vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
+            
+            vkCmdBindIndexBuffer(buffer,mesh.indices.Buffer,0,VkIndexType.Uint16);
 
             VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
             VkPipelineLayout layout = pipelineLayout;
-
             vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
-            vkCmdDraw(buffer, 3, 1, 0, 0);
+
+            vkCmdDrawIndexed(buffer,(uint)mesh.indices.Length,1,0,0,0);
 
             vkCmdEndRenderPass(buffer);
         }
