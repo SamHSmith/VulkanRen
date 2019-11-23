@@ -145,7 +145,6 @@ namespace Fabricor.VulkanRendering
         }
         static void Main(string[] args)
         {
-
             Console.WriteLine($"Hello Vulkan!");
             Init();
 
@@ -156,8 +155,8 @@ namespace Fabricor.VulkanRendering
             }
 
             WindowHint(Hint.ClientApi, ClientApi.None);
-            NativeWindow window = new GLFW.NativeWindow(width, height, "Now native!");
-
+            NativeWindow window = new GLFW.NativeWindow(width, height, "Fabricor");
+            Glfw.SetKeyCallback(window, GLFWInput.KeyCallback);
 
             FInstance finst = new FInstance();
             VkSurfaceKHR surface = CreateSurface(finst.instance, window);
@@ -197,17 +196,17 @@ namespace Fabricor.VulkanRendering
             VkQueue graphicsQueue = VkQueue.Null;
             vkGetDeviceQueue(device, queueFamilyIndex, 0, &graphicsQueue);
 
-            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Linus.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture1 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture2 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex2.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture3 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex3.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture4 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Cyan.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture5 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Victor.png",VkFormat.R8g8b8a8Unorm);
-            FTexture texture6 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Red.png",VkFormat.R8g8b8a8Unorm);
+            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Linus.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture1 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture2 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex2.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture3 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex3.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture4 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Cyan.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture5 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Victor.png", VkFormat.R8g8b8a8Unorm);
+            FTexture texture6 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Red.png", VkFormat.R8g8b8a8Unorm);
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            FGraphicsPipeline trianglePipeline = 
-            new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount,new VkImageView[]{
+            FGraphicsPipeline trianglePipeline =
+            new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
                 texture.imageView,
                 texture1.imageView,
                 texture2.imageView,
@@ -217,7 +216,7 @@ namespace Fabricor.VulkanRendering
                 texture6.imageView,
             });
 
-            VoxelVertex[] vertices=new VoxelVertex[4];
+            VoxelVertex[] vertices = new VoxelVertex[4];
             vertices[0].position = new Vector3(-0.5f, 0.5f, 0);
             vertices[0].texcoords = new Vector2(0, 1);
             vertices[1].position = new Vector3(0.5f, 0.5f, 0);
@@ -226,9 +225,19 @@ namespace Fabricor.VulkanRendering
             vertices[2].texcoords = new Vector2(1, 0);
             vertices[3].position = new Vector3(-0.5f, -0.5f, 0);
             vertices[3].texcoords = new Vector2(0, 0);
-            ushort[] indices=new ushort[]{0,1,2,0,2,3};
+            ushort[] indices = new ushort[] { 0, 1, 2, 0, 2, 3 };
 
-            VoxelMesh mesh=new VoxelMesh(device,physicalDevice,vertices,indices);
+            VoxelMesh mesh = new VoxelMesh(device, physicalDevice, vertices, indices);
+
+            Action changeTexture=delegate{
+                Span<VoxelVertex> span = mesh.vertices.Map();
+                for (int j = 0; j < span.Length; j++)
+                {
+                    span[j].textureId++;
+                }
+                span = mesh.vertices.UnMap();
+            };
+            GLFWInput.Subscribe(Keys.S,changeTexture,InputState.Press);
 
             FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
@@ -237,6 +246,7 @@ namespace Fabricor.VulkanRendering
             while (!WindowShouldClose(window))
             {
                 PollEvents();
+                GLFWInput.Update();
 
                 // Measure speed
                 double currentTime = Glfw.Time;
@@ -250,14 +260,14 @@ namespace Fabricor.VulkanRendering
                 }
 
                 //temp
-                Span<VoxelVertex> span = mesh.vertices.Map();
-                span[3].position -= 0.000002f * Vector3.UnitY;
-                span[3].position += 0.00001f * Vector3.UnitX;
-                for (int j = 0; j < span.Length; j++)
+                if (GLFWInput.TimeKeyPressed(Keys.A) > 0)
                 {
-                    span[j].textureId++;
+                    Span<VoxelVertex> span = mesh.vertices.Map();
+                    span[3].position -= 0.000002f * Vector3.UnitY;
+                    span[3].position -= 0.00001f * Vector3.UnitX;
+                    span = mesh.vertices.UnMap();
                 }
-                span = mesh.vertices.UnMap();
+                
 
                 uint imageIndex = 0;
 
@@ -270,13 +280,13 @@ namespace Fabricor.VulkanRendering
 
                 trianglePipeline.swapchainFramebuffer = frambuffers[imageIndex];
                 trianglePipeline.swapchainImage = swapchainImages[imageIndex];
-                trianglePipeline.swapchainImageIndex=imageIndex;
+                trianglePipeline.swapchainImageIndex = imageIndex;
 
                 trianglePipeline.mesh = mesh;
 
                 cmdBuffer.RecordCommandBuffer(new Action<VkCommandBuffer>[]{
                     trianglePipeline.Execute,
-                    
+
                     });
 
                 VkPipelineStageFlags submitStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
