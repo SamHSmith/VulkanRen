@@ -216,6 +216,7 @@ namespace Fabricor.VulkanRendering
                 texture6.imageView,
             });
 
+
             VoxelVertex[] vertices = new VoxelVertex[4];
             vertices[0].position = new Vector3(-0.5f, 0.5f, 0);
             vertices[0].texcoords = new Vector2(0, 1);
@@ -237,7 +238,7 @@ namespace Fabricor.VulkanRendering
                 }
                 span = mesh.vertices.UnMap();
             };
-            GLFWInput.Subscribe(Keys.S,changeTexture,InputState.Press);
+            GLFWInput.Subscribe(Keys.F,changeTexture,InputState.Press);
 
             FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
 
@@ -258,16 +259,6 @@ namespace Fabricor.VulkanRendering
                     nbFrames = 0;
                     lastTime += 1.0;
                 }
-
-                //temp
-                if (GLFWInput.TimeKeyPressed(Keys.A) > 0)
-                {
-                    Span<VoxelVertex> span = mesh.vertices.Map();
-                    span[3].position -= 0.000002f * Vector3.UnitY;
-                    span[3].position -= 0.00001f * Vector3.UnitX;
-                    span = mesh.vertices.UnMap();
-                }
-                
 
                 uint imageIndex = 0;
 
@@ -320,7 +311,6 @@ namespace Fabricor.VulkanRendering
             DestroyWindow(window);
             Terminate();
         }
-
         static readonly VkFormat[] UNORM_FORMATS ={
             VkFormat.R8g8b8a8Unorm,
             VkFormat.B8g8r8a8Unorm,
