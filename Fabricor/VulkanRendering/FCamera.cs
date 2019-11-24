@@ -19,7 +19,7 @@ namespace Fabricor.VulkanRendering
             }
         }
 
-        private Matrix4x4 CorrectionProjectionMatrix
+        private Matrix4x4 CorrectionProjectionMatrix //Corrects the z axis
         {
             get
             {
