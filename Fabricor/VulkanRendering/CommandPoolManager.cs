@@ -19,10 +19,10 @@ namespace Fabricor.VulkanRendering
             CommandPoolManager.graphicsQueueFamily = graphicsQueueFamily;
         }
 
-        public static int CreateCommandPool()
+        public static int CreateCommandPool(VkCommandPoolCreateFlags flags)
         {
             VkCommandPoolCreateInfo createInfo = VkCommandPoolCreateInfo.New();
-            createInfo.flags=VkCommandPoolCreateFlags.Transient;
+            createInfo.flags=flags;
             createInfo.queueFamilyIndex=graphicsQueueFamily;
 
             VkCommandPool pool=VkCommandPool.Null;

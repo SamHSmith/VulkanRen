@@ -182,7 +182,7 @@ namespace Fabricor.VulkanRendering
             }
 
             CommandPoolManager.Init(device, queueFamilyIndex);
-            int poolId = CommandPoolManager.CreateCommandPool();
+            int poolId = CommandPoolManager.CreateCommandPool(VkCommandPoolCreateFlags.ResetCommandBuffer);
 
 
             VkSemaphoreCreateInfo pCreateInfo = VkSemaphoreCreateInfo.New();
@@ -230,7 +230,8 @@ namespace Fabricor.VulkanRendering
 
             VoxelMesh mesh = new VoxelMesh(device, physicalDevice, vertices, indices);
 
-            Action changeTexture=delegate{
+            Action changeTexture = delegate
+            {
                 Span<VoxelVertex> span = mesh.vertices.Map();
                 for (int j = 0; j < span.Length; j++)
                 {
@@ -238,9 +239,20 @@ namespace Fabricor.VulkanRendering
                 }
                 span = mesh.vertices.UnMap();
             };
-            GLFWInput.Subscribe(Keys.F,changeTexture,InputState.Press);
+            GLFWInput.Subscribe(Keys.F, changeTexture, InputState.Press);
 
-            FCommandBuffer cmdBuffer = new FCommandBuffer(device, CommandPoolManager.GetPool(poolId));
+            FCommandBuffer[] cmdBuffers = new FCommandBuffer[swapchainImageCount];
+            VkFence[] fences = new VkFence[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                cmdBuffers[i] = new FCommandBuffer(device, poolId);
+
+                VkFenceCreateInfo createInfo = VkFenceCreateInfo.New();
+                createInfo.flags = VkFenceCreateFlags.Signaled;
+                VkFence fence = VkFence.Null;
+                Assert(vkCreateFence(device, &createInfo, null, &fence));
+                fences[i] = fence;
+            }
 
             double lastTime = Glfw.Time;
             int nbFrames = 0;
@@ -264,7 +276,6 @@ namespace Fabricor.VulkanRendering
 
                 Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &imageIndex));
 
-                Assert(vkResetCommandPool(device, CommandPoolManager.GetPool(poolId), VkCommandPoolResetFlags.None));
 
                 VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
                 beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
@@ -275,7 +286,12 @@ namespace Fabricor.VulkanRendering
 
                 trianglePipeline.mesh = mesh;
 
-                cmdBuffer.RecordCommandBuffer(new Action<VkCommandBuffer>[]{
+                fixed (VkFence* ptr = &(fences[imageIndex]))
+                {
+                    vkWaitForFences(device, 1, ptr, VkBool32.False, ulong.MaxValue);
+                    vkResetFences(device,1,ptr);
+                }
+                cmdBuffers[imageIndex].RecordCommandBuffer(new Action<VkCommandBuffer>[]{
                     trianglePipeline.Execute,
 
                     });
@@ -287,13 +303,13 @@ namespace Fabricor.VulkanRendering
                 submitInfo.pWaitSemaphores = &acquireSemaphore;
                 submitInfo.pWaitDstStageMask = &submitStageMask;
                 submitInfo.commandBufferCount = 1;
-                fixed (VkCommandBuffer* ptr = &(cmdBuffer.buffer))
+                fixed (VkCommandBuffer* ptr = &(cmdBuffers[imageIndex].buffer))
                     submitInfo.pCommandBuffers = ptr;
 
                 submitInfo.signalSemaphoreCount = 1;
                 submitInfo.pSignalSemaphores = &releaseSemaphore;
 
-                Assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VkFence.Null));
+                Assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, fences[imageIndex]));
 
                 VkPresentInfoKHR presentInfoKHR = VkPresentInfoKHR.New();
                 presentInfoKHR.swapchainCount = 1;
@@ -304,8 +320,6 @@ namespace Fabricor.VulkanRendering
                 presentInfoKHR.pWaitSemaphores = &releaseSemaphore;
 
                 Assert(vkQueuePresentKHR(graphicsQueue, &presentInfoKHR));
-
-                vkDeviceWaitIdle(device);
             }
 
             DestroyWindow(window);

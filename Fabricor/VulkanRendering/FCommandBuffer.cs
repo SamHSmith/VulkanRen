@@ -12,10 +12,10 @@ namespace Fabricor.VulkanRendering
 
         public FDataBuffer<VoxelRenderer.VoxelVertex> dataBuffer;
 
-        public FCommandBuffer(VkDevice device, VkCommandPool pool)
+        public FCommandBuffer(VkDevice device, int pool)
         {
             VkCommandBufferAllocateInfo pAllocateInfo = VkCommandBufferAllocateInfo.New();
-            pAllocateInfo.commandPool = pool;
+            pAllocateInfo.commandPool = CommandPoolManager.GetPool(pool);
             pAllocateInfo.level = VkCommandBufferLevel.Primary;
             pAllocateInfo.commandBufferCount = 1;
 
@@ -27,6 +27,7 @@ namespace Fabricor.VulkanRendering
 
         public void RecordCommandBuffer(Action<VkCommandBuffer>[] executions)
         {
+            Assert(vkResetCommandBuffer(buffer,VkCommandBufferResetFlags.None));
             VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
             beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
