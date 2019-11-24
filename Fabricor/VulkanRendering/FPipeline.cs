@@ -17,30 +17,35 @@ namespace Fabricor.VulkanRendering
 {
     public unsafe class FGraphicsPipeline
     {
-        public VkPipeline pipeline;
+        private VkDevice device;
+        private VkPipeline pipeline;
         public VkRenderPass renderPass;
-        public VkPipelineLayout pipelineLayout;
-        public VkDescriptorPool descriptorPool;
-        public VkDescriptorSetLayout desclayout;
-        public VkDescriptorSet[] descriptorSets;
-        public uint swapchainImageCount;
+        private VkPipelineLayout pipelineLayout;
+        private VkDescriptorPool descriptorPool;
+        private VkDescriptorSetLayout desclayout;
+        private VkDescriptorSet[] descriptorSets;
+        private VkSampler sampler;
+        private FDataBuffer<float> uniformdata;
+        private uint swapchainImageCount;
 
         public uint swapchainImageIndex;
         public VkImage swapchainImage;
         public VkFramebuffer swapchainFramebuffer;
         public VoxelMesh mesh;
-        public FGraphicsPipeline(VkDevice device, VkPipelineCache pipelineCache, VkRenderPass renderPass,
+        public FCamera camera;
+        public FGraphicsPipeline(VkDevice device, VkPhysicalDevice physicalDevice, VkPipelineCache pipelineCache, VkRenderPass renderPass,
         string shaderPath, uint swapchainImageCount, VkImageView[] texViews)
         {
+            this.device = device;
             this.swapchainImageCount = swapchainImageCount;
             this.renderPass = renderPass;
 
-            desclayout = CreateDescriptorLayout(device);
-            descriptorPool = CreateDescriptorPool(device, swapchainImageCount);
+            desclayout = CreateDescriptorLayout(device, 7);
+            descriptorPool = CreateDescriptorPool(device, swapchainImageCount, 7);
             descriptorSets = AllocateDescriptorSets(device, desclayout, descriptorPool,
             swapchainImageCount);
 
-            VkSampler sampler = CreateSampler(device);
+            sampler = CreateSampler(device);
             for (int j = 0; j < texViews.Length; j++)
                 for (int i = 0; i < swapchainImageCount; i++)
                 {
@@ -59,6 +64,8 @@ namespace Fabricor.VulkanRendering
                     fixed (VkWriteDescriptorSet* ptr = writes)
                         vkUpdateDescriptorSets(device, (uint)writes.Length, ptr, 0, null);
                 }
+
+            uniformdata = CreateUniformBuffer(device, physicalDevice, 1);
 
             VkShaderModule vs = LoadShader(device, $"{shaderPath}.vert.spv");
             VkShaderModule fs = LoadShader(device, $"{shaderPath}.frag.spv");
@@ -149,9 +156,9 @@ namespace Fabricor.VulkanRendering
 
             VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();
             rasterizationState.lineWidth = 1;
-            rasterizationState.frontFace=VkFrontFace.Clockwise;
-            rasterizationState.cullMode=VkCullModeFlags.Back;
-            rasterizationState.polygonMode=VkPolygonMode.Fill;//TODO add line debug render
+            rasterizationState.frontFace = VkFrontFace.Clockwise;
+            rasterizationState.cullMode = VkCullModeFlags.Back;
+            rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
@@ -248,16 +255,59 @@ namespace Fabricor.VulkanRendering
             fixed (VkBuffer* bptr = databuffers)
             fixed (ulong* optr = offsets)
                 vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
-            
-            vkCmdBindIndexBuffer(buffer,mesh.indices.Buffer,0,VkIndexType.Uint16);
+
+            vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint16);
+
+            uniformdata.Write(0,camera.View.ToFloatArray());
+            uniformdata.Write(16,camera.Projection.ToFloatArray());
+
+            UpdateUniformData(uniformdata,swapchainImageIndex);
 
             VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
             VkPipelineLayout layout = pipelineLayout;
             vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
 
-            vkCmdDrawIndexed(buffer,(uint)mesh.indices.Length,1,0,0,0);
+            vkCmdDrawIndexed(buffer, (uint)mesh.indices.Length, 1, 0, 0, 0);
 
             vkCmdEndRenderPass(buffer);
+        }
+
+        private void UpdateUniformData(FDataBuffer<float> uniformBuffer, uint swapchainImageIndex)
+        {
+            VkDescriptorBufferInfo bufferInfo = new VkDescriptorBufferInfo();
+            bufferInfo.buffer = uniformBuffer.Buffer;
+            bufferInfo.offset = 0;
+            bufferInfo.range = (uint)uniformBuffer.Length * 4;
+
+            VkWriteDescriptorSet[] writes = new VkWriteDescriptorSet[1];
+            writes[0].dstSet = descriptorSets[swapchainImageIndex];
+            writes[0].dstBinding = 1;
+            writes[0].dstArrayElement = 0;
+            writes[0].descriptorType = VkDescriptorType.UniformBuffer;
+            writes[0].descriptorCount = 1;
+            writes[0].pBufferInfo = &bufferInfo;
+            fixed (VkWriteDescriptorSet* ptr = writes)
+                vkUpdateDescriptorSets(device, (uint)writes.Length, ptr, 0, null);
+        }
+        public static FDataBuffer<float> CreateUniformBuffer(VkDevice device, VkPhysicalDevice physicalDevice, int modelCount)
+        {
+            FDataBuffer<float> buffer = new FDataBuffer<float>(device, physicalDevice, 16 * 4 + 16 * 4 + (16 * modelCount) * 4,
+            VkBufferUsageFlags.UniformBuffer, VkSharingMode.Exclusive);
+
+            float[] id = Matrix4x4.Identity.ToFloatArray();
+            Span<float> idSpan = id.AsSpan();
+
+            Span<float> span = buffer.Map();
+            for (int i = 0; i < span.Length; i += 16)
+            {
+                Span<float> mat = span.Slice(i, 16);
+                for (int j = 0; j < mat.Length; j++)
+                {
+                    mat[j] = idSpan[j];
+                }
+            }
+            span = buffer.UnMap();
+            return buffer;
         }
         private static VkSampler CreateSampler(VkDevice device)
         {
@@ -307,15 +357,21 @@ namespace Fabricor.VulkanRendering
                 Assert(vkAllocateDescriptorSets(device, &allocateInfo, ptr));
             return sets;
         }
-        private static VkDescriptorPool CreateDescriptorPool(VkDevice device, uint swapchainImageCount)
+        private static VkDescriptorPool CreateDescriptorPool(VkDevice device, uint swapchainImageCount, uint textureCount)
         {
-            VkDescriptorPoolSize size = new VkDescriptorPoolSize();
-            size.descriptorCount = swapchainImageCount * 7;
-            size.type = VkDescriptorType.CombinedImageSampler;
+            VkDescriptorPoolSize[] sizes = new VkDescriptorPoolSize[2];
+            sizes[0] = new VkDescriptorPoolSize();
+            sizes[0].descriptorCount = swapchainImageCount * textureCount;
+            sizes[0].type = VkDescriptorType.CombinedImageSampler;
+
+            sizes[1] = new VkDescriptorPoolSize();
+            sizes[1].descriptorCount = swapchainImageCount * 1;
+            sizes[1].type = VkDescriptorType.UniformBuffer;
 
             VkDescriptorPoolCreateInfo createInfo = VkDescriptorPoolCreateInfo.New();
-            createInfo.poolSizeCount = 1;
-            createInfo.pPoolSizes = &size;
+            createInfo.poolSizeCount = 2;
+            fixed (VkDescriptorPoolSize* ptr = sizes)
+                createInfo.pPoolSizes = ptr;
             createInfo.maxSets = swapchainImageCount;
 
             VkDescriptorPool pool = VkDescriptorPool.Null;
@@ -323,18 +379,29 @@ namespace Fabricor.VulkanRendering
             return pool;
         }
 
-        private static VkDescriptorSetLayout CreateDescriptorLayout(VkDevice device)
+        private static VkDescriptorSetLayout CreateDescriptorLayout(VkDevice device, uint textureCount)
         {
             VkDescriptorSetLayoutBinding samplerLayoutBinding = new VkDescriptorSetLayoutBinding();
             samplerLayoutBinding.binding = 0;
-            samplerLayoutBinding.descriptorCount = 7;
+            samplerLayoutBinding.descriptorCount = textureCount;
             samplerLayoutBinding.descriptorType = VkDescriptorType.CombinedImageSampler;
             samplerLayoutBinding.pImmutableSamplers = null;
             samplerLayoutBinding.stageFlags = VkShaderStageFlags.Fragment;
 
+            VkDescriptorSetLayoutBinding uboLayoutBinding = new VkDescriptorSetLayoutBinding();
+            uboLayoutBinding.binding = 1;
+            uboLayoutBinding.descriptorCount = 1;
+            uboLayoutBinding.descriptorType = VkDescriptorType.UniformBuffer;
+            uboLayoutBinding.stageFlags = VkShaderStageFlags.Vertex;
+
+            VkDescriptorSetLayoutBinding[] bindings = new VkDescriptorSetLayoutBinding[2];
+            bindings[0] = samplerLayoutBinding;
+            bindings[1] = uboLayoutBinding;
+
             VkDescriptorSetLayoutCreateInfo layoutInfo = VkDescriptorSetLayoutCreateInfo.New();
-            layoutInfo.bindingCount = 1;
-            layoutInfo.pBindings = &samplerLayoutBinding;
+            layoutInfo.bindingCount = (uint)bindings.Length;
+            fixed (VkDescriptorSetLayoutBinding* ptr = bindings)
+                layoutInfo.pBindings = ptr;
 
             VkDescriptorSetLayout descriptorSetLayout = VkDescriptorSetLayout.Null;
             Assert(vkCreateDescriptorSetLayout(device, &layoutInfo, null, &descriptorSetLayout));

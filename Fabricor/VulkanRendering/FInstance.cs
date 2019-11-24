@@ -26,6 +26,10 @@ namespace Fabricor.VulkanRendering{
             this.instance=CreateInstance();
         }
 
+        public void Destroy(){
+            vkDestroyInstance(instance,null);
+        }
+
         private VkInstance CreateInstance()
         {
             List<GCHandle> handles = new List<GCHandle>();

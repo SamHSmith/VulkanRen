@@ -205,8 +205,8 @@ namespace Fabricor.VulkanRendering
             FTexture texture6 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Red.png", VkFormat.R8g8b8a8Unorm);
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
-            FGraphicsPipeline trianglePipeline =
-            new FGraphicsPipeline(device, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
+            FGraphicsPipeline voxelPipeline =
+            new FGraphicsPipeline(device,physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
                 texture.imageView,
                 texture1.imageView,
                 texture2.imageView,
@@ -254,6 +254,9 @@ namespace Fabricor.VulkanRendering
                 fences[i] = fence;
             }
 
+            FCamera camera=new FCamera();
+            camera.position.Z=-1f;
+
             double lastTime = Glfw.Time;
             int nbFrames = 0;
             while (!WindowShouldClose(window))
@@ -272,6 +275,26 @@ namespace Fabricor.VulkanRendering
                     lastTime += 1.0;
                 }
 
+                if(GLFWInput.TimeKeyPressed(Keys.D)>0)
+                    camera.position+=Vector3.Transform(Vector3.UnitX*0.00001f,camera.rotation);
+                if(GLFWInput.TimeKeyPressed(Keys.A)>0)
+                    camera.position-=Vector3.Transform(Vector3.UnitX*0.00001f,camera.rotation);
+
+                if(GLFWInput.TimeKeyPressed(Keys.W)>0)
+                    camera.position+=Vector3.Transform(Vector3.UnitZ*0.00001f,camera.rotation);
+                if(GLFWInput.TimeKeyPressed(Keys.S)>0)
+                    camera.position-=Vector3.Transform(Vector3.UnitZ*0.00001f,camera.rotation);
+
+                if(GLFWInput.TimeKeyPressed(Keys.Space)>0)
+                    camera.position+=Vector3.Transform(Vector3.UnitY*0.00001f,camera.rotation);
+                if(GLFWInput.TimeKeyPressed(Keys.LeftShift)>0)
+                    camera.position-=Vector3.Transform(Vector3.UnitY*0.00001f,camera.rotation);
+
+                if(GLFWInput.TimeKeyPressed(Keys.Right)>0)
+                    camera.rotation*=Quaternion.CreateFromAxisAngle(Vector3.UnitY,0.00001f);
+                if(GLFWInput.TimeKeyPressed(Keys.Left)>0)
+                    camera.rotation*=Quaternion.CreateFromAxisAngle(Vector3.UnitY,-0.00001f);
+
                 uint imageIndex = 0;
 
                 Assert(vkAcquireNextImageKHR(device, swapchain, ulong.MaxValue, acquireSemaphore, VkFence.Null, &imageIndex));
@@ -280,11 +303,12 @@ namespace Fabricor.VulkanRendering
                 VkCommandBufferBeginInfo beginInfo = VkCommandBufferBeginInfo.New();
                 beginInfo.flags = VkCommandBufferUsageFlags.OneTimeSubmit;
 
-                trianglePipeline.swapchainFramebuffer = frambuffers[imageIndex];
-                trianglePipeline.swapchainImage = swapchainImages[imageIndex];
-                trianglePipeline.swapchainImageIndex = imageIndex;
+                voxelPipeline.swapchainFramebuffer = frambuffers[imageIndex];
+                voxelPipeline.swapchainImage = swapchainImages[imageIndex];
+                voxelPipeline.swapchainImageIndex = imageIndex;
 
-                trianglePipeline.mesh = mesh;
+                voxelPipeline.mesh = mesh;
+                voxelPipeline.camera=camera;
 
                 fixed (VkFence* ptr = &(fences[imageIndex]))
                 {
@@ -292,7 +316,7 @@ namespace Fabricor.VulkanRendering
                     vkResetFences(device,1,ptr);
                 }
                 cmdBuffers[imageIndex].RecordCommandBuffer(new Action<VkCommandBuffer>[]{
-                    trianglePipeline.Execute,
+                    voxelPipeline.Execute,
 
                     });
 
@@ -321,7 +345,7 @@ namespace Fabricor.VulkanRendering
 
                 Assert(vkQueuePresentKHR(graphicsQueue, &presentInfoKHR));
             }
-
+            finst.Destroy();
             DestroyWindow(window);
             Terminate();
         }

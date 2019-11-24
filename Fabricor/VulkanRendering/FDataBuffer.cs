@@ -78,6 +78,15 @@ namespace Fabricor.VulkanRendering
             return new Span<T>();
         }
 
+        public void Write(int position, T[] data){
+            Span<T> span=Map();
+            for (int i = 0; i < data.Length; i++)
+            {
+                span[i+position]=data[i];
+            }
+            span=UnMap();
+        }
+
         public void Free(){
             vkDestroyBuffer(device,Buffer,null);
             vkFreeMemory(device,Memory,null);
