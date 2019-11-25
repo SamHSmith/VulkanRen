@@ -51,6 +51,8 @@ namespace Fabricor.VulkanRendering
                 VkQueueFamilyProperties[] famProps = new VkQueueFamilyProperties[familyQueueCount];
                 fixed (VkQueueFamilyProperties* ptr = famProps)
                     vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyQueueCount, ptr);
+                
+                
 
                 for (uint k = 0; k < familyQueueCount; k++)
                 {
@@ -196,39 +198,25 @@ namespace Fabricor.VulkanRendering
             VkQueue graphicsQueue = VkQueue.Null;
             vkGetDeviceQueue(device, queueFamilyIndex, 0, &graphicsQueue);
 
-            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Linus.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture1 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture2 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex2.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture3 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Alex3.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture4 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Cyan.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture5 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Victor.png", VkFormat.R8g8b8a8Unorm);
-            FTexture texture6 = new FTexture(device, physicalDevice, poolId, graphicsQueue, "res/Red.png", VkFormat.R8g8b8a8Unorm);
+            string[] textures=new string[]{
+                "res/Linus.png",
+                "res/Alex.png",
+                "res/Victor.png",
+                "res/Alex2.png",
+                //"res/Cyan.png",
+                "res/Alex3.png",
+                //"res/Red.png",
+            };
+
+            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, textures, VkFormat.R8g8b8a8Unorm);
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
             FGraphicsPipeline voxelPipeline =
             new FGraphicsPipeline(device,physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
                 texture.imageView,
-                texture1.imageView,
-                texture2.imageView,
-                texture3.imageView,
-                texture4.imageView,
-                texture5.imageView,
-                texture6.imageView,
             });
 
-
-            VoxelVertex[] vertices = new VoxelVertex[4];
-            vertices[0].position = new Vector3(-0.5f, 0.5f, 0);
-            vertices[0].texcoords = new Vector2(0, 1);
-            vertices[1].position = new Vector3(0.5f, 0.5f, 0);
-            vertices[1].texcoords = new Vector2(1, 1);
-            vertices[2].position = new Vector3(0.5f, -0.5f, 0);
-            vertices[2].texcoords = new Vector2(1, 0);
-            vertices[3].position = new Vector3(-0.5f, -0.5f, 0);
-            vertices[3].texcoords = new Vector2(0, 0);
-            ushort[] indices = new ushort[] { 0, 1, 2, 0, 2, 3 };
-
-            VoxelMesh mesh = new VoxelMesh(device, physicalDevice, vertices, indices);
+            VoxelMesh mesh = VoxelMeshFactory.GenerateMesh(device,physicalDevice);
 
             Action changeTexture = delegate
             {

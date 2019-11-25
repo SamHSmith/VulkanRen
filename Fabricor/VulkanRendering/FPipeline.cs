@@ -40,7 +40,7 @@ namespace Fabricor.VulkanRendering
             this.swapchainImageCount = swapchainImageCount;
             this.renderPass = renderPass;
 
-            desclayout = CreateDescriptorLayout(device, 7);
+            desclayout = CreateDescriptorLayout(device, 1);
             descriptorPool = CreateDescriptorPool(device, swapchainImageCount, 7);
             descriptorSets = AllocateDescriptorSets(device, desclayout, descriptorPool,
             swapchainImageCount);
