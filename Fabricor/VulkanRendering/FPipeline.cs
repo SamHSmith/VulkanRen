@@ -160,8 +160,8 @@ namespace Fabricor.VulkanRendering
             VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();
             rasterizationState.lineWidth = 1;
             rasterizationState.frontFace = VkFrontFace.Clockwise;
-            rasterizationState.cullMode = VkCullModeFlags.None;
-            rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
+            rasterizationState.cullMode = VkCullModeFlags.Back;
+            rasterizationState.polygonMode = VkPolygonMode.Line;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
@@ -171,7 +171,7 @@ namespace Fabricor.VulkanRendering
             VkPipelineDepthStencilStateCreateInfo depthState = VkPipelineDepthStencilStateCreateInfo.New();
             depthState.depthTestEnable=VkBool32.True;
             depthState.depthWriteEnable=VkBool32.True;
-            depthState.depthCompareOp=VkCompareOp.LessOrEqual;
+            depthState.depthCompareOp=VkCompareOp.Less;
             pCreateInfo.pDepthStencilState = &depthState;
 
             VkPipelineColorBlendAttachmentState colourAttachment = new VkPipelineColorBlendAttachmentState();

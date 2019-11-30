@@ -269,7 +269,10 @@ namespace Fabricor.VulkanRendering
             }
 
             FCamera camera = new FCamera();
-            camera.position.Z = -1f;
+            camera.AspectWidth=width;
+            camera.AspectHeight=height;
+            camera.position.Z = 4f;
+            camera.rotation=Quaternion.CreateFromYawPitchRoll(MathF.PI,0,0);
 
             double lastTime = Glfw.Time;
             int nbFrames = 0;
