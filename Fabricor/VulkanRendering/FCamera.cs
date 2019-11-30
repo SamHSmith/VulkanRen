@@ -10,7 +10,7 @@ namespace Fabricor.VulkanRendering
         public float AspectWidth = 1, AspectHeight = 1;
         public float FOV = 90f;
 
-        public float NEAR_PLANE = 0.5f, FAR_PLANE = (float)Math.Pow(10, 10);
+        public float NEAR_PLANE = 0.1f, FAR_PLANE = (float)Math.Pow(10, 10);
         public Matrix4x4 Projection
         {
             get

@@ -6,23 +6,28 @@ using System.Collections.Generic;
 
 namespace Fabricor.VulkanRendering.VoxelRenderer
 {
+
+
     public static class VoxelMeshFactory
     {
 
-        public static VoxelMesh GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice)
+        public static VoxelMesh GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
         {
             List<VoxelVertex> vertices = new List<VoxelVertex>(); List<ushort> indicies = new List<ushort>();
             List<Face> faces = new List<Face>();
 
             faces.AddRange(GenerateFaces(new Vector3(0, 0, 0), 0));
-            faces.AddRange(GenerateFaces(new Vector3(1, 0, 0), 0));
-            faces.AddRange(GenerateFaces(new Vector3(1, 1, 0), 0));
+            faces.AddRange(GenerateFaces(new Vector3(1, 0, 0), 2));
+            faces.AddRange(GenerateFaces(new Vector3(1, 1, 0), 1));
             faces.AddRange(GenerateFaces(new Vector3(2, 0, 0), 0));
             faces.AddRange(GenerateFaces(new Vector3(2, 1, 0), 0));
 
-            LoopFaces(ref faces, Vector3.UnitX);
-            LoopFaces(ref faces, Vector3.UnitY);
-            LoopFaces(ref faces, Vector3.UnitZ);
+            if (optimize)
+            {
+                LoopFaces(ref faces, Vector3.UnitX);
+                LoopFaces(ref faces, Vector3.UnitY);
+                LoopFaces(ref faces, Vector3.UnitZ);
+            }
 
             for (int i = 0; i < faces.Count; i++)
             {
@@ -54,7 +59,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 if (f.Layer > maxLayer)
                     maxLayer = f.Layer;
             }
-            for (int i = 0; i < maxLayer+1; i++)
+            for (int i = 0; i < maxLayer + 1; i++)
             {
                 List<Face> mergeFaces = new List<Face>(faces.Where((f) => i == (int)(f.Layer)));
                 if (axis == Vector3.UnitX)
