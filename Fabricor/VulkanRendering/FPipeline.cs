@@ -26,6 +26,9 @@ namespace Fabricor.VulkanRendering
         private VkDescriptorSet[] descriptorSets;
         private VkSampler sampler;
         private FDataBuffer<float> uniformdata;
+        private VkImage depthImage;
+        private VkDeviceMemory depthImageMemory;
+        public VkImageView depthImageView { get; private set; }
         private uint swapchainImageCount;
 
         public uint swapchainImageIndex;
@@ -157,7 +160,7 @@ namespace Fabricor.VulkanRendering
             VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();
             rasterizationState.lineWidth = 1;
             rasterizationState.frontFace = VkFrontFace.Clockwise;
-            rasterizationState.cullMode = VkCullModeFlags.Back;
+            rasterizationState.cullMode = VkCullModeFlags.None;
             rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
@@ -166,6 +169,9 @@ namespace Fabricor.VulkanRendering
             pCreateInfo.pMultisampleState = &multisampleState;
 
             VkPipelineDepthStencilStateCreateInfo depthState = VkPipelineDepthStencilStateCreateInfo.New();
+            depthState.depthTestEnable=VkBool32.True;
+            depthState.depthWriteEnable=VkBool32.True;
+            depthState.depthCompareOp=VkCompareOp.LessOrEqual;
             pCreateInfo.pDepthStencilState = &depthState;
 
             VkPipelineColorBlendAttachmentState colourAttachment = new VkPipelineColorBlendAttachmentState();
@@ -220,16 +226,19 @@ namespace Fabricor.VulkanRendering
             0, null, 0, null, 1, &imageMemoryBarrier);
 
             VkClearColorValue clearColorValue = new VkClearColorValue { float32_0 = 161 / 255f, float32_1 = 96f / 255, float32_2 = 39f / 255, float32_3 = 1 };
-            VkClearValue clearValue = new VkClearValue();
-            clearValue.color = clearColorValue;
+            VkClearDepthStencilValue clearDepthStencilValue = new VkClearDepthStencilValue(1, 0);
+            VkClearValue[] clearValues = new VkClearValue[2];
+            clearValues[0].color = clearColorValue;
+            clearValues[1].depthStencil = clearDepthStencilValue;
 
             VkRenderPassBeginInfo passBeginInfo = VkRenderPassBeginInfo.New();
             passBeginInfo.renderPass = renderPass;
             passBeginInfo.framebuffer = swapchainFramebuffer;
             passBeginInfo.renderArea.extent.width = (uint)Program.width;
             passBeginInfo.renderArea.extent.height = (uint)Program.height;
-            passBeginInfo.clearValueCount = 1;
-            passBeginInfo.pClearValues = &clearValue;
+            passBeginInfo.clearValueCount = (uint)clearValues.Length;
+            fixed (VkClearValue* ptr = clearValues)
+                passBeginInfo.pClearValues = ptr;
 
             vkCmdBeginRenderPass(buffer, &passBeginInfo, VkSubpassContents.Inline);
 
@@ -258,10 +267,10 @@ namespace Fabricor.VulkanRendering
 
             vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint16);
 
-            uniformdata.Write(0,camera.View.ToFloatArray());
-            uniformdata.Write(16,camera.Projection.ToFloatArray());
+            uniformdata.Write(0, camera.View.ToFloatArray());
+            uniformdata.Write(16, camera.Projection.ToFloatArray());
 
-            UpdateUniformData(uniformdata,swapchainImageIndex);
+            UpdateUniformData(uniformdata, swapchainImageIndex);
 
             VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
             VkPipelineLayout layout = pipelineLayout;
@@ -272,6 +281,64 @@ namespace Fabricor.VulkanRendering
             vkCmdEndRenderPass(buffer);
         }
 
+        public void CreateDepthBuffer(VkPhysicalDevice physicalDevice, uint width, uint height)
+        {
+            CreateDepthImage(physicalDevice, width, height);
+            CreateDepthImageView();
+        }
+
+        private void CreateDepthImageView()
+        {
+            VkImageViewCreateInfo createInfo = VkImageViewCreateInfo.New();
+            createInfo.image = depthImage;
+            createInfo.viewType = VkImageViewType.Image2D;
+            createInfo.format = VkFormat.D32Sfloat;
+            createInfo.subresourceRange.aspectMask = VkImageAspectFlags.Depth;
+            createInfo.subresourceRange.layerCount = 1;
+            createInfo.subresourceRange.levelCount = 1;
+
+            VkImageView view = VkImageView.Null;
+            Assert(vkCreateImageView(device, &createInfo, null, &view));
+            this.depthImageView = view;
+        }
+        private void CreateDepthImage(VkPhysicalDevice physicalDevice, uint width, uint height)
+        {
+            VkImageCreateInfo createInfo = VkImageCreateInfo.New();
+            createInfo.imageType = VkImageType.Image2D;
+            createInfo.extent.width = width;
+            createInfo.extent.height = height;
+            createInfo.extent.depth = 1;
+            createInfo.mipLevels = 1;
+            createInfo.arrayLayers = 1;
+            createInfo.format = VkFormat.D32Sfloat;
+            createInfo.tiling = VkImageTiling.Optimal;
+            createInfo.initialLayout = VkImageLayout.Undefined;
+            createInfo.usage = VkImageUsageFlags.DepthStencilAttachment;
+            createInfo.sharingMode = VkSharingMode.Exclusive;
+            createInfo.samples = VkSampleCountFlags.Count1;
+
+            VkImage depthImage;
+            Assert(vkCreateImage(device, &createInfo, null, &depthImage));
+
+            VkMemoryRequirements memoryRequirements;
+            vkGetImageMemoryRequirements(device, depthImage, &memoryRequirements);
+
+            VkPhysicalDeviceMemoryProperties memoryProperties = new VkPhysicalDeviceMemoryProperties();
+            vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+            VkMemoryAllocateInfo allocateInfo = VkMemoryAllocateInfo.New();
+            allocateInfo.allocationSize = memoryRequirements.size;
+            allocateInfo.memoryTypeIndex = FDataBuffer<byte>.SelectMemoryType(memoryProperties, memoryRequirements.memoryTypeBits,
+            VkMemoryPropertyFlags.DeviceLocal);
+
+            VkDeviceMemory depthImageMemory;
+            Assert(vkAllocateMemory(device, &allocateInfo, null, &depthImageMemory));
+
+            vkBindImageMemory(device, depthImage, depthImageMemory, 0);
+
+            this.depthImage = depthImage;
+            this.depthImageMemory = depthImageMemory;
+        }
         private void UpdateUniformData(FDataBuffer<float> uniformBuffer, uint swapchainImageIndex)
         {
             VkDescriptorBufferInfo bufferInfo = new VkDescriptorBufferInfo();

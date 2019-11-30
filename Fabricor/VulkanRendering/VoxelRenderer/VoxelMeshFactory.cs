@@ -18,7 +18,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             f.up=Vector3.UnitY;
             f.Generate(ref vertices,ref indicies);
 
-            f.position=-Vector3.UnitX;
+            f.position=-(Vector3.UnitX*0.5f)+(Vector3.UnitZ*0.4f);
             f.textureID=1;
             f.Generate(ref vertices,ref indicies);
 

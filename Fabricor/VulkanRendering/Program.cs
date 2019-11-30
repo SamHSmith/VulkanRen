@@ -51,8 +51,8 @@ namespace Fabricor.VulkanRendering
                 VkQueueFamilyProperties[] famProps = new VkQueueFamilyProperties[familyQueueCount];
                 fixed (VkQueueFamilyProperties* ptr = famProps)
                     vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyQueueCount, ptr);
-                
-                
+
+
 
                 for (uint k = 0; k < familyQueueCount; k++)
                 {
@@ -98,29 +98,48 @@ namespace Fabricor.VulkanRendering
 
         static VkRenderPass CreateRenderPass(VkDevice device)
         {
-            VkAttachmentDescription[] attachmentDescription = new VkAttachmentDescription[1];
-            attachmentDescription[0] = new VkAttachmentDescription();
-            attachmentDescription[0].format = surfaceFormat.format;
-            attachmentDescription[0].samples = VkSampleCountFlags.Count1;
-            attachmentDescription[0].loadOp = VkAttachmentLoadOp.Clear;
-            attachmentDescription[0].storeOp = VkAttachmentStoreOp.Store;
-            attachmentDescription[0].stencilLoadOp = VkAttachmentLoadOp.DontCare;
-            attachmentDescription[0].stencilStoreOp = VkAttachmentStoreOp.DontCare;
-            attachmentDescription[0].initialLayout = VkImageLayout.ColorAttachmentOptimal;
-            attachmentDescription[0].finalLayout = VkImageLayout.PresentSrcKHR;
+            VkAttachmentDescription colourAttachmentDescription = new VkAttachmentDescription();
+            colourAttachmentDescription.format = surfaceFormat.format;
+            colourAttachmentDescription.samples = VkSampleCountFlags.Count1;
+            colourAttachmentDescription.loadOp = VkAttachmentLoadOp.Clear;
+            colourAttachmentDescription.storeOp = VkAttachmentStoreOp.Store;
+            colourAttachmentDescription.stencilLoadOp = VkAttachmentLoadOp.DontCare;
+            colourAttachmentDescription.stencilStoreOp = VkAttachmentStoreOp.DontCare;
+            colourAttachmentDescription.initialLayout = VkImageLayout.ColorAttachmentOptimal;
+            colourAttachmentDescription.finalLayout = VkImageLayout.PresentSrcKHR;
+
+            VkAttachmentDescription depthAttachment = new VkAttachmentDescription();
+            depthAttachment.format = VkFormat.D32Sfloat;
+            depthAttachment.samples = VkSampleCountFlags.Count1;
+            depthAttachment.loadOp = VkAttachmentLoadOp.Clear;
+            depthAttachment.storeOp = VkAttachmentStoreOp.DontCare;
+            depthAttachment.stencilLoadOp = VkAttachmentLoadOp.DontCare;
+            depthAttachment.stencilStoreOp = VkAttachmentStoreOp.DontCare;
+            depthAttachment.initialLayout = VkImageLayout.Undefined;
+            depthAttachment.finalLayout = VkImageLayout.DepthStencilAttachmentOptimal;
+
 
             VkAttachmentReference attachmentReference = new VkAttachmentReference();
-            attachmentReference.attachment = 0;//refers to the index in the array above
+            attachmentReference.attachment = 0;
             attachmentReference.layout = VkImageLayout.ColorAttachmentOptimal;
+
+            VkAttachmentReference depthAttachmentReference = new VkAttachmentReference();
+            depthAttachmentReference.attachment = 1;
+            depthAttachmentReference.layout = VkImageLayout.DepthStencilAttachmentOptimal;
 
             VkSubpassDescription subpassDescription = new VkSubpassDescription();
             subpassDescription.pipelineBindPoint = VkPipelineBindPoint.Graphics;
             subpassDescription.colorAttachmentCount = 1;
             subpassDescription.pColorAttachments = &attachmentReference;
+            subpassDescription.pDepthStencilAttachment = &depthAttachmentReference;
 
+            VkAttachmentDescription[] attachmentDescriptions = new VkAttachmentDescription[]{
+                colourAttachmentDescription,
+                depthAttachment
+            };
             VkRenderPassCreateInfo pCreateInfo = VkRenderPassCreateInfo.New();
-            pCreateInfo.attachmentCount = 1;
-            fixed (VkAttachmentDescription* ptr = &attachmentDescription[0])
+            pCreateInfo.attachmentCount = (uint)attachmentDescriptions.Length;
+            fixed (VkAttachmentDescription* ptr = attachmentDescriptions)
                 pCreateInfo.pAttachments = ptr;
             pCreateInfo.subpassCount = 1;
             pCreateInfo.pSubpasses = &subpassDescription;
@@ -131,12 +150,18 @@ namespace Fabricor.VulkanRendering
             return pass;
         }
 
-        static VkFramebuffer CreateFramebuffer(VkDevice device, VkRenderPass pass, VkImageView imageView)
+        static VkFramebuffer CreateFramebuffer(VkDevice device, VkRenderPass pass, VkImageView imageView, VkImageView depthImageView)
         {
+            VkImageView[] imageViews = new VkImageView[]{
+                imageView,
+                depthImageView
+            };
+
             VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New();
             createInfo.renderPass = pass;
-            createInfo.attachmentCount = 1;
-            createInfo.pAttachments = &imageView;
+            createInfo.attachmentCount = (uint)imageViews.Length;
+            fixed (VkImageView* ptr = imageViews)
+                createInfo.pAttachments = ptr;
             createInfo.width = (uint)width;
             createInfo.height = (uint)height;
             createInfo.layers = 1;
@@ -172,17 +197,6 @@ namespace Fabricor.VulkanRendering
             fixed (VkImage* ptr = &swapchainImages[0])
                 Assert(vkGetSwapchainImagesKHR(device, swapchain, &swapchainImageCount, ptr));
 
-            VkImageView[] swapchainImageViews = new VkImageView[swapchainImageCount];
-            for (int i = 0; i < swapchainImageCount; i++)
-            {
-                swapchainImageViews[i] = FTexture.CreateColourImageView(device, swapchainImages[i], surfaceFormat.format);
-            }
-            VkFramebuffer[] frambuffers = new VkFramebuffer[swapchainImageCount];
-            for (int i = 0; i < swapchainImageCount; i++)
-            {
-                frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i]);
-            }
-
             CommandPoolManager.Init(device, queueFamilyIndex);
             int poolId = CommandPoolManager.CreateCommandPool(VkCommandPoolCreateFlags.ResetCommandBuffer);
 
@@ -198,7 +212,7 @@ namespace Fabricor.VulkanRendering
             VkQueue graphicsQueue = VkQueue.Null;
             vkGetDeviceQueue(device, queueFamilyIndex, 0, &graphicsQueue);
 
-            string[] textures=new string[]{
+            string[] textures = new string[]{
                 "res/Linus.png",
                 "res/Alex.png",
                 "res/Victor.png",
@@ -212,11 +226,23 @@ namespace Fabricor.VulkanRendering
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
             FGraphicsPipeline voxelPipeline =
-            new FGraphicsPipeline(device,physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
+            new FGraphicsPipeline(device, physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
                 texture.imageView,
             });
+            voxelPipeline.CreateDepthBuffer(physicalDevice, (uint)width, (uint)height);
 
-            VoxelMesh mesh = VoxelMeshFactory.GenerateMesh(device,physicalDevice);
+            VkImageView[] swapchainImageViews = new VkImageView[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                swapchainImageViews[i] = FTexture.CreateColourImageView(device, swapchainImages[i], surfaceFormat.format);
+            }
+            VkFramebuffer[] frambuffers = new VkFramebuffer[swapchainImageCount];
+            for (int i = 0; i < swapchainImageCount; i++)
+            {
+                frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i], voxelPipeline.depthImageView);
+            }
+
+            VoxelMesh mesh = VoxelMeshFactory.GenerateMesh(device, physicalDevice);
 
             Action changeTexture = delegate
             {
@@ -242,8 +268,8 @@ namespace Fabricor.VulkanRendering
                 fences[i] = fence;
             }
 
-            FCamera camera=new FCamera();
-            camera.position.Z=-1f;
+            FCamera camera = new FCamera();
+            camera.position.Z = -1f;
 
             double lastTime = Glfw.Time;
             int nbFrames = 0;
@@ -263,25 +289,25 @@ namespace Fabricor.VulkanRendering
                     lastTime += 1.0;
                 }
 
-                if(GLFWInput.TimeKeyPressed(Keys.D)>0)
-                    camera.position+=Vector3.Transform(Vector3.UnitX*0.00001f,camera.rotation);
-                if(GLFWInput.TimeKeyPressed(Keys.A)>0)
-                    camera.position-=Vector3.Transform(Vector3.UnitX*0.00001f,camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.D) > 0)
+                    camera.position += Vector3.Transform(Vector3.UnitX * 0.00005f, camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.A) > 0)
+                    camera.position -= Vector3.Transform(Vector3.UnitX * 0.00005f, camera.rotation);
 
-                if(GLFWInput.TimeKeyPressed(Keys.W)>0)
-                    camera.position+=Vector3.Transform(Vector3.UnitZ*0.00001f,camera.rotation);
-                if(GLFWInput.TimeKeyPressed(Keys.S)>0)
-                    camera.position-=Vector3.Transform(Vector3.UnitZ*0.00001f,camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.W) > 0)
+                    camera.position += Vector3.Transform(Vector3.UnitZ * 0.00005f, camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.S) > 0)
+                    camera.position -= Vector3.Transform(Vector3.UnitZ * 0.00005f, camera.rotation);
 
-                if(GLFWInput.TimeKeyPressed(Keys.Space)>0)
-                    camera.position+=Vector3.Transform(Vector3.UnitY*0.00001f,camera.rotation);
-                if(GLFWInput.TimeKeyPressed(Keys.LeftShift)>0)
-                    camera.position-=Vector3.Transform(Vector3.UnitY*0.00001f,camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.Space) > 0)
+                    camera.position += Vector3.Transform(Vector3.UnitY * 0.00005f, camera.rotation);
+                if (GLFWInput.TimeKeyPressed(Keys.LeftShift) > 0)
+                    camera.position -= Vector3.Transform(Vector3.UnitY * 0.00005f, camera.rotation);
 
-                if(GLFWInput.TimeKeyPressed(Keys.Right)>0)
-                    camera.rotation*=Quaternion.CreateFromAxisAngle(Vector3.UnitY,0.00001f);
-                if(GLFWInput.TimeKeyPressed(Keys.Left)>0)
-                    camera.rotation*=Quaternion.CreateFromAxisAngle(Vector3.UnitY,-0.00001f);
+                if (GLFWInput.TimeKeyPressed(Keys.Right) > 0)
+                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.00005f);
+                if (GLFWInput.TimeKeyPressed(Keys.Left) > 0)
+                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, -0.00005f);
 
                 uint imageIndex = 0;
 
@@ -296,12 +322,12 @@ namespace Fabricor.VulkanRendering
                 voxelPipeline.swapchainImageIndex = imageIndex;
 
                 voxelPipeline.mesh = mesh;
-                voxelPipeline.camera=camera;
+                voxelPipeline.camera = camera;
 
                 fixed (VkFence* ptr = &(fences[imageIndex]))
                 {
                     vkWaitForFences(device, 1, ptr, VkBool32.False, ulong.MaxValue);
-                    vkResetFences(device,1,ptr);
+                    vkResetFences(device, 1, ptr);
                 }
                 cmdBuffers[imageIndex].RecordCommandBuffer(new Action<VkCommandBuffer>[]{
                     voxelPipeline.Execute,
