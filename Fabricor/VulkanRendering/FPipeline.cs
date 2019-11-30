@@ -265,7 +265,7 @@ namespace Fabricor.VulkanRendering
             fixed (ulong* optr = offsets)
                 vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
 
-            vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint16);
+            vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint32);
 
             uniformdata.Write(0, camera.View.ToFloatArray());
             uniformdata.Write(16, camera.Projection.ToFloatArray());

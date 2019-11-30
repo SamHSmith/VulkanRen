@@ -183,7 +183,9 @@ namespace Fabricor.VulkanRendering
 
             WindowHint(Hint.ClientApi, ClientApi.None);
             NativeWindow window = new GLFW.NativeWindow(width, height, "Fabricor");
-            Glfw.SetKeyCallback(window, GLFWInput.KeyCallback);
+            Glfw.SetKeyCallback(window,(a,b,c,d,e)=>{
+                GLFWInput.KeyCallback(a,b,c,d,e);
+            });
 
             FInstance finst = new FInstance();
             VkSurfaceKHR surface = CreateSurface(finst.instance, window);
@@ -361,6 +363,7 @@ namespace Fabricor.VulkanRendering
                 presentInfoKHR.pWaitSemaphores = &releaseSemaphore;
 
                 Assert(vkQueuePresentKHR(graphicsQueue, &presentInfoKHR));
+                vkDeviceWaitIdle(device);
             }
             finst.Destroy();
             DestroyWindow(window);

@@ -1,7 +1,7 @@
 using System.Numerics;
 using System.Linq;
 using Vulkan;
-using static Vulkan.VulkanNative;
+using System;
 using System.Collections.Generic;
 
 namespace Fabricor.VulkanRendering.VoxelRenderer
@@ -13,14 +13,41 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
 
         public static VoxelMesh GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
         {
-            List<VoxelVertex> vertices = new List<VoxelVertex>(); List<ushort> indicies = new List<ushort>();
+            List<VoxelVertex> vertices = new List<VoxelVertex>(); List<uint> indicies = new List<uint>();
             List<Face> faces = new List<Face>();
 
-            faces.AddRange(GenerateFaces(new Vector3(0, 0, 0), 0));
-            faces.AddRange(GenerateFaces(new Vector3(1, 0, 0), 2));
-            faces.AddRange(GenerateFaces(new Vector3(1, 1, 0), 1));
-            faces.AddRange(GenerateFaces(new Vector3(2, 0, 0), 0));
-            faces.AddRange(GenerateFaces(new Vector3(2, 1, 0), 0));
+            Random random=new Random();
+
+            ushort[,,] blocks=new ushort[16,16,16];
+            for (int x2 = 0; x2 < 16; x2++)
+            {
+                for (int y2 = 0; y2 < 16; y2++)
+                {
+                    for (int z2 = 0; z2 < 16; z2++)
+                    {
+                        blocks[x2,y2,z2]=(ushort)random.Next(7);
+                    }
+                }
+            }
+            VoxelRenderChunk chunk=new VoxelRenderChunk(blocks);
+
+            Span<ushort> span=chunk.Span;
+            int x=0,y=0,z=0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if(span[i]!=0)
+                    faces.AddRange(GenerateFaces(new Vector3(x,y,z),span[i]));
+
+                z++;
+                if(z>=16){
+                    z=0;
+                    y++;
+                    if(y>=16){
+                        y=0;
+                        x++;
+                    }
+                }
+            }
 
             if (optimize)
             {
@@ -122,14 +149,14 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             }
         }
 
-        private static Face[] GenerateFaces(Vector3 position, uint blockID)
+        private static Face[] GenerateFaces(Vector3 position, ushort blockID)
         {
             Face[] faces = new Face[6];
 
             for (int i = 0; i < faces.Length; i++)
             {
                 faces[i] = new Face();
-                faces[i].textureID = blockID;//TODO add custom textures for differnet sides with a block lookup
+                faces[i].textureID = (ushort)(blockID-1);//TODO add custom textures for differnet sides with a block lookup
             }
 
             faces[0].position = position;
@@ -188,7 +215,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         public Vector3 normal;
         public uint textureID;
 
-        public void Generate(ref List<VoxelVertex> vertices, ref List<ushort> indicies)
+        public void Generate(ref List<VoxelVertex> vertices, ref List<uint> indicies)
         {
             VoxelVertex[] verts = new VoxelVertex[4];
             for (int i = 0; i < verts.Length; i++)
@@ -212,7 +239,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             ushort o = (ushort)vertices.Count;//First index of this quad
             vertices.AddRange(verts);
 
-            ushort[] inds = new ushort[] { 0, 1, 2, 0, 2, 3 };
+            uint[] inds = new uint[] { 0, 1, 2, 0, 2, 3 };
             for (int i = 0; i < inds.Length; i++)
             {
                 inds[i] += o;

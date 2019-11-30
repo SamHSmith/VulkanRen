@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Collections.Generic;
 using System;
 using GLFW;
@@ -11,6 +12,7 @@ namespace Fabricor.VulkanRendering
         private static Dictionary<Keys, Action> subscribeRelease = new Dictionary<Keys, Action>();
 
         private static Queue<Keys> newlyPressed = new Queue<Keys>(), newlyReleased = new Queue<Keys>();
+
 
         private static double lastTime = Glfw.Time;
         public static void Update()
