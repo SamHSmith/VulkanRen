@@ -34,10 +34,10 @@ namespace Fabricor.VulkanRendering
         public uint swapchainImageIndex;
         public VkImage swapchainImage;
         public VkFramebuffer swapchainFramebuffer;
-        public VoxelMesh mesh;
+        public MeshWrapper<VoxelVertex> mesh;
         public FCamera camera;
         public FGraphicsPipeline(VkDevice device, VkPhysicalDevice physicalDevice, VkPipelineCache pipelineCache, VkRenderPass renderPass,
-        string shaderPath, uint swapchainImageCount, VkImageView[] texViews)
+        string shaderPath, uint swapchainImageCount, FTexture textureArray)
         {
             this.device = device;
             this.swapchainImageCount = swapchainImageCount;
@@ -48,19 +48,18 @@ namespace Fabricor.VulkanRendering
             descriptorSets = AllocateDescriptorSets(device, desclayout, descriptorPool,
             swapchainImageCount);
 
-            sampler = CreateSampler(device);
-            for (int j = 0; j < texViews.Length; j++)
+            sampler = CreateSampler(device,textureArray.MipLevels);
                 for (int i = 0; i < swapchainImageCount; i++)
                 {
                     VkDescriptorImageInfo imageInfo = new VkDescriptorImageInfo();
                     imageInfo.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-                    imageInfo.imageView = texViews[j];
+                    imageInfo.imageView = textureArray.imageView;
                     imageInfo.sampler = sampler;
 
                     VkWriteDescriptorSet[] writes = new VkWriteDescriptorSet[1];
                     writes[0].dstSet = descriptorSets[i];
                     writes[0].dstBinding = 0;
-                    writes[0].dstArrayElement = (uint)j;
+                    writes[0].dstArrayElement = 0;
                     writes[0].descriptorType = VkDescriptorType.CombinedImageSampler;
                     writes[0].descriptorCount = 1;
                     writes[0].pImageInfo = &imageInfo;
@@ -161,7 +160,7 @@ namespace Fabricor.VulkanRendering
             rasterizationState.lineWidth = 1;
             rasterizationState.frontFace = VkFrontFace.Clockwise;
             rasterizationState.cullMode = VkCullModeFlags.Back;
-            rasterizationState.polygonMode = VkPolygonMode.Line;//TODO add line debug render
+            rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
@@ -169,9 +168,9 @@ namespace Fabricor.VulkanRendering
             pCreateInfo.pMultisampleState = &multisampleState;
 
             VkPipelineDepthStencilStateCreateInfo depthState = VkPipelineDepthStencilStateCreateInfo.New();
-            depthState.depthTestEnable=VkBool32.True;
-            depthState.depthWriteEnable=VkBool32.True;
-            depthState.depthCompareOp=VkCompareOp.Less;
+            depthState.depthTestEnable = VkBool32.True;
+            depthState.depthWriteEnable = VkBool32.True;
+            depthState.depthCompareOp = VkCompareOp.Less;
             pCreateInfo.pDepthStencilState = &depthState;
 
             VkPipelineColorBlendAttachmentState colourAttachment = new VkPipelineColorBlendAttachmentState();
@@ -258,25 +257,27 @@ namespace Fabricor.VulkanRendering
             vkCmdSetScissor(buffer, 0, 1, &scissor);
 
             vkCmdBindPipeline(buffer, VkPipelineBindPoint.Graphics, pipeline);
+            if (mesh.IsReady)
+            {
+                VkBuffer[] databuffers = new VkBuffer[] { mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer };
+                ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
+                fixed (VkBuffer* bptr = databuffers)
+                fixed (ulong* optr = offsets)
+                    vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
 
-            VkBuffer[] databuffers = new VkBuffer[] { mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer };
-            ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
-            fixed (VkBuffer* bptr = databuffers)
-            fixed (ulong* optr = offsets)
-                vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
+                vkCmdBindIndexBuffer(buffer, mesh.Mesh.indices.Buffer, 0, VkIndexType.Uint32);
 
-            vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint16);
+                uniformdata.Write(0, camera.View.ToFloatArray());
+                uniformdata.Write(16, camera.Projection.ToFloatArray());
 
-            uniformdata.Write(0, camera.View.ToFloatArray());
-            uniformdata.Write(16, camera.Projection.ToFloatArray());
+                UpdateUniformData(uniformdata, swapchainImageIndex);
 
-            UpdateUniformData(uniformdata, swapchainImageIndex);
+                VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
+                VkPipelineLayout layout = pipelineLayout;
+                vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
 
-            VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
-            VkPipelineLayout layout = pipelineLayout;
-            vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
-
-            vkCmdDrawIndexed(buffer, (uint)mesh.indices.Length, 1, 0, 0, 0);
+                vkCmdDrawIndexed(buffer, (uint)mesh.Mesh.indices.Length, 1, 0, 0, 0);
+            }
 
             vkCmdEndRenderPass(buffer);
         }
@@ -376,18 +377,18 @@ namespace Fabricor.VulkanRendering
             span = buffer.UnMap();
             return buffer;
         }
-        private static VkSampler CreateSampler(VkDevice device)
+        private static VkSampler CreateSampler(VkDevice device,uint mipLevels)
         {
             VkSamplerCreateInfo createInfo = VkSamplerCreateInfo.New();
-            createInfo.magFilter = VkFilter.Nearest;
-            createInfo.minFilter = VkFilter.Nearest;
+            createInfo.magFilter = VkFilter.Linear;
+            createInfo.minFilter = VkFilter.Linear;
 
             createInfo.addressModeU = VkSamplerAddressMode.Repeat;
             createInfo.addressModeV = VkSamplerAddressMode.Repeat;
             createInfo.addressModeW = VkSamplerAddressMode.Repeat;
 
-            createInfo.anisotropyEnable = VkBool32.False;
-            createInfo.maxAnisotropy = 1;
+            createInfo.anisotropyEnable = VkBool32.True;
+            createInfo.maxAnisotropy = 16;
 
             createInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
             createInfo.unnormalizedCoordinates = VkBool32.False;
@@ -398,7 +399,7 @@ namespace Fabricor.VulkanRendering
             createInfo.mipmapMode = VkSamplerMipmapMode.Linear;
             createInfo.mipLodBias = 0;
             createInfo.minLod = 0;
-            createInfo.maxLod = 0;
+            createInfo.maxLod = mipLevels;
 
             VkSampler sampler = VkSampler.Null;
             Assert(vkCreateSampler(device, &createInfo, null, &sampler));
