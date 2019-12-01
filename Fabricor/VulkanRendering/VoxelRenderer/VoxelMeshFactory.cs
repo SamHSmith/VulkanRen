@@ -28,11 +28,11 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
 
             Random random = new Random(42);
             ushort[,,] blocks = new ushort[16, 16, 16];
-            for (int x2 = 0; x2 < 16; x2++)
+            for (int x2 = 0; x2 < 4; x2++)
             {
-                for (int y2 = 0; y2 < 16; y2++)
+                for (int y2 = 0; y2 < 8; y2++)
                 {
-                    for (int z2 = 0; z2 < 16; z2++)
+                    for (int z2 = 0; z2 < 12; z2++)
                     {
                         blocks[x2, y2, z2] = (ushort)random.Next(7);
                     }
