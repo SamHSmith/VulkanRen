@@ -76,7 +76,6 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 faces[i].Generate(ref vertices, ref indicies);
             }
             Console.WriteLine($"Vertex Count: {vertices.Count}, Index Count: {indicies.Count}");
-            Thread.Sleep(4000);
             return new Mesh<VoxelVertex>(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
         }
         private static Stopwatch s1 = new Stopwatch();

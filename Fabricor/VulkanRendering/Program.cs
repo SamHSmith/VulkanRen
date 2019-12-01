@@ -13,7 +13,7 @@ namespace Fabricor.VulkanRendering
 {
     unsafe class Program
     {
-        public static int width = 640, height = 400;
+        public static int width = 1600, height = 900;
 
         static void Assert(VkResult result)
         {
@@ -52,7 +52,10 @@ namespace Fabricor.VulkanRendering
                 fixed (VkQueueFamilyProperties* ptr = famProps)
                     vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &familyQueueCount, ptr);
 
-
+                VkPhysicalDeviceFeatures deviceFeatures;
+                vkGetPhysicalDeviceFeatures(devices[i],&deviceFeatures);
+                if(deviceFeatures.samplerAnisotropy==VkBool32.False)
+                    continue;
 
                 for (uint k = 0; k < familyQueueCount; k++)
                 {
@@ -224,13 +227,12 @@ namespace Fabricor.VulkanRendering
                 //"res/Red.png",
             };
 
-            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, textures, VkFormat.R8g8b8a8Unorm);
+            FTexture texture = new FTexture(device, physicalDevice, poolId, graphicsQueue, textures, VkFormat.R8g8b8a8Unorm,
+            512,512,(uint)(Math.Log(512)/Math.Log(2))+1);
 
             VkPipelineCache pipelineCache = VkPipelineCache.Null;//This is critcal for performance.
             FGraphicsPipeline voxelPipeline =
-            new FGraphicsPipeline(device, physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, new VkImageView[]{
-                texture.imageView,
-            });
+            new FGraphicsPipeline(device, physicalDevice, pipelineCache, renderPass, "shaders/voxel", swapchainImageCount, texture);
             voxelPipeline.CreateDepthBuffer(physicalDevice, (uint)width, (uint)height);
 
             VkImageView[] swapchainImageViews = new VkImageView[swapchainImageCount];
