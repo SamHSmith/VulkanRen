@@ -13,28 +13,31 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
 
     public static class VoxelMeshFactory
     {
-        
-        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true){
-            MeshWrapper<VoxelVertex> mesh=new MeshWrapper<VoxelVertex>();
-            mesh.CreateMesh(()=>{
-                return _DoGenerateMesh(device,physicalDevice);
+
+        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
+        {
+            MeshWrapper<VoxelVertex> mesh = new MeshWrapper<VoxelVertex>();
+            mesh.CreateMesh(() =>
+            {
+                return _DoGenerateMesh(device, physicalDevice,optimize);
             });
             return mesh;
         }
-        private static Mesh<VoxelVertex> _DoGenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
+        private static Mesh<VoxelVertex> _DoGenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize)
         {
             List<VoxelVertex> vertices = new List<VoxelVertex>(); List<uint> indicies = new List<uint>();
             List<Face> faces = new List<Face>();
 
             Random random = new Random(42);
             ushort[,,] blocks = new ushort[16, 16, 16];
-            for (int x2 = 0; x2 < 4; x2++)
+            for (int x2 = 0; x2 < 16; x2++)
             {
-                for (int y2 = 0; y2 < 8; y2++)
+                for (int z2 = 0; z2 < 16; z2++)
                 {
-                    for (int z2 = 0; z2 < 12; z2++)
+                    for (int y2 = 0; y2 < random.Next(7); y2++)
                     {
-                        blocks[x2, y2, z2] = (ushort)random.Next(7);
+
+                        blocks[x2, y2, z2] = (ushort)random.Next(6);
                     }
                 }
             }
@@ -84,11 +87,12 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         {
 
             List<Face> faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
-            Face[] faceArray=faces.ToArray();
-            Memory<Face> faceMem=faceArray.AsMemory();
+            Face[] faceArray = faces.ToArray();
+            Memory<Face> faceMem = faceArray.AsMemory();
             s1.Restart();
-            Parallel.For(0,faceMem.Length,(i)=>{
-                Span<Face> faceSpan=faceMem.Span;
+            Parallel.For(0, faceMem.Length, (i) =>
+            {
+                Span<Face> faceSpan = faceMem.Span;
                 for (int j = i + 1; j < faceSpan.Length; j++)
                 {
                     if (faceSpan[i].shouldBeRemoved || faceSpan[j].shouldBeRemoved)
@@ -100,7 +104,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     }
                 }
             });
-            
+
             s1.Stop();
             totalTicks += s1.ElapsedTicks;
             outFaces.RemoveAll((f) => f.shouldBeRemoved);
@@ -148,15 +152,15 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     if (faces[i].shouldBeRemoved || faces[j].shouldBeRemoved)
                         continue;//None of the faces are queued for destruction
 
-                    if ((faces[i].position * otherAxis).LengthSquared() != (faces[j].position * otherAxis).LengthSquared())
+                    if ((faces[i].position * otherAxis) != (faces[j].position * otherAxis))
                         continue;//If not aligned on other axis, skip.
 
-                    if (((faces[i].position + faces[i].right + faces[j].up) * compareAxis).LengthSquared() != (faces[j].position * compareAxis).LengthSquared())
+                    if (((faces[i].position + faces[i].right + faces[i].up) * compareAxis) != (faces[j].position * compareAxis))
                         continue;//is face j next to face i?
 
                     if ((faces[i].right * compareAxis).LengthSquared() > 0)
                     {//Comparision is on the right axis
-                        if (faces[i].up.LengthSquared() != faces[j].up.LengthSquared())
+                        if (faces[i].up != faces[j].up)
                             continue;//Are the faces the same size?
 
                         faces[i].right += faces[j].right;
@@ -164,8 +168,15 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     }
                     else
                     {//Comparision is on the up axis
-                        if (faces[i].right.LengthSquared() != faces[j].right.LengthSquared())
-                            continue;//Are the faces the same size?
+                        if (faces[i].right != faces[j].right)
+                            continue;//Are the faces the same size? And are they going the same direction?
+
+                        Face a=faces[i];
+                        Face b=faces[j];
+
+                        if((b.normal*Vector3.UnitX).Length()>=1){
+                            
+                        }
 
                         faces[i].up += faces[j].up;
                         faces[j].shouldBeRemoved = true;
@@ -181,7 +192,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             for (int i = 0; i < faces.Length; i++)
             {
                 faces[i] = new Face();
-                faces[i].textureID = (ushort)(blockID - 1);//TODO add custom textures for differnet sides with a block lookup
+                faces[i].textureID = (ushort)(blockID);//TODO add custom textures for differnet sides with a block lookup
             }
 
             faces[0].position = position;

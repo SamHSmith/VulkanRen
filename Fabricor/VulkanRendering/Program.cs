@@ -297,24 +297,24 @@ namespace Fabricor.VulkanRendering
                 }
 
                 if (GLFWInput.TimeKeyPressed(Keys.D) > 0)
-                    camera.position += Vector3.Transform(Vector3.UnitX * 0.00005f, camera.rotation);
+                    camera.position += Vector3.Transform(Vector3.UnitX * 0.00015f, camera.rotation);
                 if (GLFWInput.TimeKeyPressed(Keys.A) > 0)
-                    camera.position -= Vector3.Transform(Vector3.UnitX * 0.00005f, camera.rotation);
+                    camera.position -= Vector3.Transform(Vector3.UnitX * 0.00015f, camera.rotation);
 
                 if (GLFWInput.TimeKeyPressed(Keys.W) > 0)
-                    camera.position += Vector3.Transform(Vector3.UnitZ * 0.00005f, camera.rotation);
+                    camera.position += Vector3.Transform(Vector3.UnitZ * 0.00015f, camera.rotation);
                 if (GLFWInput.TimeKeyPressed(Keys.S) > 0)
-                    camera.position -= Vector3.Transform(Vector3.UnitZ * 0.00005f, camera.rotation);
+                    camera.position -= Vector3.Transform(Vector3.UnitZ * 0.00015f, camera.rotation);
 
                 if (GLFWInput.TimeKeyPressed(Keys.Space) > 0)
-                    camera.position += Vector3.Transform(Vector3.UnitY * 0.00005f, camera.rotation);
+                    camera.position += Vector3.Transform(Vector3.UnitY * 0.00015f, camera.rotation);
                 if (GLFWInput.TimeKeyPressed(Keys.LeftShift) > 0)
-                    camera.position -= Vector3.Transform(Vector3.UnitY * 0.00005f, camera.rotation);
+                    camera.position -= Vector3.Transform(Vector3.UnitY * 0.00015f, camera.rotation);
 
                 if (GLFWInput.TimeKeyPressed(Keys.Right) > 0)
-                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.00005f);
+                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.00015f);
                 if (GLFWInput.TimeKeyPressed(Keys.Left) > 0)
-                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, -0.00005f);
+                    camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, -0.00015f);
 
                 uint imageIndex = 0;
 
