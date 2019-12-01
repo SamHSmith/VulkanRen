@@ -36,7 +36,7 @@ steps:
   inputs:
     command: publish 
     publishWebProjects: false
-    arguments: '--configuration $(BuildConfiguration) -r win-x64 --output $(artifactStagingDirectory)'
+    arguments: '--configuration $(BuildConfiguration) -r win-x64 --output $(artifactStagingDirectory)/win'
     zipAfterPublish: True
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
