@@ -1,5 +1,8 @@
+using System.Threading;
+using System.Diagnostics;
 using System.Numerics;
 using System.Linq;
+using System.Threading.Tasks;
 using Vulkan;
 using System;
 using System.Collections.Generic;
@@ -10,74 +13,97 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
 
     public static class VoxelMeshFactory
     {
-
-        public static VoxelMesh GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
+        
+        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true){
+            MeshWrapper<VoxelVertex> mesh=new MeshWrapper<VoxelVertex>();
+            mesh.CreateMesh(()=>{
+                return _DoGenerateMesh(device,physicalDevice);
+            });
+            return mesh;
+        }
+        private static Mesh<VoxelVertex> _DoGenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
         {
             List<VoxelVertex> vertices = new List<VoxelVertex>(); List<uint> indicies = new List<uint>();
             List<Face> faces = new List<Face>();
 
-            Random random=new Random();
-
-            ushort[,,] blocks=new ushort[16,16,16];
+            Random random = new Random(42);
+            ushort[,,] blocks = new ushort[16, 16, 16];
             for (int x2 = 0; x2 < 16; x2++)
             {
                 for (int y2 = 0; y2 < 16; y2++)
                 {
                     for (int z2 = 0; z2 < 16; z2++)
                     {
-                        blocks[x2,y2,z2]=(ushort)random.Next(7);
+                        blocks[x2, y2, z2] = (ushort)random.Next(7);
                     }
                 }
             }
-            VoxelRenderChunk chunk=new VoxelRenderChunk(blocks);
+            VoxelRenderChunk chunk = new VoxelRenderChunk(blocks);
 
-            Span<ushort> span=chunk.Span;
-            int x=0,y=0,z=0;
+            Span<ushort> span = chunk.Span;
+            int x = 0, y = 0, z = 0;
             for (int i = 0; i < span.Length; i++)
             {
-                if(span[i]!=0)
-                    faces.AddRange(GenerateFaces(new Vector3(x,y,z),span[i]));
+                if (span[i] != 0)
+                    faces.AddRange(GenerateFaces(new Vector3(x, y, z), span[i]));
 
                 z++;
-                if(z>=16){
-                    z=0;
+                if (z >= 16)
+                {
+                    z = 0;
                     y++;
-                    if(y>=16){
-                        y=0;
+                    if (y >= 16)
+                    {
+                        y = 0;
                         x++;
                     }
                 }
             }
-
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
             if (optimize)
             {
                 LoopFaces(ref faces, Vector3.UnitX);
                 LoopFaces(ref faces, Vector3.UnitY);
                 LoopFaces(ref faces, Vector3.UnitZ);
             }
+            stopwatch.Stop();
+            Console.WriteLine($"Optimize time: {stopwatch.ElapsedMilliseconds} ms, TestingTicks: {totalTicks}");
+
 
             for (int i = 0; i < faces.Count; i++)
             {
                 faces[i].Generate(ref vertices, ref indicies);
             }
-            return new VoxelMesh(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
+            Console.WriteLine($"Vertex Count: {vertices.Count}, Index Count: {indicies.Count}");
+            Thread.Sleep(4000);
+            return new Mesh<VoxelVertex>(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
         }
-
+        private static Stopwatch s1 = new Stopwatch();
+        private static long totalTicks = 0;
         private static void LoopFaces(ref List<Face> outFaces, Vector3 axis)
         {
-            List<Face> faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
 
-            for (int i = 0; i < faces.Count; i++)//remove inner faces
-            {
-                for (int j = i + 1; j < faces.Count; j++)
+            List<Face> faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
+            Face[] faceArray=faces.ToArray();
+            Memory<Face> faceMem=faceArray.AsMemory();
+            s1.Restart();
+            Parallel.For(0,faceMem.Length,(i)=>{
+                Span<Face> faceSpan=faceMem.Span;
+                for (int j = i + 1; j < faceSpan.Length; j++)
                 {
-                    if (faces[i].CenterPosition == faces[j].CenterPosition)
+                    if (faceSpan[i].shouldBeRemoved || faceSpan[j].shouldBeRemoved)
+                        continue;
+                    if (faceSpan[i].centerPosition == faceSpan[j].centerPosition)
                     {
-                        faces[i].shouldBeRemoved = true;
-                        faces[j].shouldBeRemoved = true;
+                        faceSpan[i].shouldBeRemoved = true;
+                        faceSpan[j].shouldBeRemoved = true;
                     }
                 }
-            }
+            });
+            
+            s1.Stop();
+            totalTicks += s1.ElapsedTicks;
             outFaces.RemoveAll((f) => f.shouldBeRemoved);
             faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
             int maxLayer = 0;
@@ -156,7 +182,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             for (int i = 0; i < faces.Length; i++)
             {
                 faces[i] = new Face();
-                faces[i].textureID = (ushort)(blockID-1);//TODO add custom textures for differnet sides with a block lookup
+                faces[i].textureID = (ushort)(blockID - 1);//TODO add custom textures for differnet sides with a block lookup
             }
 
             faces[0].position = position;
@@ -189,6 +215,10 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             faces[5].right = Vector3.UnitX;
             faces[5].up = -Vector3.UnitZ;
 
+            for (int i = 0; i < faces.Length; i++)
+            {
+                faces[i].UpdateCenterPosition();
+            }
             return faces;
         }
     }
@@ -197,12 +227,12 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
     {
         public bool shouldBeRemoved = false;
         public Vector3 position;//Bottom left of face
-        public Vector3 CenterPosition
+
+        public Vector3 centerPosition;
+        public void UpdateCenterPosition()
         {
-            get
-            {
-                return position + (right / 2) + (up / 2);
-            }
+            centerPosition = position + (right / 2) + (up / 2);
+
         }
         public int Layer
         {

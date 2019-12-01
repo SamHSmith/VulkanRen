@@ -1,19 +1,17 @@
-using System;
 using Vulkan;
-using static Vulkan.VulkanNative;
+using System;
+namespace Fabricor.VulkanRendering{
+    public class Mesh<T> where T : unmanaged
+    {
+        public FDataBuffer<T> vertices{get;protected set;}
+        public FDataBuffer<uint> indices{get;protected set;}
 
-namespace Fabricor.VulkanRendering.VoxelRenderer
-{
-    public class VoxelMesh{
-        public FDataBuffer<VoxelVertex> vertices;
-        public FDataBuffer<uint> indices;
-
-        public VoxelMesh(VkDevice device,VkPhysicalDevice physicalDevice, VoxelVertex[] vertices,uint[] indices){
-            this.vertices=new FDataBuffer<VoxelVertex>(device,physicalDevice,vertices.Length,VkBufferUsageFlags.VertexBuffer,
+        public Mesh(VkDevice device,VkPhysicalDevice physicalDevice, T[] vertices,uint[] indices){
+            this.vertices=new FDataBuffer<T>(device,physicalDevice,vertices.Length,VkBufferUsageFlags.VertexBuffer,
             VkSharingMode.Exclusive);
             this.indices=new FDataBuffer<uint>(device,physicalDevice,indices.Length,VkBufferUsageFlags.IndexBuffer,VkSharingMode.Exclusive);
 
-            Span<VoxelVertex> spanv=this.vertices.Map();
+            Span<T> spanv=this.vertices.Map();
             for (int i = 0; i < vertices.Length; i++)
             {
                 spanv[i]=vertices[i];
@@ -26,6 +24,11 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 spani[i]=indices[i];
             }
             spani=this.indices.UnMap();
+        }
+
+        public void Free(){
+            vertices.Free();
+            indices.Free();
         }
     }
 }

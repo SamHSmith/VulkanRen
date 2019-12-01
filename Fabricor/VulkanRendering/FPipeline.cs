@@ -34,7 +34,7 @@ namespace Fabricor.VulkanRendering
         public uint swapchainImageIndex;
         public VkImage swapchainImage;
         public VkFramebuffer swapchainFramebuffer;
-        public VoxelMesh mesh;
+        public MeshWrapper<VoxelVertex> mesh;
         public FCamera camera;
         public FGraphicsPipeline(VkDevice device, VkPhysicalDevice physicalDevice, VkPipelineCache pipelineCache, VkRenderPass renderPass,
         string shaderPath, uint swapchainImageCount, VkImageView[] texViews)
@@ -169,9 +169,9 @@ namespace Fabricor.VulkanRendering
             pCreateInfo.pMultisampleState = &multisampleState;
 
             VkPipelineDepthStencilStateCreateInfo depthState = VkPipelineDepthStencilStateCreateInfo.New();
-            depthState.depthTestEnable=VkBool32.True;
-            depthState.depthWriteEnable=VkBool32.True;
-            depthState.depthCompareOp=VkCompareOp.Less;
+            depthState.depthTestEnable = VkBool32.True;
+            depthState.depthWriteEnable = VkBool32.True;
+            depthState.depthCompareOp = VkCompareOp.Less;
             pCreateInfo.pDepthStencilState = &depthState;
 
             VkPipelineColorBlendAttachmentState colourAttachment = new VkPipelineColorBlendAttachmentState();
@@ -258,25 +258,27 @@ namespace Fabricor.VulkanRendering
             vkCmdSetScissor(buffer, 0, 1, &scissor);
 
             vkCmdBindPipeline(buffer, VkPipelineBindPoint.Graphics, pipeline);
+            if (mesh.IsReady)
+            {
+                VkBuffer[] databuffers = new VkBuffer[] { mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer };
+                ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
+                fixed (VkBuffer* bptr = databuffers)
+                fixed (ulong* optr = offsets)
+                    vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
 
-            VkBuffer[] databuffers = new VkBuffer[] { mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer, mesh.vertices.Buffer };
-            ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
-            fixed (VkBuffer* bptr = databuffers)
-            fixed (ulong* optr = offsets)
-                vkCmdBindVertexBuffers(buffer, 0, 4, bptr, optr);
+                vkCmdBindIndexBuffer(buffer, mesh.Mesh.indices.Buffer, 0, VkIndexType.Uint32);
 
-            vkCmdBindIndexBuffer(buffer, mesh.indices.Buffer, 0, VkIndexType.Uint32);
+                uniformdata.Write(0, camera.View.ToFloatArray());
+                uniformdata.Write(16, camera.Projection.ToFloatArray());
 
-            uniformdata.Write(0, camera.View.ToFloatArray());
-            uniformdata.Write(16, camera.Projection.ToFloatArray());
+                UpdateUniformData(uniformdata, swapchainImageIndex);
 
-            UpdateUniformData(uniformdata, swapchainImageIndex);
+                VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
+                VkPipelineLayout layout = pipelineLayout;
+                vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
 
-            VkDescriptorSet sets = descriptorSets[swapchainImageIndex];
-            VkPipelineLayout layout = pipelineLayout;
-            vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
-
-            vkCmdDrawIndexed(buffer, (uint)mesh.indices.Length, 1, 0, 0, 0);
+                vkCmdDrawIndexed(buffer, (uint)mesh.Mesh.indices.Length, 1, 0, 0, 0);
+            }
 
             vkCmdEndRenderPass(buffer);
         }

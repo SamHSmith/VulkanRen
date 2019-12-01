@@ -244,16 +244,16 @@ namespace Fabricor.VulkanRendering
                 frambuffers[i] = CreateFramebuffer(device, renderPass, swapchainImageViews[i], voxelPipeline.depthImageView);
             }
 
-            VoxelMesh mesh = VoxelMeshFactory.GenerateMesh(device, physicalDevice);
+            MeshWrapper<VoxelVertex> mesh = VoxelMeshFactory.GenerateMesh(device, physicalDevice);
 
             Action changeTexture = delegate
             {
-                Span<VoxelVertex> span = mesh.vertices.Map();
+                Span<VoxelVertex> span = mesh.Mesh.vertices.Map();
                 for (int j = 0; j < span.Length; j++)
                 {
                     span[j].textureId++;
                 }
-                span = mesh.vertices.UnMap();
+                span = mesh.Mesh.vertices.UnMap();
             };
             GLFWInput.Subscribe(Keys.F, changeTexture, InputState.Press);
 
