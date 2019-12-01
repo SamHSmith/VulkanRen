@@ -10,9 +10,8 @@ pool:
   vmImage: 'ubuntu-18.04'
 
 variables:
-  project: '**/*.csproj'
-  buildPlatform: 'linux-x64'
   buildConfiguration: 'Release'
+  artifactStagingDirectory: 'bin/publish'
 
 steps:
 - task: NuGetToolInstaller@1
@@ -28,15 +27,24 @@ steps:
     
 - task: DotNetCoreCLI@2
   inputs:
-    command: publish
-    arguments: '--configuration $(BuildConfiguration) -r $(buildPlatform) --output $(Build.ArtifactStagingDirectory)'
+    command: publish 
+    publishWebProjects: false
+    arguments: '--configuration $(BuildConfiguration) -r linux-x64 --output $(artifactStagingDirectory)/VulkanRen-linux'
+    zipAfterPublish: True
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: publish 
+    publishWebProjects: false
+    arguments: '--configuration $(BuildConfiguration) -r win-x64 --output $(artifactStagingDirectory)/VulkanRen-win'
     zipAfterPublish: True
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '$(Build.ArtifactStagingDirectory)' 
-    artifactName: 'myWebsiteName'
+    pathtoPublish: '$(artifactStagingDirectory)' 
+    artifactName: 'VulkanRen'
+
 
 
 
