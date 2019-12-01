@@ -11,7 +11,7 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  artifactStagingDirectory: 'bin'
+  artifactStagingDirectory: 'bin/publish'
 
 steps:
 - task: NuGetToolInstaller@1
