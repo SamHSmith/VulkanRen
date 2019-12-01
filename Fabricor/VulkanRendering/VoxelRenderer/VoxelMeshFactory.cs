@@ -201,7 +201,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             faces[0].up = Vector3.UnitY;
 
             faces[1].position = position + Vector3.UnitZ;
-            faces[1].normal = Vector3.UnitX;
+            faces[1].normal = -Vector3.UnitX;
             faces[1].right = -Vector3.UnitZ;
             faces[1].up = Vector3.UnitY;
 

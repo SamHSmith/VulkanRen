@@ -224,7 +224,7 @@ namespace Fabricor.VulkanRendering
             vkCmdPipelineBarrier(buffer, VkPipelineStageFlags.AllGraphics, VkPipelineStageFlags.AllGraphics, VkDependencyFlags.ByRegion,
             0, null, 0, null, 1, &imageMemoryBarrier);
 
-            VkClearColorValue clearColorValue = new VkClearColorValue { float32_0 = 161 / 255f, float32_1 = 96f / 255, float32_2 = 39f / 255, float32_3 = 1 };
+            VkClearColorValue clearColorValue = new VkClearColorValue { float32_0 = 3f / 255f, float32_1 = 2f / 255, float32_2 = 12f / 255, float32_3 = 1 };
             VkClearDepthStencilValue clearDepthStencilValue = new VkClearDepthStencilValue(1, 0);
             VkClearValue[] clearValues = new VkClearValue[2];
             clearValues[0].color = clearColorValue;
