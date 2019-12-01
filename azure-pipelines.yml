@@ -10,9 +10,8 @@ pool:
   vmImage: 'ubuntu-18.04'
 
 variables:
-  buildPlatform: 'linux-x64'
   buildConfiguration: 'Release'
-  artifactStagingDirectory: 'bin/linux'
+  artifactStagingDirectory: 'bin'
 
 steps:
 - task: NuGetToolInstaller@1
@@ -30,7 +29,14 @@ steps:
   inputs:
     command: publish 
     publishWebProjects: false
-    arguments: '--configuration $(BuildConfiguration) -r $(buildPlatform) --output $(artifactStagingDirectory)'
+    arguments: '--configuration $(BuildConfiguration) -r linux-x64 --output $(artifactStagingDirectory)/linux'
+    zipAfterPublish: True
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: publish 
+    publishWebProjects: false
+    arguments: '--configuration $(BuildConfiguration) -r win-x64 --output $(artifactStagingDirectory)'
     zipAfterPublish: True
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
