@@ -45,10 +45,6 @@ steps:
     pathtoPublish: '$(artifactStagingDirectory)' 
     artifactName: 'VulkanRen'
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathtoPublish: '$(artifactStagingDirectory)/win' 
-    artifactName: 'VulkanRen-Win'
 
 
 
