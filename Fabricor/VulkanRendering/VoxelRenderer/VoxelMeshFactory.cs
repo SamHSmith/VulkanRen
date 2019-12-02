@@ -34,9 +34,9 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             {
                 for (int z2 = 0; z2 < 16; z2++)
                 {
-                    for (int y2 = 0; y2 < random.Next(6); y2++)
+                    for (int y2 = 0; y2 < 1; y2++)
                     {
-                        blocks[x2, y2, z2] = (ushort)random.Next(6);
+                        blocks[x2, y2, z2] = 1;//(ushort)random.Next(6);
                     }
                 }
             }
