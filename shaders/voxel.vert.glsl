@@ -21,13 +21,13 @@ layout(binding=1) uniform UniformBufferObject{
 void main(){
     frag_texcoords=texcoords;
     frag_textureID=textureID;
-    frag_normals=normal;
+    frag_normals=(ubo.model[0]*vec4(normal,0)).xyz;
 
     vec4 worldpos=ubo.model[0]*vec4(position,1);
     frag_worldposition=worldpos.xyz;
 
     vec4 cameraPos=inverse(ubo.view)*vec4(0,0,0,1);
-    frag_toCamera=(cameraPos-worldpos).xyz;
+    frag_toCamera=(cameraPos).xyz;
 
     gl_Position=ubo.proj*ubo.view*worldpos;
 
