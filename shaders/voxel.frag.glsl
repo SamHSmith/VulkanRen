@@ -10,8 +10,8 @@ layout(location=0) out vec4 outColour;
 
 layout(binding=0) uniform sampler2DArray texSampler;
 
-const float practicallyNoLightAfter1MConst=0.1;
-const float ambientLighting=0.1;
+const float practicallyNoLightAfter1MConst=0.08;
+const float ambientLighting=0.2;
 
 void main()
 {

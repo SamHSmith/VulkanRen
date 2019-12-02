@@ -19,7 +19,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             MeshWrapper<VoxelVertex> mesh = new MeshWrapper<VoxelVertex>();
             mesh.CreateMesh(() =>
             {
-                return _DoGenerateMesh(device, physicalDevice,optimize);
+                return _DoGenerateMesh(device, physicalDevice, optimize);
             });
             return mesh;
         }
@@ -34,9 +34,8 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             {
                 for (int z2 = 0; z2 < 16; z2++)
                 {
-                    for (int y2 = 0; y2 < random.Next(7); y2++)
+                    for (int y2 = 0; y2 < random.Next(6); y2++)
                     {
-
                         blocks[x2, y2, z2] = (ushort)random.Next(6);
                     }
                 }
@@ -51,11 +50,11 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     faces.AddRange(GenerateFaces(new Vector3(x, y, z), span[i]));
 
                 z++;
-                if (z >= 16)
+                if (z >= VoxelRenderChunk.CHUNK_SIZE)
                 {
                     z = 0;
                     y++;
-                    if (y >= 16)
+                    if (y >= VoxelRenderChunk.CHUNK_SIZE)
                     {
                         y = 0;
                         x++;
@@ -86,65 +85,68 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         private static void LoopFaces(ref List<Face> outFaces, Vector3 axis)
         {
 
-            List<Face> faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
-            Face[] faceArray = faces.ToArray();
-            Memory<Face> faceMem = faceArray.AsMemory();
-            s1.Restart();
-            Parallel.For(0, faceMem.Length, (i) =>
-            {
-                Span<Face> faceSpan = faceMem.Span;
-                for (int j = i + 1; j < faceSpan.Length; j++)
-                {
-                    if (faceSpan[i].shouldBeRemoved || faceSpan[j].shouldBeRemoved)
-                        continue;
-                    if (faceSpan[i].centerPosition == faceSpan[j].centerPosition)
-                    {
-                        faceSpan[i].shouldBeRemoved = true;
-                        faceSpan[j].shouldBeRemoved = true;
-                    }
-                }
-            });
-
-            s1.Stop();
-            totalTicks += s1.ElapsedTicks;
-            outFaces.RemoveAll((f) => f.shouldBeRemoved);
-            faces = new List<Face>(outFaces.Where((f) => Vector3.Abs(f.normal) == axis));
+            Face[] faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
             int maxLayer = 0;
             foreach (var f in faces)
             {
                 if (f.Layer > maxLayer)
                     maxLayer = f.Layer;
             }
+
+            Parallel.For(0, maxLayer, (i) =>
+            {
+                Face[] localArray = faces.Where((f) => f.Layer == i).ToArray();
+                for (int j = i + 1; j < localArray.Length; j++)
+                {
+                    if (localArray[i].shouldBeRemoved || localArray[j].shouldBeRemoved)
+                        continue;
+                    if (localArray[i].centerPosition == localArray[j].centerPosition)
+                    {
+                        localArray[i].shouldBeRemoved = true;
+                        localArray[j].shouldBeRemoved = true;
+                    }
+                }
+            });
+
+            outFaces.RemoveAll((f) => f.shouldBeRemoved);
+            faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
+            s1.Restart();
             for (int i = 0; i < maxLayer + 1; i++)
             {
-                List<Face> mergeFaces = new List<Face>(faces.Where((f) => i == (int)(f.Layer)));
+                Face[] mergeFaces = (faces.Where((f) => i == (int)(f.Layer))).ToArray();
                 if (axis == Vector3.UnitX)
                 {
-                    MergeFaces(mergeFaces, Vector3.UnitY, Vector3.UnitZ);
-                    MergeFaces(mergeFaces, Vector3.UnitZ, Vector3.UnitY);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitY, Vector3.UnitZ);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitZ, Vector3.UnitY);
                 }
                 else if (axis == Vector3.UnitY)
                 {
-                    MergeFaces(mergeFaces, Vector3.UnitX, Vector3.UnitZ);
-                    MergeFaces(mergeFaces, Vector3.UnitZ, Vector3.UnitX);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitX, Vector3.UnitZ);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitZ, Vector3.UnitX);
                 }
                 else if (axis == Vector3.UnitZ)
                 {
-                    MergeFaces(mergeFaces, Vector3.UnitX, Vector3.UnitY);
-                    MergeFaces(mergeFaces, Vector3.UnitY, Vector3.UnitX);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitX, Vector3.UnitY);
+                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitY, Vector3.UnitX);
                 }
             }
+            s1.Stop();
+            totalTicks += s1.ElapsedTicks;
             outFaces.RemoveAll((f) => f.shouldBeRemoved);
         }
 
-        private static void MergeFaces(List<Face> faces, Vector3 compareAxis, Vector3 otherAxis)
+        private static void MergeFaces(Memory<Face> mem, Vector3 compareAxis, Vector3 otherAxis)
         {
-            for (int i = 0; i < faces.Count; i++)
+
+            for (int i = 0; i < mem.Length; i++)
             {
-                for (int j = 0; j < faces.Count; j++)//inefficient loop but it makes stuff easier
+                Span<Face> faces = mem.Span;
+                for (int j = 0; j < faces.Length; j++)//inefficient loop but it makes stuff easier
                 {
                     if (i == j)//This is self explanitory
                         continue;
+
+
 
                     if (faces[i].textureID != faces[j].textureID)
                         continue;//The faces have the same texture
@@ -170,13 +172,6 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     {//Comparision is on the up axis
                         if (faces[i].right != faces[j].right)
                             continue;//Are the faces the same size? And are they going the same direction?
-
-                        Face a=faces[i];
-                        Face b=faces[j];
-
-                        if((b.normal*Vector3.UnitX).Length()>=1){
-                            
-                        }
 
                         faces[i].up += faces[j].up;
                         faces[j].shouldBeRemoved = true;

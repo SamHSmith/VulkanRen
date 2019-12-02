@@ -13,7 +13,7 @@ namespace Fabricor.VulkanRendering
 {
     unsafe class Program
     {
-        public static int width = 1600, height = 900;
+        public static int width = 640, height = 400;
 
         static void Assert(VkResult result)
         {
