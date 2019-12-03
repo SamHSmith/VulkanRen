@@ -4,7 +4,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
     public struct VoxelRenderChunk
     {
 
-        public const int CHUNK_SIZE = 16;
+        public const int CHUNK_SIZE = 32;
         public ushort[] voxels { get; private set; }
 
         public Span<ushort> Span

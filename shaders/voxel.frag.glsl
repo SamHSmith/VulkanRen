@@ -106,4 +106,5 @@ void main()
     //color = pow(color, vec3(1.0/2.2)); 
 
     outColour = vec4(color, alpha);
+    outColour=vec4(albedo,1);
 }

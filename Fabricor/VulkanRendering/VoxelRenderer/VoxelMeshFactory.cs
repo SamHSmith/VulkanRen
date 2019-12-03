@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
 using System.Numerics;
@@ -29,14 +30,14 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             List<Face> faces = new List<Face>();
 
             Random random = new Random(42);
-            ushort[,,] blocks = new ushort[16, 16, 16];
-            for (int x2 = 0; x2 < 16; x2++)
+            ushort[,,] blocks = new ushort[VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE];
+            for (int x2 = 0; x2 < VoxelRenderChunk.CHUNK_SIZE; x2++)
             {
-                for (int z2 = 0; z2 < 16; z2++)
+                for (int z2 = 0; z2 < VoxelRenderChunk.CHUNK_SIZE; z2++)
                 {
-                    for (int y2 = 0; y2 < random.Next(4); y2++)
+                    for (int y2 = 0; y2 < VoxelRenderChunk.CHUNK_SIZE; y2++)
                     {
-                        blocks[x2, y2, z2] = (ushort)random.Next(6);
+                        blocks[x2, y2, z2] = (ushort)random.Next(2);
                     }
                 }
             }
@@ -84,7 +85,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         private static long totalTicks = 0;
         private static void LoopFaces(ref List<Face> outFaces, Vector3 axis)
         {
-
+            RemoveFaces(ref outFaces);
             Face[] faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
             int maxLayer = 0;
             foreach (var f in faces)
@@ -92,27 +93,34 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 if (f.Layer > maxLayer)
                     maxLayer = f.Layer;
             }
+            ConcurrentBag<Face[]> threadSafeBag = new ConcurrentBag<Face[]>();
 
-            Parallel.For(0, maxLayer, (i) =>
+            Parallel.For(0, maxLayer, (layer) =>
             {
-                Face[] localArray = faces.Where((f) => f.Layer == i).ToArray();
-                for (int j = i + 1; j < localArray.Length; j++)
-                {
-                    if (localArray[i].shouldBeRemoved || localArray[j].shouldBeRemoved)
-                        continue;
-                    if (localArray[i].centerPosition == localArray[j].centerPosition)
+                Face[] localArray = faces.Where((f) => f.Layer == layer).ToArray();
+                for (int i = 0; i < localArray.Length; i++)
+                    for (int j = i + 1; j < localArray.Length; j++)
                     {
-                        localArray[i].shouldBeRemoved = true;
-                        localArray[j].shouldBeRemoved = true;
+                        if (localArray[i].shouldBeRemoved || localArray[j].shouldBeRemoved)
+                            continue;
+                        if (localArray[i].centerPosition == localArray[j].centerPosition)
+                        {
+                            localArray[i].shouldBeRemoved = true;
+                            localArray[j].shouldBeRemoved = true;
+                        }
                     }
-                }
+                threadSafeBag.Add(localArray);
             });
-
-            outFaces.RemoveAll((f) => f.shouldBeRemoved);
+            foreach (var facArr in threadSafeBag)
+            {
+                UpdateFaces(ref outFaces, facArr);
+            }
+            RemoveFaces(ref outFaces);
+            threadSafeBag.Clear();
             faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
             s1.Restart();
             for (int i = 0; i < maxLayer + 1; i++)
-            {
+            {/*
                 Face[] mergeFaces = (faces.Where((f) => i == (int)(f.Layer))).ToArray();
                 if (axis == Vector3.UnitX)
                 {
@@ -129,12 +137,39 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     MergeFaces(mergeFaces.AsMemory(), Vector3.UnitX, Vector3.UnitY);
                     MergeFaces(mergeFaces.AsMemory(), Vector3.UnitY, Vector3.UnitX);
                 }
+                threadSafeBag.Add(mergeFaces);*/
             }
             s1.Stop();
             totalTicks += s1.ElapsedTicks;
-            outFaces.RemoveAll((f) => f.shouldBeRemoved);
+            foreach (var facArr in threadSafeBag)
+            {
+                UpdateFaces(ref outFaces, facArr);
+            }
+            RemoveFaces(ref outFaces);
         }
 
+        private static void UpdateFaces(ref List<Face> faceList, Memory<Face> data)
+        {
+            Span<Face> span = data.Span;
+            for (int i = 0; i < data.Length; i++)
+            {
+                Face f = span[i];
+                if (f.shouldBeRemoved || faceList[span[i].index].shouldBeRemoved)
+                    f.shouldBeRemoved = true;
+                faceList[span[i].index] = f;
+            }
+        }
+
+        private static void RemoveFaces(ref List<Face> faceList)
+        {
+            faceList.RemoveAll((f) => f.shouldBeRemoved);
+            for (int i = 0; i < faceList.Count; i++)
+            {
+                Face f = faceList[i];
+                f.index = i;
+                faceList[i] = f;
+            }
+        }
         private static void MergeFaces(Memory<Face> mem, Vector3 compareAxis, Vector3 otherAxis)
         {
 
@@ -228,9 +263,10 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         }
     }
 
-    class Face
+    struct Face
     {
-        public bool shouldBeRemoved = false;
+        public int index;
+        public bool shouldBeRemoved;
         public Vector3 position;//Bottom left of face
 
         public Vector3 centerPosition;
