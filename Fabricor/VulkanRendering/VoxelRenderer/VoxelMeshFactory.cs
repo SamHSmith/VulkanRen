@@ -29,7 +29,6 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         }
         private static Mesh<VoxelVertex> _DoGenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize)
         {
-            List<VoxelVertex> vertices = new List<VoxelVertex>(); List<uint> indicies = new List<uint>();
             List<Face> faces = new List<Face>();
 
             Random random = new Random(42);
@@ -78,12 +77,12 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             stopwatch.Stop();
             Console.WriteLine($"Optimize time: {stopwatch.ElapsedTicks} ms, TestingTicks: {totalTicks}");
 
-
-            for (int i = 0; i < faceArr.Length; i++)
+            VoxelVertex[] vertices = new VoxelVertex[faceArr.Length*4]; uint[] indicies = new uint[faceArr.Length*6];
+            for (uint i = 0; i < faceArr.Length; i++)
             {
-                faceArr[i].Generate(ref vertices, ref indicies);
+                faceArr[i].Generate(ref vertices, ref indicies,i*4,i*6);
             }
-            Console.WriteLine($"Vertex Count: {vertices.Count}, Index Count: {indicies.Count}");
+            Console.WriteLine($"Vertex Count: {vertices.Length}, Index Count: {indicies.Length}");
             return new Mesh<VoxelVertex>(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
         }
         private static Stopwatch s1 = new Stopwatch();
@@ -136,13 +135,13 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             });
             s1.Stop();
             totalTicks += s1.ElapsedTicks;
-            
-            UpdateFaces(ref outFaces, faces);            
+
+            UpdateFaces(ref outFaces, faces);
             RemoveFaces(ref outFaces);
             faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
             faces = faces.OrderBy(f => f.Layer).ToArray();
 
-            maxLayer=0;
+            maxLayer = 0;
             foreach (var f in faces)
             {
                 if (f.Layer > maxLayer)
@@ -337,36 +336,33 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         public Vector3 normal;
         public uint textureID;
 
-        public void Generate(ref List<VoxelVertex> vertices, ref List<uint> indicies)
+        public void Generate(ref VoxelVertex[] vertices, ref uint[] indicies,uint vIndex,uint iIndex)
         {
-            VoxelVertex[] verts = new VoxelVertex[4];
-            for (int i = 0; i < verts.Length; i++)
+            for (int i = 0; i < 4; i++)
             {
-                verts[i].normal = normal;
-                verts[i].textureId = textureID;
+                vertices[vIndex+i].normal = normal;
+                vertices[vIndex+i].textureId = textureID;
             }
 
-            verts[0].position = position;
-            verts[0].texcoords = Vector2.Zero;
+            vertices[vIndex+0].position = position;
+            vertices[vIndex+0].texcoords = Vector2.Zero;
 
-            verts[1].position = position + up;
-            verts[1].texcoords = new Vector2(0, up.Length());
+            vertices[vIndex+1].position = position + up;
+            vertices[vIndex+1].texcoords = new Vector2(0, up.Length());
 
-            verts[2].position = position + up + right;
-            verts[2].texcoords = new Vector2(right.Length(), up.Length());
+            vertices[vIndex+2].position = position + up + right;
+            vertices[vIndex+2].texcoords = new Vector2(right.Length(), up.Length());
 
-            verts[3].position = position + right;
-            verts[3].texcoords = new Vector2(right.Length(), 0);
+            vertices[vIndex+3].position = position + right;
+            vertices[vIndex+3].texcoords = new Vector2(right.Length(), 0);
 
-            uint o = (uint)vertices.Count;//First index of this quad
-            vertices.AddRange(verts);
+            indicies[iIndex+0]=vIndex+0;
+            indicies[iIndex+1]=vIndex+1;
+            indicies[iIndex+2]=vIndex+2;
 
-            uint[] inds = new uint[] { 0, 1, 2, 0, 2, 3 };
-            for (int i = 0; i < inds.Length; i++)
-            {
-                inds[i] += o;
-            }
-            indicies.AddRange(inds);
+            indicies[iIndex+3]=vIndex+0;
+            indicies[iIndex+4]=vIndex+2;
+            indicies[iIndex+5]=vIndex+3;
         }
     }
 }
