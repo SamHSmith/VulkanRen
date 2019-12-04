@@ -15,14 +15,14 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
     public static class VoxelMeshFactory
     {
 
-        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = true)
+        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = false)
         {
             MeshWrapper<VoxelVertex> mesh = new MeshWrapper<VoxelVertex>();
             mesh.CreateMesh(() =>
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, optimize);
-                Console.WriteLine($"Total time taken to make mesh: {stopwatch.ElapsedMilliseconds} ms");
+                Console.WriteLine($"Total time taken to make mesh: {((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000} ms");
                 return meshlocal;
             });
             return mesh;
@@ -30,7 +30,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         private static Mesh<VoxelVertex> _DoGenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize)
         {
             List<Face> faces = new List<Face>();
-
+            Stopwatch stopwatch = Stopwatch.StartNew();
             Random random = new Random(42);
             ushort[,,] blocks = new ushort[VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE];
             for (int x2 = 0; x2 < VoxelRenderChunk.CHUNK_SIZE; x2++)
@@ -39,12 +39,12 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 {
                     for (int y2 = 0; y2 < VoxelRenderChunk.CHUNK_SIZE; y2++)
                     {
-                        blocks[x2, y2, z2] = (ushort)random.Next(2);
+                        blocks[x2, y2, z2] = (ushort)(random.Next(6) + 1);
                     }
                 }
             }
+            
             VoxelRenderChunk chunk = new VoxelRenderChunk(blocks);
-
             Span<ushort> span = chunk.Span;
             int x = 0, y = 0, z = 0;
             for (int i = 0; i < span.Length; i++)
@@ -65,28 +65,23 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 }
             }
             Face[] faceArr = faces.ToArray();
-
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
             if (optimize)
             {
                 LoopFaces(ref faceArr, Vector3.UnitX);
                 LoopFaces(ref faceArr, Vector3.UnitY);
                 LoopFaces(ref faceArr, Vector3.UnitZ);
             }
-            stopwatch.Stop();
-            Console.WriteLine($"Optimize time: {stopwatch.ElapsedTicks} ms, TestingTicks: {totalTicks}");
 
-            VoxelVertex[] vertices = new VoxelVertex[faceArr.Length*4]; uint[] indicies = new uint[faceArr.Length*6];
+            VoxelVertex[] vertices = new VoxelVertex[faceArr.Length * 4]; uint[] indicies = new uint[faceArr.Length * 6];
             for (uint i = 0; i < faceArr.Length; i++)
             {
-                faceArr[i].Generate(ref vertices, ref indicies,i*4,i*6);
+                faceArr[i].Generate(ref vertices, ref indicies, i * 4, i * 6);
             }
+            stopwatch.Stop();
+            Console.WriteLine(((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000);
             Console.WriteLine($"Vertex Count: {vertices.Length}, Index Count: {indicies.Length}");
             return new Mesh<VoxelVertex>(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
         }
-        private static Stopwatch s1 = new Stopwatch();
-        private static long totalTicks = 0;
         private static void LoopFaces(ref Face[] outFaces, Vector3 axis)
         {
             RemoveFaces(ref outFaces);
@@ -116,7 +111,6 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     }
                 }
             }
-            s1.Restart();
             Memory<Face> mainMemory = faces.AsMemory();
             Parallel.For(0, maxLayer, (layer) =>
             {
@@ -133,8 +127,6 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                         }
                     }
             });
-            s1.Stop();
-            totalTicks += s1.ElapsedTicks;
 
             UpdateFaces(ref outFaces, faces);
             RemoveFaces(ref outFaces);
@@ -336,33 +328,33 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         public Vector3 normal;
         public uint textureID;
 
-        public void Generate(ref VoxelVertex[] vertices, ref uint[] indicies,uint vIndex,uint iIndex)
+        public void Generate(ref VoxelVertex[] vertices, ref uint[] indicies, uint vIndex, uint iIndex)
         {
             for (int i = 0; i < 4; i++)
             {
-                vertices[vIndex+i].normal = normal;
-                vertices[vIndex+i].textureId = textureID;
+                vertices[vIndex + i].normal = normal;
+                vertices[vIndex + i].textureId = textureID;
             }
 
-            vertices[vIndex+0].position = position;
-            vertices[vIndex+0].texcoords = Vector2.Zero;
+            vertices[vIndex + 0].position = position;
+            vertices[vIndex + 0].texcoords = Vector2.Zero;
 
-            vertices[vIndex+1].position = position + up;
-            vertices[vIndex+1].texcoords = new Vector2(0, up.Length());
+            vertices[vIndex + 1].position = position + up;
+            vertices[vIndex + 1].texcoords = new Vector2(0, up.Length());
 
-            vertices[vIndex+2].position = position + up + right;
-            vertices[vIndex+2].texcoords = new Vector2(right.Length(), up.Length());
+            vertices[vIndex + 2].position = position + up + right;
+            vertices[vIndex + 2].texcoords = new Vector2(right.Length(), up.Length());
 
-            vertices[vIndex+3].position = position + right;
-            vertices[vIndex+3].texcoords = new Vector2(right.Length(), 0);
+            vertices[vIndex + 3].position = position + right;
+            vertices[vIndex + 3].texcoords = new Vector2(right.Length(), 0);
 
-            indicies[iIndex+0]=vIndex+0;
-            indicies[iIndex+1]=vIndex+1;
-            indicies[iIndex+2]=vIndex+2;
+            indicies[iIndex + 0] = vIndex + 0;
+            indicies[iIndex + 1] = vIndex + 1;
+            indicies[iIndex + 2] = vIndex + 2;
 
-            indicies[iIndex+3]=vIndex+0;
-            indicies[iIndex+4]=vIndex+2;
-            indicies[iIndex+5]=vIndex+3;
+            indicies[iIndex + 3] = vIndex + 0;
+            indicies[iIndex + 4] = vIndex + 2;
+            indicies[iIndex + 5] = vIndex + 3;
         }
     }
 }
