@@ -20,7 +20,10 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             MeshWrapper<VoxelVertex> mesh = new MeshWrapper<VoxelVertex>();
             mesh.CreateMesh(() =>
             {
-                return _DoGenerateMesh(device, physicalDevice, optimize);
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, optimize);
+                Console.WriteLine($"Total time taken to make mesh: {stopwatch.ElapsedMilliseconds} ms");
+                return meshlocal;
             });
             return mesh;
         }
@@ -62,42 +65,63 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                     }
                 }
             }
+            Face[] faceArr = faces.ToArray();
+
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             if (optimize)
             {
-                LoopFaces(ref faces, Vector3.UnitX);
-                LoopFaces(ref faces, Vector3.UnitY);
-                LoopFaces(ref faces, Vector3.UnitZ);
+                LoopFaces(ref faceArr, Vector3.UnitX);
+                LoopFaces(ref faceArr, Vector3.UnitY);
+                LoopFaces(ref faceArr, Vector3.UnitZ);
             }
             stopwatch.Stop();
-            Console.WriteLine($"Optimize time: {stopwatch.ElapsedMilliseconds} ms, TestingTicks: {totalTicks}");
+            Console.WriteLine($"Optimize time: {stopwatch.ElapsedTicks} ms, TestingTicks: {totalTicks}");
 
 
-            for (int i = 0; i < faces.Count; i++)
+            for (int i = 0; i < faceArr.Length; i++)
             {
-                faces[i].Generate(ref vertices, ref indicies);
+                faceArr[i].Generate(ref vertices, ref indicies);
             }
             Console.WriteLine($"Vertex Count: {vertices.Count}, Index Count: {indicies.Count}");
             return new Mesh<VoxelVertex>(device, physicalDevice, vertices.ToArray(), indicies.ToArray());
         }
         private static Stopwatch s1 = new Stopwatch();
         private static long totalTicks = 0;
-        private static void LoopFaces(ref List<Face> outFaces, Vector3 axis)
+        private static void LoopFaces(ref Face[] outFaces, Vector3 axis)
         {
             RemoveFaces(ref outFaces);
             Face[] faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
+            faces = faces.OrderBy(f => f.Layer).ToArray();
+
             int maxLayer = 0;
             foreach (var f in faces)
             {
                 if (f.Layer > maxLayer)
                     maxLayer = f.Layer;
             }
-            ConcurrentBag<Face[]> threadSafeBag = new ConcurrentBag<Face[]>();
-
+            int[] startPoints = new int[maxLayer + 1 + 1];
+            for (int i = 1; i < startPoints.Length; i++)
+            {
+                if (i == maxLayer + 1)
+                {
+                    startPoints[i] = faces.Length;
+                    continue;
+                }
+                for (int j = 0; j < faces.Length; j++)
+                {
+                    if (faces[j].Layer >= i)
+                    {
+                        startPoints[i] = j;
+                        break;
+                    }
+                }
+            }
+            s1.Restart();
+            Memory<Face> mainMemory = faces.AsMemory();
             Parallel.For(0, maxLayer, (layer) =>
             {
-                Face[] localArray = faces.Where((f) => f.Layer == layer).ToArray();
+                Span<Face> localArray = mainMemory.Span.Slice(startPoints[layer], startPoints[layer + 1] - startPoints[layer]);
                 for (int i = 0; i < localArray.Length; i++)
                     for (int j = i + 1; j < localArray.Length; j++)
                     {
@@ -109,46 +133,66 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                             localArray[j].shouldBeRemoved = true;
                         }
                     }
-                threadSafeBag.Add(localArray);
             });
-            foreach (var facArr in threadSafeBag)
-            {
-                UpdateFaces(ref outFaces, facArr);
-            }
+            s1.Stop();
+            totalTicks += s1.ElapsedTicks;
+            
+            UpdateFaces(ref outFaces, faces);            
             RemoveFaces(ref outFaces);
-            threadSafeBag.Clear();
             faces = (outFaces.Where((f) => Vector3.Abs(f.normal) == axis)).ToArray();
-            s1.Restart();
+            faces = faces.OrderBy(f => f.Layer).ToArray();
+
+            maxLayer=0;
+            foreach (var f in faces)
+            {
+                if (f.Layer > maxLayer)
+                    maxLayer = f.Layer;
+            }
+            startPoints = new int[maxLayer + 1 + 1];
+            for (int i = 1; i < startPoints.Length; i++)
+            {
+                if (i == maxLayer + 1)
+                {
+                    startPoints[i] = faces.Length;
+                    continue;
+                }
+                for (int j = 0; j < faces.Length; j++)
+                {
+                    if (faces[j].Layer >= i)
+                    {
+                        startPoints[i] = j;
+                        break;
+                    }
+                }
+            }
+
+            mainMemory = faces.AsMemory();
             for (int i = 0; i < maxLayer + 1; i++)
-            {/*
-                Face[] mergeFaces = (faces.Where((f) => i == (int)(f.Layer))).ToArray();
+            {
+                Memory<Face> mergeFaces = mainMemory.Slice(startPoints[i], startPoints[i + 1] - startPoints[i]);
                 if (axis == Vector3.UnitX)
                 {
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitY, Vector3.UnitZ);
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitZ, Vector3.UnitY);
+                    MergeFaces(mergeFaces, Vector3.UnitY, Vector3.UnitZ);
+                    MergeFaces(mergeFaces, Vector3.UnitZ, Vector3.UnitY);
                 }
                 else if (axis == Vector3.UnitY)
                 {
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitX, Vector3.UnitZ);
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitZ, Vector3.UnitX);
+                    MergeFaces(mergeFaces, Vector3.UnitX, Vector3.UnitZ);
+                    MergeFaces(mergeFaces, Vector3.UnitZ, Vector3.UnitX);
                 }
                 else if (axis == Vector3.UnitZ)
                 {
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitX, Vector3.UnitY);
-                    MergeFaces(mergeFaces.AsMemory(), Vector3.UnitY, Vector3.UnitX);
+                    MergeFaces(mergeFaces, Vector3.UnitX, Vector3.UnitY);
+                    MergeFaces(mergeFaces, Vector3.UnitY, Vector3.UnitX);
                 }
-                threadSafeBag.Add(mergeFaces);*/
             }
-            s1.Stop();
-            totalTicks += s1.ElapsedTicks;
-            foreach (var facArr in threadSafeBag)
-            {
-                UpdateFaces(ref outFaces, facArr);
-            }
+
+
+            UpdateFaces(ref outFaces, faces);
             RemoveFaces(ref outFaces);
         }
 
-        private static void UpdateFaces(ref List<Face> faceList, Memory<Face> data)
+        private static void UpdateFaces(ref Face[] faceList, Memory<Face> data)
         {
             Span<Face> span = data.Span;
             for (int i = 0; i < data.Length; i++)
@@ -160,15 +204,22 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             }
         }
 
-        private static void RemoveFaces(ref List<Face> faceList)
+        private static void RemoveFaces(ref Face[] faceList)
         {
-            faceList.RemoveAll((f) => f.shouldBeRemoved);
-            for (int i = 0; i < faceList.Count; i++)
+            Face[] arr = new Face[faceList.Length];
+            faceList.CopyTo(arr, 0);
+
+            int index = 0;
+            for (int i = 0; i < arr.Length; i++)
             {
-                Face f = faceList[i];
-                f.index = i;
-                faceList[i] = f;
+                if (arr[i].shouldBeRemoved != true)
+                {
+                    faceList[index] = arr[i];
+                    faceList[index].index = index;
+                    index++;
+                }
             }
+            Array.Resize(ref faceList, index + 1);
         }
         private static void MergeFaces(Memory<Face> mem, Vector3 compareAxis, Vector3 otherAxis)
         {
@@ -307,7 +358,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
             verts[3].position = position + right;
             verts[3].texcoords = new Vector2(right.Length(), 0);
 
-            ushort o = (ushort)vertices.Count;//First index of this quad
+            uint o = (uint)vertices.Count;//First index of this quad
             vertices.AddRange(verts);
 
             uint[] inds = new uint[] { 0, 1, 2, 0, 2, 3 };
