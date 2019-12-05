@@ -248,6 +248,11 @@ namespace Fabricor.VulkanRendering
 
             MeshWrapper<VoxelVertex> mesh = VoxelMeshFactory.GenerateMesh(device, physicalDevice);
 
+            Action updateMesh= delegate{
+                VoxelMeshFactory.UpdateMesh(device,physicalDevice,mesh);
+            };
+            GLFWInput.Subscribe(Keys.U,updateMesh,InputState.Press);
+
             Action changeTexture = delegate
             {
                 Span<VoxelVertex> span = mesh.Mesh.vertices.Map();
@@ -315,6 +320,7 @@ namespace Fabricor.VulkanRendering
                     camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.00015f);
                 if (GLFWInput.TimeKeyPressed(Keys.Left) > 0)
                     camera.rotation *= Quaternion.CreateFromAxisAngle(Vector3.UnitY, -0.00015f);
+                
 
                 uint imageIndex = 0;
 

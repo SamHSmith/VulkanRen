@@ -24,12 +24,13 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 {
                     for (int z = 0; z < CHUNK_SIZE; z++)
                     {
-                        bool canBeSeen = IsBlockEmpty(blocks, x + 1, y, z) ||
-                        IsBlockEmpty(blocks, x - 1, y, z) ||
-                        IsBlockEmpty(blocks, x, y + 1, z) ||
-                        IsBlockEmpty(blocks, x, y - 1, z) ||
-                        IsBlockEmpty(blocks, x, y, z + 1) ||
-                        IsBlockEmpty(blocks, x, y, z - 1);
+                        bool canBeSeen = 
+                        IsBlockEmpty(blocks, x + 1  , y     , z     ) ||
+                        IsBlockEmpty(blocks, x - 1  , y     , z     ) ||
+                        IsBlockEmpty(blocks, x      , y + 1 , z     ) ||
+                        IsBlockEmpty(blocks, x      , y - 1 , z     ) ||
+                        IsBlockEmpty(blocks, x      , y     , z + 1 ) ||
+                        IsBlockEmpty(blocks, x      , y     , z - 1 );
 
                         if (canBeSeen)
                             voxels[CoordsToIndex(x, y, z)] = blocks[x, y, z];

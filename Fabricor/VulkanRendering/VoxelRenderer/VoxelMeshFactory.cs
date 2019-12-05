@@ -15,13 +15,39 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
     public static class VoxelMeshFactory
     {
 
-        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice, bool optimize = false)
+        public static MeshWrapper<VoxelVertex> GenerateMesh(VkDevice device, VkPhysicalDevice physicalDevice)
         {
             MeshWrapper<VoxelVertex> mesh = new MeshWrapper<VoxelVertex>();
             mesh.CreateMesh(() =>
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, optimize);
+                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, true);
+                Console.WriteLine($"Total time taken to make mesh: {((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000} ms");
+                return meshlocal;
+            },
+            () =>//Quick mesh
+            {
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, false);
+                Console.WriteLine($"Total time taken to make mesh: {((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000} ms");
+                return meshlocal;
+            });
+            return mesh;
+        }
+
+        public static MeshWrapper<VoxelVertex> UpdateMesh(VkDevice device, VkPhysicalDevice physicalDevice,MeshWrapper<VoxelVertex> mesh)
+        {
+            mesh.UpdateMesh(() =>
+            {
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, true);
+                Console.WriteLine($"Total time taken to make mesh: {((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000} ms");
+                return meshlocal;
+            },
+            () =>//Quick mesh
+            {
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                Mesh<VoxelVertex> meshlocal = _DoGenerateMesh(device, physicalDevice, false);
                 Console.WriteLine($"Total time taken to make mesh: {((double)stopwatch.ElapsedTicks) / Stopwatch.Frequency * 1000} ms");
                 return meshlocal;
             });
@@ -31,7 +57,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
         {
             List<Face> faces = new List<Face>();
             Stopwatch stopwatch = Stopwatch.StartNew();
-            Random random = new Random(42);
+            Random random = new Random();
             ushort[,,] blocks = new ushort[VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE, VoxelRenderChunk.CHUNK_SIZE];
             for (int x2 = 0; x2 < VoxelRenderChunk.CHUNK_SIZE; x2++)
             {
@@ -39,7 +65,7 @@ namespace Fabricor.VulkanRendering.VoxelRenderer
                 {
                     for (int y2 = 0; y2 < VoxelRenderChunk.CHUNK_SIZE; y2++)
                     {
-                        blocks[x2, y2, z2] = (ushort)(random.Next(6) + 1);
+                        blocks[x2, y2, z2] = (ushort)(random.Next(6));
                     }
                 }
             }

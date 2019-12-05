@@ -160,7 +160,7 @@ namespace Fabricor.VulkanRendering
             rasterizationState.lineWidth = 1;
             rasterizationState.frontFace = VkFrontFace.Clockwise;
             rasterizationState.cullMode = VkCullModeFlags.Back;
-            rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
+            rasterizationState.polygonMode = VkPolygonMode.Line;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
@@ -259,6 +259,7 @@ namespace Fabricor.VulkanRendering
             vkCmdBindPipeline(buffer, VkPipelineBindPoint.Graphics, pipeline);
             if (mesh.IsReady)
             {
+                mesh.Use();
                 VkBuffer[] databuffers = new VkBuffer[] { mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer, mesh.Mesh.vertices.Buffer };
                 ulong[] offsets = new ulong[] { 0, 3 * 4, 6 * 4, 6 * 4 + 2 * 4 };
                 fixed (VkBuffer* bptr = databuffers)
@@ -277,6 +278,7 @@ namespace Fabricor.VulkanRendering
                 vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint.Graphics, layout, 0, 1, &sets, 0, null);
 
                 vkCmdDrawIndexed(buffer, (uint)mesh.Mesh.indices.Length, 1, 0, 0, 0);
+                mesh.StopUse();
             }
 
             vkCmdEndRenderPass(buffer);

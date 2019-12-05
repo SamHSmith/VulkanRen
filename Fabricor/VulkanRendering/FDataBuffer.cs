@@ -1,3 +1,5 @@
+using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using static Vulkan.VulkanNative;
 using Vulkan;
@@ -10,10 +12,10 @@ namespace Fabricor.VulkanRendering
         private VkDevice device;
 
         private ulong size = 0;
-        private void* spanStart=(void*)0;
-        private int spanLength=0;
-        public int Length{get{return spanLength;}}
-        private Span<T> Span{get{return new Span<T>(spanStart,spanLength);}}
+        private void* spanStart = (void*)0;
+        private int spanLength = 0;
+        public int Length { get { return spanLength; } }
+        private Span<T> Span { get { return new Span<T>(spanStart, spanLength); } }
 
         public VkBuffer Buffer { get; private set; }
         public VkDeviceMemory Memory { get; private set; }
@@ -44,11 +46,11 @@ namespace Fabricor.VulkanRendering
 
             VkDeviceMemory memory = new VkDeviceMemory();
             Assert(vkAllocateMemory(device, &allocateInfo, null, &memory));
-            Memory=memory;
+            Memory = memory;
 
             Assert(vkBindBufferMemory(device, this.Buffer, memory, 0));
 
-            spanLength=length;
+            spanLength = length;
         }
 
         public static uint SelectMemoryType(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties, uint memoryTypeBits, VkMemoryPropertyFlags flags)
@@ -64,32 +66,36 @@ namespace Fabricor.VulkanRendering
             throw new Exception("No Compatible Memory Found");
         }
 
-        public Span<T> Map(){
+        public Span<T> Map()
+        {
             void* data = (void*)0;
             vkMapMemory(device, Memory, 0, size, 0, &data);
-            
-            spanStart=data;
+
+            spanStart = data;
             return Span;
         }
-        
+
         /*You should assign your old span variable with this blank value to stop an exception from the debugger */
-        public Span<T> UnMap(){
-            vkUnmapMemory(device,Memory);
+        public Span<T> UnMap()
+        {
+            vkUnmapMemory(device, Memory);
             return new Span<T>();
         }
 
-        public void Write(int position, T[] data){
-            Span<T> span=Map();
+        public void Write(int position, T[] data)
+        {
+            Span<T> span = Map();
             for (int i = 0; i < data.Length; i++)
             {
-                span[i+position]=data[i];
+                span[i + position] = data[i];
             }
-            span=UnMap();
+            span = UnMap();
         }
 
-        public void Free(){
-            vkDestroyBuffer(device,Buffer,null);
-            vkFreeMemory(device,Memory,null);
+        public void Free()
+        {
+            vkDestroyBuffer(device, Buffer, null);
+            vkFreeMemory(device, Memory, null);
         }
 
         private static VkMemoryType[] GetMemoryTypes(Vulkan.VkPhysicalDeviceMemoryProperties memoryProperties)
