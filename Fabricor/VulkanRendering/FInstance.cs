@@ -34,7 +34,7 @@ namespace Fabricor.VulkanRendering{
         {
             List<GCHandle> handles = new List<GCHandle>();
 
-            bool debug = true;
+            bool debug = false;
 
             string[] debugOnlyLayers = new string[] {
                 //"VK_LAYER_GOOGLE_threading",
