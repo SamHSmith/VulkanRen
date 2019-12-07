@@ -30,12 +30,12 @@ steps:
 - task: CopyFiles@2
   inputs:
     SourceFolder: res
-    TargetFolder: $(artifactStagingDirectory)/VulkanRen-linux/
+    TargetFolder: $(artifactStagingDirectory)/VulkanRen-linux/res/
 
 - task: CopyFiles@2
   inputs:
     SourceFolder: shaders
-    TargetFolder: $(artifactStagingDirectory)/VulkanRen-linux/
+    TargetFolder: $(artifactStagingDirectory)/VulkanRen-linux/shaders/
 
 - task: DotNetCoreCLI@2
   inputs:
@@ -47,12 +47,12 @@ steps:
 - task: CopyFiles@2
   inputs:
     SourceFolder: res
-    TargetFolder: $(artifactStagingDirectory)/VulkanRen-win/
+    TargetFolder: $(artifactStagingDirectory)/VulkanRen-win/res/
 
 - task: CopyFiles@2
   inputs:
     SourceFolder: shaders
-    TargetFolder: $(artifactStagingDirectory)/VulkanRen-win/
+    TargetFolder: $(artifactStagingDirectory)/VulkanRen-win/shaders/
 
 # this code takes all the files in $(Build.ArtifactStagingDirectory) and uploads them as an artifact of your build.
 - task: PublishBuildArtifacts@1
