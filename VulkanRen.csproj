@@ -15,7 +15,7 @@
     <None Update="./res/*" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="./libs/native/*" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
-    <Target Name="BuildNative" BeforeTargets="Build">
+    <Target Name="BuildNative" BeforeTargets="Build;Publish">
       <Copy
       SourceFiles="./libs/native/libglfw.so;./libs/native/glfw.dll"
       DestinationFolder="$(OutputPath)"
