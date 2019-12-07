@@ -13,7 +13,14 @@
     </Reference>
     <None Update="./shaders/*.spv" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="./res/*" CopyToOutputDirectory="PreserveNewest"/>
+    <None Update="./libs/native/*" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
+    <Target Name="BuildNative" BeforeTargets="Build">
+      <Copy
+      SourceFiles="./libs/native/libglfw.so;./libs/native/glfw.dll"
+      DestinationFolder="$(OutputPath)"
+      />
+    </Target>
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="4.6.1"/>
   </ItemGroup>
