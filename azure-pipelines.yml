@@ -25,7 +25,7 @@ steps:
     command: publish 
     publishWebProjects: false
     arguments: '--configuration $(BuildConfiguration) -r linux-x64 /p:PublishSingleFile=true --output $(artifactStagingDirectory)/VulkanRen-linux'
-    zipAfterPublish: True
+    zipAfterPublish: false
 
 - task: CopyFiles@2
   inputs:
@@ -42,7 +42,7 @@ steps:
     command: publish 
     publishWebProjects: false
     arguments: '--configuration $(BuildConfiguration) -r win-x64 /p:PublishSingleFile=true --output $(artifactStagingDirectory)/VulkanRen-win'
-    zipAfterPublish: True
+    zipAfterPublish: false
 
 - task: CopyFiles@2
   inputs:
