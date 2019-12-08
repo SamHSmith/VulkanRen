@@ -175,6 +175,7 @@ namespace Fabricor.VulkanRendering
         }
         static void Main(string[] args)
         {
+            Console.WriteLine(AppContext.GetData("NATIVE_DLL_SEARCH_DIRECTORIES").ToString());
             Console.WriteLine($"Hello Vulkan!");
             Init();
 

@@ -160,7 +160,7 @@ namespace Fabricor.VulkanRendering
             rasterizationState.lineWidth = 1;
             rasterizationState.frontFace = VkFrontFace.Clockwise;
             rasterizationState.cullMode = VkCullModeFlags.Back;
-            rasterizationState.polygonMode = VkPolygonMode.Line;//TODO add line debug render
+            rasterizationState.polygonMode = VkPolygonMode.Fill;//TODO add line debug render
             pCreateInfo.pRasterizationState = &rasterizationState;
 
             VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New();
